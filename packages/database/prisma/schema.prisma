@@ -1,0 +1,132 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DOKTER
+  PERAWAT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum EncounterStatus {
+  WAITING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum SyncStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+model User {
+  id           String      @id @default(uuid())
+  username     String      @unique
+  passwordHash String
+  fullName     String
+  role         Role
+  sipNumber    String?
+  strNumber    String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  encounters   Encounter[] @relation("DoctorEncounters")
+}
+
+model Patient {
+  id           String      @id @default(uuid())
+  nik          String      @unique
+  fullName     String
+  birthDate    DateTime
+  gender       Gender
+  address      String?
+  phone        String?
+  medicalRecNo String      @unique
+  satusehatId  String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  encounters   Encounter[]
+}
+
+model Encounter {
+  id                   String          @id @default(uuid())
+  patientId            String
+  doctorId             String
+  queueNumber          Int
+  status               EncounterStatus @default(WAITING)
+  satusehatEncounterId String?
+  patient              Patient         @relation(fields: [patientId], references: [id])
+  doctor               User            @relation("DoctorEncounters", fields: [doctorId], references: [id])
+  medicalRecord        MedicalRecord?
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+}
+
+model MedicalRecord {
+  id            String         @id @default(uuid())
+  encounterId   String         @unique
+  anamnesis     String?
+  systolic      Int?
+  diastolic     Int?
+  heartRate     Int?
+  temperature   Float?
+  weight        Float?
+  height        Float?
+  encounter     Encounter      @relation(fields: [encounterId], references: [id])
+  diagnoses     Diagnosis[]
+  prescriptions Prescription[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model MasterIcd10 {
+  code      String      @id
+  nameIndo  String
+  nameEng   String
+  diagnoses Diagnosis[]
+}
+
+model Diagnosis {
+  id                   String        @id @default(uuid())
+  medicalRecordId      String
+  icd10Code            String
+  isPrimary            Boolean       @default(true)
+  satusehatConditionId String?
+  medicalRecord        MedicalRecord @relation(fields: [medicalRecordId], references: [id])
+  icd10                MasterIcd10   @relation(fields: [icd10Code], references: [code])
+}
+
+model Prescription {
+  id              String        @id @default(uuid())
+  medicalRecordId String
+  medicineName    String
+  kfaCode         String?
+  dosage          String
+  frequency       String
+  quantity        Int
+  instructions    String?
+  medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id])
+}
+
+model SatusehatSyncLog {
+  id           String     @id @default(uuid())
+  resourceType String
+  resourceId   String
+  status       SyncStatus @default(PENDING)
+  payload      Json
+  satusehatId  String?
+  errorMessage String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
