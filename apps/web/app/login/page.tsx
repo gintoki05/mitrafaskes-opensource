@@ -51,44 +51,41 @@ export default function LoginPage() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
-      <div className="w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-2xl p-8 shadow-2xl">
+      <div className="w-full max-w-md rounded-[var(--radius-panel)] border border-border bg-card p-8 shadow-lg">
         <div className="flex flex-col items-center mb-8 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center shadow-xl shadow-teal-500/20 mb-3">
-            <Activity className="w-8 h-8 text-slate-950 stroke-[2.5]" />
+          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-[var(--radius-panel)] bg-primary shadow-md shadow-primary/20">
+            <Activity className="h-8 w-8 text-primary-foreground stroke-[2.5]" />
           </div>
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-bold text-foreground">
             Mitra Faskes RME
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            Rekam Medis Elektronik (Next.js & NestJS API)
-          </p>
         </div>
 
         {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs text-center font-medium">
+          <div className="clinical-status-error mb-4 rounded-[var(--radius-card)] border p-3 text-center text-xs font-medium" role="alert">
             {error}
           </div>
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Username</label>
+            <label className="mb-1 block text-xs font-semibold text-foreground">Username</label>
             <input
               type="text"
               value={username}
               onChange={e => setUsername(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-teal-500 text-sm transition-all"
+              className="clinical-field w-full px-4 py-2.5 text-sm transition-colors focus-visible:border-ring"
               required
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+            <label className="mb-1 block text-xs font-semibold text-foreground">Password</label>
             <input
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl bg-slate-950 border border-slate-700 text-white focus:outline-none focus:border-teal-500 text-sm transition-all"
+              className="clinical-field w-full px-4 py-2.5 text-sm transition-colors focus-visible:border-ring"
               required
             />
           </div>
@@ -96,36 +93,36 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-teal-500/20 transition-all flex items-center justify-center gap-2"
+            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-primary py-3 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 transition-colors hover:bg-primary/85 disabled:bg-muted disabled:text-muted-foreground"
           >
             <Lock className="w-4 h-4" />
             {loading ? 'Proses...' : 'Masuk ke Sistem'}
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-800">
-          <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3 text-center">
+        <div className="mt-8 border-t border-border pt-6">
+          <span className="mb-3 block text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
             Akun Demo Praktis (Klik untuk Mengisi)
           </span>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => selectQuickUser('admin', 'admin123')}
-              className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-left transition-all group"
+              className="group rounded-[var(--radius-card)] border border-border bg-background p-2.5 text-left transition-colors hover:bg-muted"
             >
-              <div className="flex items-center gap-2 text-teal-400 text-xs font-bold">
+              <div className="flex items-center gap-2 text-xs font-bold text-primary">
                 <UserCheck className="w-3.5 h-3.5" /> Admin
               </div>
-              <div className="text-[11px] text-slate-400 truncate">Siti Rahma (Pendaftaran)</div>
+              <div className="truncate text-[11px] text-muted-foreground">Siti Rahma (Pendaftaran)</div>
             </button>
 
             <button
               onClick={() => selectQuickUser('dr_budi', 'dok123')}
-              className="p-2.5 rounded-xl bg-slate-950 hover:bg-slate-800 border border-slate-800 text-left transition-all group"
+              className="group rounded-[var(--radius-card)] border border-border bg-background p-2.5 text-left transition-colors hover:bg-muted"
             >
-              <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold">
+              <div className="flex items-center gap-2 text-xs font-bold text-success">
                 <Stethoscope className="w-3.5 h-3.5" /> Dokter
               </div>
-              <div className="text-[11px] text-slate-400 truncate">dr. Budi Santoso</div>
+              <div className="truncate text-[11px] text-muted-foreground">dr. Budi Santoso</div>
             </button>
           </div>
         </div>

@@ -95,19 +95,19 @@ export default function PendaftaranPage() {
     <RouteGuard permission={AccessPermission.QUEUE_READ}>
     <div className="space-y-8">
       {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl">
+      <div className="clinical-panel flex flex-col justify-between gap-4 p-6 md:flex-row md:items-center">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <UserCheck className="w-6 h-6 text-teal-400" />
+          <h1 className="flex items-center gap-2 text-xl font-bold text-foreground">
+            <UserCheck className="h-6 w-6 text-primary" />
             Pendaftaran Pasien & Antrean Poli Rawat Jalan
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="mt-1 text-xs text-muted-foreground">
             Pencarian Master Pasien, Pendaftaran NIK SATUSEHAT, dan Penjadwalan Antrean Dokter
           </p>
         </div>
         {canWritePatient && <Button
           onClick={() => setShowModal(true)}
-          className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-teal-500/20"
+          className="bg-primary text-xs font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/85"
         >
           <UserPlus className="w-4 h-4 stroke-[2.5] mr-1.5" />
           Daftar Pasien Baru
@@ -117,48 +117,48 @@ export default function PendaftaranPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Patient Search & List */}
         <div className="lg:col-span-2 space-y-4">
-          <Card className="bg-slate-900/90 border-slate-800">
+          <Card>
             <CardContent className="p-4">
               <form onSubmit={handleSearchSubmit} className="flex gap-2">
                 <div className="relative flex-1">
-                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="text"
                     placeholder="Cari berdasarkan NIK (16-Digit), No. RM, atau Nama Pasien..."
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    className="pl-9 bg-slate-950 border-slate-700 text-white placeholder-slate-500 text-xs"
+                    className="pl-9 text-xs"
                   />
                 </div>
-                <Button type="submit" variant="secondary" className="text-teal-400 border border-teal-500/20 text-xs font-semibold">
+                <Button type="submit" variant="secondary" className="border-primary/20 text-xs font-semibold text-primary">
                   Cari
                 </Button>
               </form>
             </CardContent>
           </Card>
 
-          <Card className="bg-slate-900/90 border-slate-800 overflow-hidden">
-            <CardHeader className="px-6 py-4 border-b border-slate-800 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-bold text-slate-200">Daftar Master Pasien</CardTitle>
-              <Badge variant="outline" className="text-teal-400 border-teal-500/30 text-xs font-semibold">
+          <Card className="overflow-hidden">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-border px-6 py-4">
+              <CardTitle className="text-sm font-bold text-foreground">Daftar Master Pasien</CardTitle>
+              <Badge variant="outline" className="border-primary/30 text-xs font-semibold text-primary">
                 {patients.length} Pasien
               </Badge>
             </CardHeader>
-            <div className="divide-y divide-slate-800/60">
+            <div className="divide-y divide-border">
               {patients.map(p => (
-                <div key={p.id} className="p-4 hover:bg-slate-800/40 transition-colors flex items-center justify-between gap-4">
+                <div key={p.id} className="flex items-center justify-between gap-4 p-4 transition-colors hover:bg-muted">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-white">{p.fullName}</span>
-                      <span className="px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-400 border border-teal-500/20 text-[10px] font-mono font-bold">
+                      <span className="text-sm font-bold text-foreground">{p.fullName}</span>
+                      <span className="rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5 font-mono text-[10px] font-bold text-primary">
                         {p.medicalRecNo}
                       </span>
                     </div>
-                    <div className="text-xs text-slate-400 flex flex-wrap gap-x-4 gap-y-1">
-                      <span>NIK: <strong className="text-slate-300 font-mono">{p.nik}</strong></span>
-                      <span>Gender: <strong className="text-slate-300">{p.gender === 'MALE' ? 'Laki-Laki' : 'Perempuan'}</strong></span>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span>NIK: <strong className="font-mono text-foreground">{p.nik}</strong></span>
+                      <span>Gender: <strong className="text-foreground">{p.gender === 'MALE' ? 'Laki-Laki' : 'Perempuan'}</strong></span>
                       {p.satusehatId && (
-                        <span className="text-emerald-400 font-mono flex items-center gap-1">
+                        <span className="flex items-center gap-1 font-mono text-success">
                           <ShieldCheck className="w-3 h-3 inline" /> SATUSEHAT ID: {p.satusehatId}
                         </span>
                       )}
@@ -167,7 +167,7 @@ export default function PendaftaranPage() {
                   {canCreateQueue && <Button
                     onClick={() => handleDaftarAntrean(p.id)}
                     size="sm"
-                    className="bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/30 text-xs font-semibold shrink-0"
+                    className="shrink-0 border-primary/30 bg-primary/10 text-xs font-semibold text-primary hover:bg-primary/15"
                   >
                     + Masuk Antrean
                   </Button>}
@@ -179,36 +179,36 @@ export default function PendaftaranPage() {
 
         {/* Right Column: Active Queue Status */}
         <div className="space-y-4">
-          <Card className="bg-slate-900/90 border-slate-800">
-            <CardHeader className="pb-3 border-b border-slate-800 flex flex-row items-center justify-between">
-              <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
-                <Clock className="w-4 h-4 text-emerald-400" />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
+                <Clock className="h-4 w-4 text-success" />
                 Antrean Rawat Jalan
               </CardTitle>
-              <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-mono font-bold text-xs">
+              <Badge className="border-success/20 bg-success/10 font-mono text-xs font-bold text-success">
                 {encounters.length} Antrean
               </Badge>
             </CardHeader>
 
             <CardContent className="pt-4 space-y-3">
               {encounters.map(e => (
-                <div key={e.id} className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                <div key={e.id} className="flex items-center justify-between rounded-[var(--radius-card)] border border-border bg-background p-3.5">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center font-bold text-teal-400 font-mono text-sm">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-card)] border border-primary/20 bg-primary/10 font-mono text-sm font-bold text-primary">
                       #{e.queueNumber}
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-white">{e.patient?.fullName}</div>
-                      <div className="text-[11px] font-mono text-slate-400">{e.patient?.medicalRecNo}</div>
+                      <div className="text-xs font-bold text-foreground">{e.patient?.fullName}</div>
+                      <div className="font-mono text-[11px] text-muted-foreground">{e.patient?.medicalRecNo}</div>
                     </div>
                   </div>
                   <Badge
                     className={
                       e.status === 'WAITING'
-                        ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] font-bold'
+                        ? 'clinical-status-warning border text-[10px] font-bold'
                         : e.status === 'IN_PROGRESS'
-                        ? 'bg-teal-500/10 text-teal-400 border-teal-500/20 animate-pulse text-[10px] font-bold'
-                        : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] font-bold'
+                        ? 'border border-primary/20 bg-primary/10 text-[10px] font-bold text-primary'
+                        : 'clinical-status-success border text-[10px] font-bold'
                     }
                   >
                     {e.status === 'WAITING' ? 'MENUNGGU' : e.status === 'IN_PROGRESS' ? 'DIPERIKSA' : 'SELESAI'}
@@ -222,58 +222,58 @@ export default function PendaftaranPage() {
 
       {/* Modal Registration Pasien */}
       {showModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="bg-slate-900 border-slate-800 w-full max-w-lg">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 p-4 backdrop-blur-sm">
+          <Card className="w-full max-w-lg">
             <CardHeader>
-              <CardTitle className="text-base font-bold text-white flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-teal-400" />
+              <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+                <UserPlus className="h-5 w-5 text-primary" />
                 Pendaftaran Pasien Baru SATUSEHAT
               </CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreatePatient} className="space-y-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">NIK (16 Digit Sesuai KTP)</label>
+                  <label className="mb-1 block text-xs font-semibold text-foreground">NIK (16 Digit Sesuai KTP)</label>
                   <Input
                     type="text"
                     maxLength={16}
                     value={nik}
                     onChange={e => setNik(e.target.value)}
                     placeholder="Contoh: 3171012304900001"
-                    className="bg-slate-950 border-slate-700 text-white text-xs font-mono"
+                    className="text-xs font-mono"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Nama Lengkap Pasien</label>
+                  <label className="mb-1 block text-xs font-semibold text-foreground">Nama Lengkap Pasien</label>
                   <Input
                     type="text"
                     value={fullName}
                     onChange={e => setFullName(e.target.value)}
                     placeholder="Nama sesuai KTP"
-                    className="bg-slate-950 border-slate-700 text-white text-xs"
+                    className="text-xs"
                     required
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Tanggal Lahir</label>
+                    <label className="mb-1 block text-xs font-semibold text-foreground">Tanggal Lahir</label>
                     <Input
                       type="date"
                       value={birthDate}
                       onChange={e => setBirthDate(e.target.value)}
-                      className="bg-slate-950 border-slate-700 text-white text-xs"
+                      className="text-xs"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-slate-300 mb-1">Jenis Kelamin</label>
+                    <label className="mb-1 block text-xs font-semibold text-foreground">Jenis Kelamin</label>
                     <select
                       value={gender}
                       onChange={e => setGender(e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-teal-500"
+                      className="clinical-field w-full px-3 py-2 text-xs"
                     >
                       <option value="MALE">Laki-Laki</option>
                       <option value="FEMALE">Perempuan</option>
@@ -282,13 +282,13 @@ export default function PendaftaranPage() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-slate-300 mb-1">Alamat Tempat Tinggal</label>
+                  <label className="mb-1 block text-xs font-semibold text-foreground">Alamat Tempat Tinggal</label>
                   <Input
                     type="text"
                     value={address}
                     onChange={e => setAddress(e.target.value)}
                     placeholder="Jl. Melati No. 12..."
-                    className="bg-slate-950 border-slate-700 text-white text-xs"
+                    className="text-xs"
                   />
                 </div>
 
@@ -303,7 +303,7 @@ export default function PendaftaranPage() {
                   </Button>
                   <Button
                     type="submit"
-                    className="bg-teal-500 text-slate-950 text-xs font-bold hover:bg-teal-400"
+                    className="bg-primary text-xs font-bold text-primary-foreground hover:bg-primary/85"
                   >
                     Simpan Pasien
                   </Button>

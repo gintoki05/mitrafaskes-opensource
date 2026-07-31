@@ -152,26 +152,26 @@ export default function RmePage() {
     <RouteGuard permission={AccessPermission.RME_READ}>
     <div className="space-y-8">
       {/* Header */}
-      <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
+      <div className="clinical-panel flex flex-col justify-between gap-4 p-6 md:flex-row md:items-center">
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-            <Stethoscope className="w-6 h-6 text-emerald-400" />
+          <h1 className="flex items-center gap-2 text-xl font-bold text-foreground">
+            <Stethoscope className="h-6 w-6 text-success" />
             Form Rekam Medis Elektronik (RME) Dokter
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
+          <p className="mt-1 text-xs text-muted-foreground">
             Input Anamnesis, Vital Signs, Diagnosis ICD-10, dan E-Resep Obat Pasien Rawat Jalan
           </p>
         </div>
 
         {/* Quick Shortcut Badge */}
-        <div className="flex items-center gap-2 text-xs font-mono text-teal-400 bg-teal-500/10 border border-teal-500/20 px-3 py-1.5 rounded-xl">
-          <Zap className="w-4 h-4 text-amber-400 animate-pulse" />
+        <div className="flex items-center gap-2 rounded-[var(--radius-card)] border border-primary/20 bg-primary/10 px-3 py-1.5 font-mono text-xs text-primary">
+          <Zap className="h-4 w-4 text-warning" />
           <span>Shortcut: <strong>Ctrl + Enter</strong> untuk Simpan</span>
         </div>
       </div>
 
       {successMsg && (
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold flex items-center gap-3">
+        <div className="clinical-status-success flex items-center gap-3 rounded-[var(--radius-card)] border p-4 text-xs font-semibold" role="status" aria-live="polite">
           <CheckCircle className="w-5 h-5 shrink-0" />
           <span>{successMsg}</span>
         </div>
@@ -180,9 +180,9 @@ export default function RmePage() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         {/* Left Column: Select Patient Queue */}
         <div className="space-y-4">
-          <Card className="bg-slate-900/90 border-slate-800">
+          <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+              <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Pilih Antrean Pasien
               </CardTitle>
             </CardHeader>
@@ -191,17 +191,18 @@ export default function RmePage() {
                 <button
                   key={e.id}
                   onClick={() => setSelectedEncounter(e)}
-                  className={`w-full p-3 rounded-xl border text-left transition-all flex items-center justify-between ${
+                  aria-pressed={selectedEncounter?.id === e.id}
+                  className={`flex w-full items-center justify-between rounded-[var(--radius-card)] border p-3 text-left transition-colors ${
                     selectedEncounter?.id === e.id
-                      ? 'bg-teal-500/10 border-teal-500/50 text-white shadow-md shadow-teal-500/10'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'
+                      ? 'border-primary/50 bg-primary/10 text-foreground shadow-sm'
+                      : 'border-border bg-background text-muted-foreground hover:bg-muted'
                   }`}
                 >
                   <div>
-                    <div className="text-xs font-bold text-white">{e.patient?.fullName}</div>
-                    <div className="text-[11px] font-mono text-slate-400">{e.patient?.medicalRecNo}</div>
+                    <div className="text-xs font-bold text-foreground">{e.patient?.fullName}</div>
+                    <div className="font-mono text-[11px] text-muted-foreground">{e.patient?.medicalRecNo}</div>
                   </div>
-                  <Badge className="bg-slate-800 text-teal-400 font-mono font-bold text-xs">
+                  <Badge className="bg-muted font-mono text-xs font-bold text-primary">
                     #{e.queueNumber}
                   </Badge>
                 </button>
@@ -215,29 +216,29 @@ export default function RmePage() {
           {selectedEncounter ? (
             <form onSubmit={handleSaveRme} className="space-y-6">
               {/* Patient Info Banner */}
-              <div className="bg-slate-900/90 border border-teal-500/20 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-panel)] border border-primary/20 bg-card p-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-teal-500/20 border border-teal-500/30 flex items-center justify-center text-teal-400">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-card)] border border-primary/30 bg-primary/10 text-primary">
                     <User className="w-5 h-5" />
                   </div>
                   <div>
-                    <div className="text-sm font-bold text-white">{selectedEncounter.patient?.fullName}</div>
-                    <div className="text-xs text-slate-400 flex gap-3 font-mono">
+                    <div className="text-sm font-bold text-foreground">{selectedEncounter.patient?.fullName}</div>
+                    <div className="flex gap-3 font-mono text-xs text-muted-foreground">
                       <span>No. RM: {selectedEncounter.patient?.medicalRecNo}</span>
                       <span>NIK: {selectedEncounter.patient?.nik}</span>
                     </div>
                   </div>
                 </div>
-                <Badge className="bg-teal-500/10 border-teal-500/30 text-teal-400 text-xs font-semibold">
+                <Badge className="border-primary/30 bg-primary/10 text-xs font-semibold text-primary">
                   Rawat Jalan - Poli Umum
                 </Badge>
               </div>
 
               {/* 1. Anamnesis */}
-              <Card className="bg-slate-900/90 border-slate-800">
+              <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-teal-400" />
+                  <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    <FileText className="h-4 w-4 text-primary" />
                     1. Anamnesis & Keluhan Utama
                   </CardTitle>
                 </CardHeader>
@@ -246,7 +247,7 @@ export default function RmePage() {
                     rows={3}
                     value={anamnesis}
                     onChange={e => setAnamnesis(e.target.value)}
-                    className="w-full p-3 rounded-xl bg-slate-950 border border-slate-700 text-white text-xs focus:outline-none focus:border-teal-500"
+                    className="clinical-field w-full p-3 text-xs"
                     placeholder="Input keluhan utama, riwayat penyakit, alergi obat..."
                     required
                   />
@@ -254,50 +255,50 @@ export default function RmePage() {
               </Card>
 
               {/* 2. Vital Signs */}
-              <Card className="bg-slate-900/90 border-slate-800">
+              <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
-                    <Activity className="w-4 h-4 text-emerald-400" />
+                  <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    <Activity className="h-4 w-4 text-success" />
                     2. Pemeriksaan Fisik & Vital Signs
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-400 mb-1">Sistolik (mmHg)</label>
+                      <label className="mb-1 block text-[11px] font-medium text-muted-foreground">Sistolik (mmHg)</label>
                       <Input
                         type="number"
                         value={systolic}
                         onChange={e => setSystolic(e.target.value)}
-                        className="bg-slate-950 border-slate-700 text-white text-xs font-mono"
+                        className="text-xs font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-400 mb-1">Diastolik (mmHg)</label>
+                      <label className="mb-1 block text-[11px] font-medium text-muted-foreground">Diastolik (mmHg)</label>
                       <Input
                         type="number"
                         value={diastolic}
                         onChange={e => setDiastolic(e.target.value)}
-                        className="bg-slate-950 border-slate-700 text-white text-xs font-mono"
+                        className="text-xs font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-400 mb-1">Suhu Tubuh (°C)</label>
+                      <label className="mb-1 block text-[11px] font-medium text-muted-foreground">Suhu Tubuh (°C)</label>
                       <Input
                         type="number"
                         step="0.1"
                         value={temperature}
                         onChange={e => setTemperature(e.target.value)}
-                        className="bg-slate-950 border-slate-700 text-white text-xs font-mono"
+                        className="text-xs font-mono"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-400 mb-1">Denyut Nadi (bpm)</label>
+                      <label className="mb-1 block text-[11px] font-medium text-muted-foreground">Denyut Nadi (bpm)</label>
                       <Input
                         type="number"
                         value={heartRate}
                         onChange={e => setHeartRate(e.target.value)}
-                        className="bg-slate-950 border-slate-700 text-white text-xs font-mono"
+                        className="text-xs font-mono"
                       />
                     </div>
                   </div>
@@ -305,16 +306,16 @@ export default function RmePage() {
               </Card>
 
               {/* 3. Diagnosis ICD-10 */}
-              <Card className="bg-slate-900/90 border-slate-800">
+              <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
-                    <Heart className="w-4 h-4 text-rose-400" />
+                  <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    <Heart className="h-4 w-4 text-destructive" />
                     3. Diagnosis ICD-10 (Persyaratan Kemenkes)
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="relative">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       type="text"
                       value={icdSearch}
@@ -323,42 +324,42 @@ export default function RmePage() {
                         searchIcd10(e.target.value);
                       }}
                       placeholder="Cari Kode atau Nama Penyakit ICD-10 (Contoh: J00, Diare, Hipertensi)..."
-                      className="pl-9 bg-slate-950 border-slate-700 text-white text-xs focus:border-teal-500"
+                      className="pl-9 text-xs"
                     />
                   </div>
 
                   {icdSearch && (
-                    <div className="max-h-48 overflow-y-auto bg-slate-950 border border-slate-700 rounded-xl divide-y divide-slate-800">
+                    <div className="max-h-48 divide-y divide-border overflow-y-auto rounded-[var(--radius-card)] border border-input bg-background">
                       {icdResults.map(icd => (
                         <button
                           key={icd.code}
                           type="button"
                           onClick={() => handleAddDiagnosis(icd)}
-                          className="w-full p-2.5 text-left hover:bg-slate-800 transition-colors flex items-center justify-between text-xs"
+                          className="flex w-full items-center justify-between p-2.5 text-left text-xs transition-colors hover:bg-muted"
                         >
                           <div>
-                            <strong className="text-teal-400 font-mono mr-2">{icd.code}</strong>
-                            <span className="text-slate-200">{icd.nameIndo}</span>
+                            <strong className="mr-2 font-mono text-primary">{icd.code}</strong>
+                            <span className="text-foreground">{icd.nameIndo}</span>
                           </div>
-                          <span className="text-[10px] text-slate-500 italic">{icd.nameEng}</span>
+                          <span className="text-[10px] italic text-muted-foreground">{icd.nameEng}</span>
                         </button>
                       ))}
                     </div>
                   )}
 
                   <div className="space-y-2">
-                    <label className="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    <label className="block text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                       Diagnosis Terpilih:
                     </label>
                     {selectedDiagnoses.map((d) => (
-                      <div key={d.icd10Code} className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between gap-3">
+                      <div key={d.icd10Code} className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-background p-3">
                         <div className="flex items-center gap-2">
-                          <Badge className="bg-teal-500/20 text-teal-400 font-mono text-xs font-bold">
+                          <Badge className="bg-primary/10 font-mono text-xs font-bold text-primary">
                             {d.icd10Code}
                           </Badge>
-                          <span className="text-xs text-white font-medium">{d.nameIndo}</span>
+                          <span className="text-xs font-medium text-foreground">{d.nameIndo}</span>
                           {d.isPrimary && (
-                            <Badge className="bg-emerald-500/10 text-emerald-400 text-[10px] font-bold">
+                            <Badge className="clinical-status-success border text-[10px] font-bold">
                               UTAMA
                             </Badge>
                           )}
@@ -368,7 +369,7 @@ export default function RmePage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveDiagnosis(d.icd10Code)}
-                          className="p-1 text-slate-400 hover:text-rose-400"
+                          className="p-1 text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
@@ -379,10 +380,10 @@ export default function RmePage() {
               </Card>
 
               {/* 4. Resep Obat & One-Click Bundles */}
-              <Card className="bg-slate-900/90 border-slate-800">
+              <Card>
                 <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
-                    <Thermometer className="w-4 h-4 text-amber-400" />
+                  <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
+                    <Thermometer className="h-4 w-4 text-warning" />
                     4. Resep Obat (KFA)
                   </CardTitle>
                   <Button
@@ -390,7 +391,7 @@ export default function RmePage() {
                     variant="secondary"
                     size="sm"
                     onClick={handleAddPrescription}
-                    className="text-teal-400 border border-teal-500/20 text-xs font-semibold"
+                    className="border-primary/20 text-xs font-semibold text-primary"
                   >
                     <Plus className="w-3.5 h-3.5 mr-1" /> Tambah Obat
                   </Button>
@@ -398,21 +399,21 @@ export default function RmePage() {
                 <CardContent className="space-y-4">
                   {/* Preset Bundles */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] text-slate-400 font-semibold uppercase">Preset Cepat Dokter:</span>
-                    <Button type="button" size="sm" variant="outline" onClick={() => applyPresetBundle('ISPA')} className="text-[11px] text-teal-300 border-teal-500/30">
+                    <span className="text-[11px] font-semibold uppercase text-muted-foreground">Preset Cepat Dokter:</span>
+                    <Button type="button" size="sm" variant="outline" onClick={() => applyPresetBundle('ISPA')} className="border-primary/30 text-[11px] text-primary">
                       ⚡ Paket ISPA / Flu
                     </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => applyPresetBundle('GASTRITIS')} className="text-[11px] text-amber-300 border-amber-500/30">
+                    <Button type="button" size="sm" variant="outline" onClick={() => applyPresetBundle('GASTRITIS')} className="border-warning/30 text-[11px] text-warning">
                       ⚡ Paket Gastritis / Maag
                     </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => applyPresetBundle('HYPERTENSION')} className="text-[11px] text-rose-300 border-rose-500/30">
+                    <Button type="button" size="sm" variant="outline" onClick={() => applyPresetBundle('HYPERTENSION')} className="border-destructive/30 text-[11px] text-destructive">
                       ⚡ Paket Hipertensi
                     </Button>
                   </div>
 
                   <div className="space-y-3">
                     {prescriptions.map((p, idx) => (
-                      <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-3 p-3 rounded-xl bg-slate-950 border border-slate-800">
+                      <div key={idx} className="grid grid-cols-1 gap-3 rounded-[var(--radius-card)] border border-border bg-background p-3 sm:grid-cols-4">
                         <div className="sm:col-span-2">
                           <Input
                             type="text"
@@ -423,7 +424,7 @@ export default function RmePage() {
                               setPrescriptions(newRx);
                             }}
                             placeholder="Nama Obat (Contoh: Paracetamol 500mg)"
-                            className="bg-slate-900 border-slate-700 text-white text-xs"
+                            className="text-xs"
                           />
                         </div>
                         <div>
@@ -436,7 +437,7 @@ export default function RmePage() {
                               setPrescriptions(newRx);
                             }}
                             placeholder="Aturan Pakai (Contoh: 3x Sehari)"
-                            className="bg-slate-900 border-slate-700 text-white text-xs"
+                            className="text-xs"
                           />
                         </div>
                         <div>
@@ -449,7 +450,7 @@ export default function RmePage() {
                               setPrescriptions(newRx);
                             }}
                             placeholder="Jumlah"
-                            className="bg-slate-900 border-slate-700 text-white text-xs font-mono"
+                            className="text-xs font-mono"
                           />
                         </div>
                       </div>
@@ -463,14 +464,14 @@ export default function RmePage() {
                 id="btn-save-rme"
                 type="submit"
                 disabled={saving}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold text-sm shadow-xl shadow-teal-500/20 transition-all"
+                className="w-full rounded-[var(--radius-panel)] bg-primary py-4 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/85"
               >
                 <CheckCircle className="w-5 h-5 mr-2 stroke-[2.5]" />
                 {saving ? 'Menyimpan & Mensinkronkan...' : 'Simpan Rekam Medis (RME) & Sinkronkan ke SATUSEHAT'}
               </Button>
             </form>
           ) : (
-            <Card className="bg-slate-900/90 border-slate-800 p-12 text-center text-slate-400">
+            <Card className="p-12 text-center text-muted-foreground">
               Pilih antrean pasien di sebelah kiri untuk mulai menginput Rekam Medis.
             </Card>
           )}

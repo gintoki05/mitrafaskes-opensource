@@ -24,18 +24,18 @@ export function Navbar() {
   if (pathname === '/login') return null;
 
   return (
-    <nav className="border-b border-slate-800/80 bg-slate-950/90 backdrop-blur-xl sticky top-0 z-50">
+    <nav className="sticky top-0 z-50 border-b border-border/90 bg-card/95 shadow-sm backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-teal-500/20">
-              <Activity className="w-6 h-6 text-slate-950 stroke-[2.5]" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-card)] bg-primary shadow-sm shadow-primary/20">
+              <Activity className="h-6 w-6 text-primary-foreground stroke-[2.5]" />
             </div>
             <div>
-              <span className="text-lg font-bold bg-gradient-to-r from-teal-400 via-emerald-400 to-teal-300 bg-clip-text text-transparent">
+              <span className="text-lg font-bold text-foreground">
                 Mitra Faskes
               </span>
-              <span className="block text-[10px] tracking-wider text-teal-400 font-semibold uppercase">
+              <span className="block text-[10px] font-semibold uppercase tracking-wider text-primary">
                 Clinical RME & SATUSEHAT
               </span>
             </div>
@@ -46,8 +46,8 @@ export function Navbar() {
               href="/pendaftaran"
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 pathname === '/pendaftaran'
-                  ? 'bg-teal-500/10 text-teal-400 border border-teal-500/30 shadow-md shadow-teal-500/10'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  ? 'border border-primary/30 bg-primary/10 text-primary shadow-sm'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
               <UserCheck className="w-4 h-4" />
@@ -58,8 +58,8 @@ export function Navbar() {
               href="/rme"
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 pathname === '/rme'
-                  ? 'bg-teal-500/10 text-teal-400 border border-teal-500/30 shadow-md shadow-teal-500/10'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  ? 'border border-primary/30 bg-primary/10 text-primary shadow-sm'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
               <Stethoscope className="w-4 h-4" />
@@ -70,8 +70,8 @@ export function Navbar() {
               href="/satusehat"
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 pathname === '/satusehat'
-                  ? 'bg-teal-500/10 text-teal-400 border border-teal-500/30 shadow-md shadow-teal-500/10'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-800/60'
+                  ? 'border border-primary/30 bg-primary/10 text-primary shadow-sm'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
               <RefreshCw className="w-4 h-4" />
@@ -83,15 +83,15 @@ export function Navbar() {
             {user ? (
               <div className="flex items-center gap-3">
                 <div className="text-right hidden sm:block">
-                  <div className="text-xs font-bold text-slate-200">{user.fullName}</div>
-                  <div className="text-[10px] text-teal-400 flex items-center justify-end gap-1 font-semibold uppercase">
+                  <div className="text-xs font-bold text-foreground">{user.fullName}</div>
+                  <div className="flex items-center justify-end gap-1 text-[10px] font-semibold uppercase text-primary">
                     <ShieldCheck className="w-3 h-3" />
                     {ROLE_LABELS[user.role]}
                   </div>
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                  className="rounded-[var(--radius-control)] p-2 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                   title="Keluar"
                 >
                   <LogOut className="w-5 h-5" />
@@ -100,7 +100,7 @@ export function Navbar() {
             ) : (
               <Link
                 href="/login"
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-teal-500/20"
+                className="rounded-[var(--radius-control)] bg-primary px-4 py-2 text-xs font-bold text-primary-foreground shadow-sm shadow-primary/20 transition-colors hover:bg-primary/85"
               >
                 Masuk
               </Link>
