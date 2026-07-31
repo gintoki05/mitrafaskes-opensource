@@ -1,8 +1,8 @@
 export enum EncounterStatus {
-  WAITING = 'WAITING',
-  IN_PROGRESS = 'IN_PROGRESS',
-  COMPLETED = 'COMPLETED',
-  CANCELLED = 'CANCELLED',
+  WAITING = "WAITING",
+  IN_PROGRESS = "IN_PROGRESS",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
 }
 
 export interface Encounter {
@@ -14,7 +14,7 @@ export interface Encounter {
   satusehatEncounterId?: string;
   createdAt: string;
   patient?: {
-    nik: string;
+    nik?: string;
     fullName: string;
     medicalRecNo: string;
   };

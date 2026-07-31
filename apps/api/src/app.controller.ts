@@ -22,10 +22,13 @@ import {
   AuthenticatedUser,
   SessionPermissionGuard,
 } from './auth/session-permission.guard';
+import { PatientsService } from './patients/patients.service';
 
 @Controller('api')
 @UseGuards(SessionPermissionGuard)
 export class AppController {
+  constructor(private readonly patients: PatientsService) {}
+
   @Get()
   @ApiTags('General')
   @Public()
@@ -74,43 +77,14 @@ export class AppController {
   @ApiTags('Patients')
   @RequirePermission(AccessPermission.PATIENT_READ)
   getPatients(@Query('search') search?: string) {
-    let results = MemoryStore.patients;
-    if (search) {
-      const query = String(search).toLowerCase();
-      results = results.filter(
-        (p) =>
-          p.nik.includes(query) ||
-          p.fullName.toLowerCase().includes(query) ||
-          p.medicalRecNo.toLowerCase().includes(query),
-      );
-    }
-    return results;
+    return this.patients.findMany(search);
   }
 
   @Post('patients')
   @ApiTags('Patients')
   @RequirePermission(AccessPermission.PATIENT_WRITE)
   createPatient(@Body() body: any) {
-    const { nik, fullName, birthDate, gender, address, phone } = body;
-    if (!nik || !fullName) {
-      throw new BadRequestException('NIK dan Nama Lengkap wajib diisi');
-    }
-
-    const newPatient = {
-      id: `pat-${Date.now()}`,
-      nik,
-      fullName,
-      birthDate,
-      gender,
-      address,
-      phone,
-      medicalRecNo: `RM-2026-${String(MemoryStore.patients.length + 1).padStart(4, '0')}`,
-      satusehatId: `P${Math.floor(10000000 + Math.random() * 90000000)}-ID`,
-      createdAt: new Date().toISOString(),
-    };
-
-    MemoryStore.patients.unshift(newPatient);
-    return newPatient;
+    return this.patients.create(body);
   }
 
   // 3. Encounter & Antrean Endpoints
@@ -124,9 +98,9 @@ export class AppController {
   @Post('encounters')
   @ApiTags('Encounters')
   @RequirePermission(AccessPermission.QUEUE_CREATE)
-  createEncounter(@Body() body: any) {
+  async createEncounter(@Body() body: any) {
     const { patientId, doctorId } = body;
-    const patient = MemoryStore.patients.find((p) => p.id === patientId);
+    const patient = await this.patients.findById(patientId);
     if (!patient) {
       throw new NotFoundException('Pasien tidak ditemukan');
     }
@@ -224,7 +198,7 @@ export class AppController {
   @Post('rme')
   @ApiTags('Medical Records')
   @RequirePermission(AccessPermission.RME_FINALIZE)
-  saveRme(@Body() body: any) {
+  async saveRme(@Body() body: any) {
     const {
       encounterId,
       anamnesis,
@@ -289,9 +263,7 @@ export class AppController {
     MemoryStore.medicalRecords[encounterId] = medicalRecord;
     encounter.status = 'COMPLETED';
 
-    const patient = MemoryStore.patients.find(
-      (p) => p.id === encounter.patientId,
-    );
+    const patient = await this.patients.findById(encounter.patientId);
     if (patient) {
       formattedDiagnoses.forEach((diag: any) => {
         const conditionPayload = SatusehatFhirTransformer.transformCondition({

@@ -24,12 +24,14 @@ export interface Session {
   user: SessionUser;
 }
 
+let sessionSnapshot: Session | null = null;
+let hasLoadedSessionSnapshot = false;
+
 function isUserRole(role: unknown): role is UserRole {
   return Object.values(UserRole).includes(role as UserRole);
 }
 
-export function getSession(): Session | null {
-  if (typeof window === 'undefined') return null;
+function readSession(): Session | null {
   const accessToken = localStorage.getItem(TOKEN_KEY);
   const rawUser = localStorage.getItem(USER_KEY);
   if (!accessToken || !rawUser) return null;
@@ -44,15 +46,33 @@ export function getSession(): Session | null {
   }
 }
 
+function refreshSessionSnapshot(): void {
+  if (typeof window === 'undefined') return;
+  sessionSnapshot = readSession();
+  hasLoadedSessionSnapshot = true;
+}
+
+export function getSession(): Session | null {
+  if (typeof window !== 'undefined' && !hasLoadedSessionSnapshot) {
+    refreshSessionSnapshot();
+  }
+
+  return sessionSnapshot;
+}
+
 export function saveSession(accessToken: string, user: SessionUser): void {
   localStorage.setItem(TOKEN_KEY, accessToken);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  sessionSnapshot = { accessToken, user };
+  hasLoadedSessionSnapshot = true;
   notifySessionChange();
 }
 
 export function clearSession(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  sessionSnapshot = null;
+  hasLoadedSessionSnapshot = true;
   notifySessionChange();
 }
 
@@ -63,15 +83,20 @@ function notifySessionChange(): void {
 export function subscribeToSession(onStoreChange: () => void): () => void {
   const handleStorageChange = (event: StorageEvent) => {
     if (event.key === TOKEN_KEY || event.key === USER_KEY || event.key === null) {
+      refreshSessionSnapshot();
       onStoreChange();
     }
   };
 
-  window.addEventListener(SESSION_CHANGE_EVENT, onStoreChange);
+  const handleSessionChange = () => {
+    onStoreChange();
+  };
+
+  window.addEventListener(SESSION_CHANGE_EVENT, handleSessionChange);
   window.addEventListener('storage', handleStorageChange);
 
   return () => {
-    window.removeEventListener(SESSION_CHANGE_EVENT, onStoreChange);
+    window.removeEventListener(SESSION_CHANGE_EVENT, handleSessionChange);
     window.removeEventListener('storage', handleStorageChange);
   };
 }

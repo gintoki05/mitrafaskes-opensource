@@ -46,14 +46,14 @@ model User {
 
 model Patient {
   id           String      @id @default(uuid())
-  nik          String      @unique
-  fullName     String
-  birthDate    DateTime
+  nik          String?     @unique @db.VarChar(16)
+  fullName     String      @db.VarChar(150)
+  birthDate    DateTime    @db.Date
   gender       Gender
-  address      String?
-  phone        String?
-  medicalRecNo String      @unique
-  satusehatId  String?
+  address      String?     @db.VarChar(500)
+  phone        String?     @db.VarChar(16)
+  medicalRecNo String      @unique @db.VarChar(32)
+  satusehatId  String?     @db.VarChar(64)
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
   encounters   Encounter[]
