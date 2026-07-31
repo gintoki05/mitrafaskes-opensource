@@ -6,6 +6,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { AccessPermission } from '@mitrafaskes/shared';
+import { RouteGuard } from '@/components/RouteGuard';
+import { apiFetch } from '@/lib/auth';
 
 export default function RmePage() {
   const [encounters, setEncounters] = useState<any[]>([]);
@@ -36,7 +39,7 @@ export default function RmePage() {
 
   const fetchEncounters = async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/encounters');
+      const res = await apiFetch('http://localhost:4000/api/encounters');
       const data = await res.json();
       setEncounters(data);
       if (data.length > 0 && !selectedEncounter) {
@@ -49,7 +52,7 @@ export default function RmePage() {
 
   const searchIcd10 = async (q: string) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/master/icd10?q=${encodeURIComponent(q)}`);
+      const res = await apiFetch(`http://localhost:4000/api/master/icd10?q=${encodeURIComponent(q)}`);
       const data = await res.json();
       setIcdResults(data);
     } catch (e) {
@@ -119,7 +122,7 @@ export default function RmePage() {
     setSuccessMsg('');
 
     try {
-      const res = await fetch('http://localhost:4000/api/rme', {
+      const res = await apiFetch('http://localhost:4000/api/rme', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -146,6 +149,7 @@ export default function RmePage() {
   };
 
   return (
+    <RouteGuard permission={AccessPermission.RME_READ}>
     <div className="space-y-8">
       {/* Header */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
@@ -473,5 +477,6 @@ export default function RmePage() {
         </div>
       </div>
     </div>
+    </RouteGuard>
   );
 }

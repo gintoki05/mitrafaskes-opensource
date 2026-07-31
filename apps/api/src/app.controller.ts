@@ -1,17 +1,23 @@
-import { Controller, Get, Post, Patch, Body, Param, Query, UnauthorizedException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, Query, UnauthorizedException, NotFoundException, BadRequestException, ForbiddenException, Req, UseGuards } from '@nestjs/common';
 import { MemoryStore, INITIAL_ICD10 } from './store/memory-store';
 import { SatusehatFhirTransformer } from './satusehat/fhir-transformer';
+import { AccessPermission, evaluateAccess } from '@mitrafaskes/shared';
+import { Public, RequirePermission } from './auth/access-control.decorator';
+import { AuthenticatedUser, SessionPermissionGuard } from './auth/session-permission.guard';
 
 @Controller('api')
+@UseGuards(SessionPermissionGuard)
 export class AppController {
 
   @Get()
+  @Public()
   getHello(): string {
     return 'Mitra Faskes NestJS API Server Ready';
   }
 
   // 1. Auth Endpoint
   @Post('auth/login')
+  @Public()
   login(@Body() body: any) {
     const { username } = body;
     if (username === 'admin' || username === 'dr_budi' || username === 'perawat_ani') {
@@ -38,6 +44,7 @@ export class AppController {
 
   // 2. Patient Registry Endpoints
   @Get('patients')
+  @RequirePermission(AccessPermission.PATIENT_READ)
   getPatients(@Query('search') search?: string) {
     let results = MemoryStore.patients;
     if (search) {
@@ -50,6 +57,7 @@ export class AppController {
   }
 
   @Post('patients')
+  @RequirePermission(AccessPermission.PATIENT_WRITE)
   createPatient(@Body() body: any) {
     const { nik, fullName, birthDate, gender, address, phone } = body;
     if (!nik || !fullName) {
@@ -75,11 +83,13 @@ export class AppController {
 
   // 3. Encounter & Antrean Endpoints
   @Get('encounters')
+  @RequirePermission(AccessPermission.QUEUE_READ)
   getEncounters() {
     return MemoryStore.encounters;
   }
 
   @Post('encounters')
+  @RequirePermission(AccessPermission.QUEUE_CREATE)
   createEncounter(@Body() body: any) {
     const { patientId, doctorId } = body;
     const patient = MemoryStore.patients.find(p => p.id === patientId);
@@ -128,7 +138,17 @@ export class AppController {
   }
 
   @Patch('encounters/:id/status')
-  updateEncounterStatus(@Param('id') id: string, @Body('status') status: any) {
+  @RequirePermission(AccessPermission.QUEUE_READ)
+  updateEncounterStatus(@Param('id') id: string, @Body('status') status: any, @Req() request: { user: AuthenticatedUser }) {
+    const permissionByStatus: Record<string, AccessPermission> = {
+      IN_PROGRESS: AccessPermission.QUEUE_START,
+      CANCELLED: AccessPermission.QUEUE_CANCEL,
+    };
+    const requiredPermission = permissionByStatus[status];
+    if (!requiredPermission) {
+      throw new BadRequestException('Status antrean tidak dapat diubah melalui endpoint ini');
+    }
+    this.ensurePermission(request.user, requiredPermission);
     const encounter = MemoryStore.encounters.find(e => e.id === id);
     if (!encounter) {
       throw new NotFoundException('Antrean tidak ditemukan');
@@ -139,6 +159,7 @@ export class AppController {
 
   // 4. Master ICD-10 Search
   @Get('master/icd10')
+  @RequirePermission(AccessPermission.RME_READ)
   getIcd10(@Query('q') q?: string) {
     if (!q) return INITIAL_ICD10;
     const query = String(q).toLowerCase();
@@ -152,11 +173,13 @@ export class AppController {
 
   // 5. RME Dokter Endpoints
   @Get('rme/encounter/:encounterId')
+  @RequirePermission(AccessPermission.RME_READ)
   getRme(@Param('encounterId') encounterId: string) {
     return MemoryStore.medicalRecords[encounterId] || null;
   }
 
   @Post('rme')
+  @RequirePermission(AccessPermission.RME_FINALIZE)
   saveRme(@Body() body: any) {
     const { encounterId, anamnesis, systolic, diastolic, heartRate, temperature, weight, height, diagnoses, prescriptions } = body;
     const encounter = MemoryStore.encounters.find(e => e.id === encounterId);
@@ -255,11 +278,16 @@ export class AppController {
 
   // 6. SATUSEHAT Logs & Sync Retry
   @Get('satusehat/logs')
-  getSatusehatLogs() {
-    return MemoryStore.syncLogs;
+  @RequirePermission(AccessPermission.SYNC_STATUS_READ)
+  getSatusehatLogs(@Req() request: { user: AuthenticatedUser }) {
+    if (this.can(request.user, AccessPermission.SYNC_PAYLOAD_READ)) {
+      return MemoryStore.syncLogs;
+    }
+    return MemoryStore.syncLogs.map(({ payload, ...log }) => log);
   }
 
   @Post('satusehat/sync/:logId/retry')
+  @RequirePermission(AccessPermission.SYNC_RETRY)
   retrySync(@Param('logId') logId: string) {
     const log = MemoryStore.syncLogs.find(l => l.id === logId);
     if (!log) {
@@ -270,5 +298,19 @@ export class AppController {
     log.errorMessage = undefined;
     log.updatedAt = new Date().toISOString();
     return { message: 'Sinkronisasi Ulang ke SATUSEHAT Kemenkes Berhasil', log };
+  }
+
+  private can(user: AuthenticatedUser, permission: AccessPermission): boolean {
+    return evaluateAccess(user.role, permission).allowed;
+  }
+
+  private ensurePermission(user: AuthenticatedUser, permission: AccessPermission): void {
+    const decision = evaluateAccess(user.role, permission);
+    if (!decision.allowed) {
+      throw new ForbiddenException({
+        code: 'FORBIDDEN',
+        message: 'Peran Anda tidak memiliki izin untuk tindakan ini',
+      });
+    }
   }
 }

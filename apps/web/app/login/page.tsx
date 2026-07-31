@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Activity, UserCheck, Stethoscope, Lock } from 'lucide-react';
+import { defaultRoute, getSession, saveSession } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,6 +11,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('dok123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const session = getSession();
+    if (session) router.replace(defaultRoute(session.user));
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,14 +35,8 @@ export default function LoginPage() {
       }
 
       const data = await res.json();
-      localStorage.setItem('mitrafaskes_token', data.accessToken);
-      localStorage.setItem('mitrafaskes_user', JSON.stringify(data.user));
-
-      if (data.user.role === 'ADMIN' || data.user.role === 'PERAWAT') {
-        router.push('/pendaftaran');
-      } else {
-        router.push('/rme');
-      }
+      saveSession(data.accessToken, data.user);
+      router.replace(defaultRoute(data.user));
     } catch (err: any) {
       setError(err.message);
     } finally {

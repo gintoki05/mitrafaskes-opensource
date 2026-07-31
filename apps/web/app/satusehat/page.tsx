@@ -5,15 +5,20 @@ import { RefreshCw, CheckCircle2, AlertTriangle, Clock, Code } from 'lucide-reac
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { AccessPermission } from '@mitrafaskes/shared';
+import { RouteGuard } from '@/components/RouteGuard';
+import { apiFetch, can, getSession } from '@/lib/auth';
 
 export default function SatusehatPage() {
   const [logs, setLogs] = useState<any[]>([]);
   const [selectedLog, setSelectedLog] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
+  const canReadPayload = can(getSession()?.user ?? null, AccessPermission.SYNC_PAYLOAD_READ);
+  const canRetry = can(getSession()?.user ?? null, AccessPermission.SYNC_RETRY);
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/satusehat/logs');
+      const res = await apiFetch('http://localhost:4000/api/satusehat/logs');
       const data = await res.json();
       setLogs(data);
       if (data.length > 0 && !selectedLog) {
@@ -31,7 +36,7 @@ export default function SatusehatPage() {
   const handleRetrySync = async (logId: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:4000/api/satusehat/sync/${logId}/retry`, {
+      const res = await apiFetch(`http://localhost:4000/api/satusehat/sync/${logId}/retry`, {
         method: 'POST',
       });
       if (res.ok) {
@@ -45,6 +50,7 @@ export default function SatusehatPage() {
   };
 
   return (
+    <RouteGuard permission={AccessPermission.SYNC_STATUS_READ}>
     <div className="space-y-8">
       {/* Header Banner */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl">
@@ -128,7 +134,7 @@ export default function SatusehatPage() {
                       )}
                     </Badge>
 
-                    {log.status !== 'SUCCESS' && (
+                    {canRetry && log.status !== 'SUCCESS' && (
                       <Button
                         size="sm"
                         onClick={(e: React.MouseEvent) => {
@@ -149,7 +155,7 @@ export default function SatusehatPage() {
         </div>
 
         {/* Right Column: FHIR Payload Inspector */}
-        <div className="space-y-4">
+        {canReadPayload && <div className="space-y-4">
           <Card className="bg-slate-900/90 border-slate-800">
             <CardHeader>
               <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
@@ -178,8 +184,9 @@ export default function SatusehatPage() {
               )}
             </CardContent>
           </Card>
-        </div>
+        </div>}
       </div>
     </div>
+    </RouteGuard>
   );
 }

@@ -1,6 +1,10 @@
 export enum UserRole {
   ADMIN = 'ADMIN',
   DOKTER = 'DOKTER',
+  /**
+   * Legacy persisted value for the phase-one registration officer role.
+   * The product-facing label is "Petugas pendaftaran".
+   */
   PERAWAT = 'PERAWAT',
 }
 

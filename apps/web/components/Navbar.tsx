@@ -4,25 +4,21 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Activity, UserCheck, Stethoscope, RefreshCw, LogOut, ShieldCheck } from 'lucide-react';
+import { AccessPermission, ROLE_LABELS } from '@mitrafaskes/shared';
+import { can, clearSession, getSession, SessionUser } from '@/lib/auth';
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<{ fullName: string; role: string } | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem('mitrafaskes_user');
-    if (stored) {
-      try {
-        setUser(JSON.parse(stored));
-      } catch (e) {}
-    }
+    setUser(getSession()?.user ?? null);
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem('mitrafaskes_user');
-    localStorage.removeItem('mitrafaskes_token');
-    router.push('/login');
+    clearSession();
+    router.replace('/login');
   };
 
   if (pathname === '/login') return null;
@@ -46,7 +42,7 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-1.5">
-            <Link
+            {can(user, AccessPermission.QUEUE_READ) && <Link
               href="/pendaftaran"
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 pathname === '/pendaftaran'
@@ -56,9 +52,9 @@ export function Navbar() {
             >
               <UserCheck className="w-4 h-4" />
               Pendaftaran & Antrean
-            </Link>
+            </Link>}
 
-            <Link
+            {can(user, AccessPermission.RME_READ) && <Link
               href="/rme"
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 pathname === '/rme'
@@ -68,9 +64,9 @@ export function Navbar() {
             >
               <Stethoscope className="w-4 h-4" />
               RME Dokter
-            </Link>
+            </Link>}
 
-            <Link
+            {can(user, AccessPermission.SYNC_STATUS_READ) && <Link
               href="/satusehat"
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                 pathname === '/satusehat'
@@ -80,7 +76,7 @@ export function Navbar() {
             >
               <RefreshCw className="w-4 h-4" />
               SATUSEHAT Sync
-            </Link>
+            </Link>}
           </div>
 
           <div className="flex items-center gap-3">
@@ -90,7 +86,7 @@ export function Navbar() {
                   <div className="text-xs font-bold text-slate-200">{user.fullName}</div>
                   <div className="text-[10px] text-teal-400 flex items-center justify-end gap-1 font-semibold uppercase">
                     <ShieldCheck className="w-3 h-3" />
-                    {user.role}
+                    {ROLE_LABELS[user.role]}
                   </div>
                 </div>
                 <button

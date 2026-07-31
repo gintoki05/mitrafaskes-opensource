@@ -6,6 +6,9 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { AccessPermission } from '@mitrafaskes/shared';
+import { RouteGuard } from '@/components/RouteGuard';
+import { apiFetch, can, getSession } from '@/lib/auth';
 
 export default function PendaftaranPage() {
   const [patients, setPatients] = useState<any[]>([]);
@@ -20,10 +23,13 @@ export default function PendaftaranPage() {
   const [gender, setGender] = useState('MALE');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
+  const currentUser = getSession()?.user ?? null;
+  const canWritePatient = can(currentUser, AccessPermission.PATIENT_WRITE);
+  const canCreateQueue = can(currentUser, AccessPermission.QUEUE_CREATE);
 
   const fetchPatients = async (query = '') => {
     try {
-      const res = await fetch(`http://localhost:4000/api/patients?search=${encodeURIComponent(query)}`);
+      const res = await apiFetch(`http://localhost:4000/api/patients?search=${encodeURIComponent(query)}`);
       const data = await res.json();
       setPatients(data);
     } catch (e) {
@@ -33,7 +39,7 @@ export default function PendaftaranPage() {
 
   const fetchEncounters = async () => {
     try {
-      const res = await fetch('http://localhost:4000/api/encounters');
+      const res = await apiFetch('http://localhost:4000/api/encounters');
       const data = await res.json();
       setEncounters(data);
     } catch (e) {
@@ -54,7 +60,7 @@ export default function PendaftaranPage() {
   const handleCreatePatient = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:4000/api/patients', {
+      const res = await apiFetch('http://localhost:4000/api/patients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ nik, fullName, birthDate, gender, address, phone }),
@@ -72,7 +78,7 @@ export default function PendaftaranPage() {
 
   const handleDaftarAntrean = async (patientId: string) => {
     try {
-      const res = await fetch('http://localhost:4000/api/encounters', {
+      const res = await apiFetch('http://localhost:4000/api/encounters', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ patientId, doctorId: 'doc-001' }),
@@ -86,6 +92,7 @@ export default function PendaftaranPage() {
   };
 
   return (
+    <RouteGuard permission={AccessPermission.QUEUE_READ}>
     <div className="space-y-8">
       {/* Header Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl">
@@ -98,13 +105,13 @@ export default function PendaftaranPage() {
             Pencarian Master Pasien, Pendaftaran NIK SATUSEHAT, dan Penjadwalan Antrean Dokter
           </p>
         </div>
-        <Button
+        {canWritePatient && <Button
           onClick={() => setShowModal(true)}
           className="bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-400 hover:to-emerald-400 text-slate-950 font-bold text-xs shadow-lg shadow-teal-500/20"
         >
           <UserPlus className="w-4 h-4 stroke-[2.5] mr-1.5" />
           Daftar Pasien Baru
-        </Button>
+        </Button>}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -157,13 +164,13 @@ export default function PendaftaranPage() {
                       )}
                     </div>
                   </div>
-                  <Button
+                  {canCreateQueue && <Button
                     onClick={() => handleDaftarAntrean(p.id)}
                     size="sm"
                     className="bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 border border-teal-500/30 text-xs font-semibold shrink-0"
                   >
                     + Masuk Antrean
-                  </Button>
+                  </Button>}
                 </div>
               ))}
             </div>
@@ -307,5 +314,6 @@ export default function PendaftaranPage() {
         </div>
       )}
     </div>
+    </RouteGuard>
   );
 }
