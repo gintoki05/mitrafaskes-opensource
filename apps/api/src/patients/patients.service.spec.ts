@@ -34,4 +34,37 @@ describe('PatientsService', () => {
       expect.objectContaining({ nik: '3171012304900003' }),
     );
   });
+
+  it('maps a primary identifier constraint to an explicit conflict response', async () => {
+    const repository = {
+      create: jest
+        .fn()
+        .mockRejectedValue(
+          new PatientIdentityConflictError('primaryIdentifier'),
+        ),
+    } as unknown as PatientRepository;
+    const service = new PatientsService(repository);
+
+    await expect(
+      service.create({
+        fullName: 'Nadia Tanpa NIK',
+        birthDate: '1988-11-02',
+        gender: 'FEMALE',
+        identifiers: [
+          {
+            type: 'PASSPORT',
+            system: 'urn:id:passport:id',
+            value: 'A123',
+            isPrimary: true,
+          },
+        ],
+      }),
+    ).rejects.toMatchObject<Partial<ConflictException>>({
+      response: {
+        code: 'PRIMARY_IDENTIFIER_CONFLICT',
+        field: 'identifiers',
+      },
+      status: 409,
+    });
+  });
 });

@@ -18,6 +18,66 @@ enum Gender {
   FEMALE
 }
 
+enum PatientIdentifierType {
+  NIK
+  MOTHER_NIK
+  PASSPORT
+  FAMILY_CARD
+  OTHER
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum PatientNameUse {
+  OFFICIAL
+  PREFERRED
+  ALIAS
+  OLD
+}
+
+enum TelecomSystem {
+  PHONE
+  EMAIL
+  FAX
+  OTHER
+}
+
+enum TelecomUse {
+  MOBILE
+  HOME
+  WORK
+  TEMP
+  OTHER
+}
+
+enum AddressUse {
+  HOME
+  WORK
+  TEMP
+  OLD
+  OTHER
+}
+
+enum AddressType {
+  PHYSICAL
+  POSTAL
+  BOTH
+}
+
+enum PatientRelationshipCode {
+  MOTHER
+  FATHER
+  CHILD
+  GUARDIAN
+  CAREGIVER
+  OTHER
+}
+
 enum EncounterStatus {
   WAITING
   IN_PROGRESS
@@ -45,18 +105,153 @@ model User {
 }
 
 model Patient {
+  id                 String                @id @default(uuid())
+  nik                String?               @unique @db.VarChar(16)
+  fullName           String                @db.VarChar(150)
+  birthDate          DateTime              @db.Date
+  gender             Gender
+  address            String?               @db.VarChar(500)
+  phone              String?               @db.VarChar(16)
+  medicalRecNo       String                @unique @db.VarChar(32)
+  satusehatId        String?               @db.VarChar(64)
+  active             Boolean               @default(true)
+  birthPlaceText     String?               @db.VarChar(255)
+  multipleBirthOrder Int?
+  deceasedAt         DateTime?
+  maritalStatusCode  String?               @db.VarChar(32)
+  citizenshipCode    String?               @db.VarChar(3)
+  version            Int                   @default(1)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  identifiers        PatientIdentifier[]
+  names              PatientName[]
+  telecoms           PatientTelecom[]
+  addresses          PatientAddress[]
+  relationshipsFrom  PatientRelationship[] @relation("PatientRelationshipSubject")
+  relationshipsTo    PatientRelationship[] @relation("PatientRelationshipTarget")
+  encounters         Encounter[]
+}
+
+model PatientIdentifier {
+  id                 String                @id @default(uuid())
+  patientId          String
+  type               PatientIdentifierType
+  system             String                @db.VarChar(255)
+  value              String                @db.VarChar(255)
+  normalizedValue    String                @db.VarChar(255)
+  verificationStatus VerificationStatus    @default(UNVERIFIED)
+  isPrimary          Boolean               @default(false)
+  active             Boolean               @default(true)
+  issuer             String?               @db.VarChar(255)
+  validFrom          DateTime?
+  validTo            DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  patient            Patient               @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, type])
+  @@index([system, normalizedValue])
+}
+
+model PatientName {
+  id        String         @id @default(uuid())
+  patientId String
+  use       PatientNameUse
+  text      String         @db.VarChar(255)
+  given     String[]       @default([])
+  family    String?        @db.VarChar(150)
+  prefix    String[]       @default([])
+  suffix    String[]       @default([])
+  validFrom DateTime?
+  validTo   DateTime?
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  patient   Patient        @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, use])
+}
+
+model PatientTelecom {
+  id                 String             @id @default(uuid())
+  patientId          String
+  system             TelecomSystem
+  value              String             @db.VarChar(255)
+  normalizedValue    String             @db.VarChar(255)
+  use                TelecomUse
+  rank               Int                @default(1)
+  verificationStatus VerificationStatus @default(UNVERIFIED)
+  active             Boolean            @default(true)
+  validFrom          DateTime?
+  validTo            DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  patient            Patient            @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, system, active])
+  @@index([system, normalizedValue])
+}
+
+model PatientAddress {
   id           String      @id @default(uuid())
-  nik          String?     @unique @db.VarChar(16)
-  fullName     String      @db.VarChar(150)
-  birthDate    DateTime    @db.Date
-  gender       Gender
-  address      String?     @db.VarChar(500)
-  phone        String?     @db.VarChar(16)
-  medicalRecNo String      @unique @db.VarChar(32)
-  satusehatId  String?     @db.VarChar(64)
+  patientId    String
+  use          AddressUse
+  type         AddressType
+  text         String?     @db.VarChar(500)
+  lines        String[]    @default([])
+  postalCode   String?     @db.VarChar(16)
+  countryCode  String?     @db.VarChar(2)
+  provinceCode String?     @db.VarChar(16)
+  provinceName String?     @db.VarChar(100)
+  regencyCode  String?     @db.VarChar(16)
+  regencyName  String?     @db.VarChar(100)
+  districtCode String?     @db.VarChar(16)
+  districtName String?     @db.VarChar(100)
+  villageCode  String?     @db.VarChar(16)
+  villageName  String?     @db.VarChar(100)
+  active       Boolean     @default(true)
+  validFrom    DateTime?
+  validTo      DateTime?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
-  encounters   Encounter[]
+  patient      Patient     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId, use, active])
+  @@index([provinceCode, regencyCode, districtCode, villageCode])
+}
+
+model PatientRelatedPerson {
+  id            String                @id @default(uuid())
+  fullName      String                @db.VarChar(150)
+  gender        Gender?
+  birthDate     DateTime?             @db.Date
+  phone         String?               @db.VarChar(32)
+  email         String?               @db.VarChar(255)
+  addressText   String?               @db.VarChar(500)
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  relationships PatientRelationship[]
+}
+
+model PatientRelationship {
+  id               String                  @id @default(uuid())
+  patientId        String
+  relatedPatientId String?
+  relatedPersonId  String?
+  relationshipCode PatientRelationshipCode
+  startAt          DateTime?
+  endAt            DateTime?
+  isGuardian       Boolean                 @default(false)
+  contactPriority  Int?
+  active           Boolean                 @default(true)
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+  patient          Patient                 @relation("PatientRelationshipSubject", fields: [patientId], references: [id], onDelete: Cascade)
+  relatedPatient   Patient?                @relation("PatientRelationshipTarget", fields: [relatedPatientId], references: [id], onDelete: Restrict)
+  relatedPerson    PatientRelatedPerson?   @relation(fields: [relatedPersonId], references: [id], onDelete: Restrict)
+
+  @@index([patientId, relationshipCode, active])
+  @@index([relatedPatientId])
+  @@index([relatedPersonId])
 }
 
 model Encounter {

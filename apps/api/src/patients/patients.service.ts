@@ -57,6 +57,17 @@ export class PatientsService {
           field: 'medicalRecNo',
         });
       }
+      if (
+        error instanceof PatientIdentityConflictError &&
+        error.field === 'primaryIdentifier'
+      ) {
+        throw new ConflictException({
+          code: 'PRIMARY_IDENTIFIER_CONFLICT',
+          message:
+            'Pasien hanya boleh memiliki satu identifier utama aktif untuk setiap jenis',
+          field: 'identifiers',
+        });
+      }
       throw error;
     }
   }

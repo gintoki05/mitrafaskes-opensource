@@ -3,7 +3,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import { AppModule } from './../src/app.module';
-import { Patient } from '@mitrafaskes/shared';
+import {
+  AddressType,
+  AddressUse,
+  Gender,
+  Patient,
+  PatientIdentifierType,
+  PatientNameUse,
+  PatientRelationshipCode,
+  TelecomSystem,
+  TelecomUse,
+} from '@mitrafaskes/shared';
 import {
   PatientIdentityConflictError,
   PatientRepository,
@@ -42,6 +52,57 @@ class InMemoryPatientRepository {
       address: input.address,
       phone: input.phone,
       medicalRecNo: `RM-2026-${String(this.sequence).padStart(6, '0')}`,
+      active: input.active,
+      birthPlaceText: input.birthPlaceText,
+      multipleBirthOrder: input.multipleBirthOrder,
+      deceasedAt: input.deceasedAt?.toISOString(),
+      maritalStatusCode: input.maritalStatusCode,
+      citizenshipCode: input.citizenshipCode,
+      version: 1,
+      identifiers: input.identifiers.map((identifier, index) => ({
+        ...identifier,
+        id: `identifier-${this.sequence}-${index}`,
+        validFrom: identifier.validFrom?.toISOString(),
+        validTo: identifier.validTo?.toISOString(),
+      })),
+      names: input.names.map((name, index) => ({
+        ...name,
+        id: `name-${this.sequence}-${index}`,
+        validFrom: name.validFrom?.toISOString(),
+        validTo: name.validTo?.toISOString(),
+      })),
+      telecoms: input.telecoms.map((telecom, index) => ({
+        ...telecom,
+        id: `telecom-${this.sequence}-${index}`,
+        validFrom: telecom.validFrom?.toISOString(),
+        validTo: telecom.validTo?.toISOString(),
+      })),
+      addresses: input.addresses.map((address, index) => ({
+        ...address,
+        id: `address-${this.sequence}-${index}`,
+        validFrom: address.validFrom?.toISOString(),
+        validTo: address.validTo?.toISOString(),
+      })),
+      relationships: input.relationships.map((relationship, index) => ({
+        id: `relationship-${this.sequence}-${index}`,
+        relationshipCode: relationship.relationshipCode,
+        relatedPatientId: relationship.relatedPatientId,
+        relatedPersonId: relationship.relatedPersonId,
+        relatedPerson: relationship.relatedPerson
+          ? {
+              id: `related-person-${this.sequence}-${index}`,
+              ...relationship.relatedPerson,
+              birthDate: relationship.relatedPerson.birthDate
+                ?.toISOString()
+                .slice(0, 10),
+            }
+          : undefined,
+        startAt: relationship.startAt?.toISOString(),
+        endAt: relationship.endAt?.toISOString(),
+        isGuardian: relationship.isGuardian,
+        contactPriority: relationship.contactPriority,
+        active: relationship.active,
+      })),
       createdAt: timestamp,
       updatedAt: timestamp,
     };
@@ -170,6 +231,103 @@ describe('Access control (e2e)', () => {
         expect.objectContaining({ field: 'birthDate' }),
         expect.objectContaining({ field: 'gender' }),
       ]),
+    );
+  });
+
+  it('allows registration staff to create structured multi-value patient data atomically', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/patients')
+      .set(bearer('mock-jwt-token-perawat_ani'))
+      .send({
+        fullName: 'Bayi Ny. Sari',
+        birthDate: '2026-07-31',
+        gender: Gender.FEMALE,
+        multipleBirthOrder: 2,
+        identifiers: [
+          {
+            type: PatientIdentifierType.MOTHER_NIK,
+            system: 'urn:id:nik',
+            value: '3171-0123-0490-0003',
+            isPrimary: true,
+          },
+        ],
+        names: [
+          { use: PatientNameUse.ALIAS, text: 'Bayi A' },
+          {
+            use: PatientNameUse.OLD,
+            text: 'Bayi Belum Bernama',
+            validTo: '2026-07-30T00:00:00.000Z',
+          },
+        ],
+        telecoms: [
+          {
+            system: TelecomSystem.PHONE,
+            use: TelecomUse.MOBILE,
+            value: '0812-1111-2222',
+          },
+          {
+            system: TelecomSystem.EMAIL,
+            use: TelecomUse.HOME,
+            value: 'keluarga@example.test',
+            rank: 2,
+          },
+        ],
+        addresses: [
+          {
+            use: AddressUse.HOME,
+            type: AddressType.BOTH,
+            text: 'Jl. Mawar 1',
+            lines: ['Jl. Mawar 1'],
+            countryCode: 'ID',
+            provinceCode: '31',
+            provinceName: 'DKI Jakarta',
+            regencyCode: '3171',
+            regencyName: 'Jakarta Selatan',
+            districtCode: '317101',
+            districtName: 'Kebayoran Baru',
+            villageCode: '3171011001',
+            villageName: 'Selong',
+          },
+          {
+            use: AddressUse.OLD,
+            type: AddressType.PHYSICAL,
+            text: 'Jl. Lama 2',
+            active: false,
+          },
+        ],
+        relationships: [
+          {
+            relationshipCode: PatientRelationshipCode.GUARDIAN,
+            relatedPerson: {
+              fullName: 'Rina Wulandari',
+              phone: '081355556666',
+            },
+          },
+        ],
+      })
+      .expect(201);
+
+    expect(response.body.nik).toBeUndefined();
+    expect(response.body.identifiers).toEqual([
+      expect.objectContaining({
+        type: PatientIdentifierType.MOTHER_NIK,
+        normalizedValue: '3171012304900003',
+      }),
+    ]);
+    expect(response.body.names).toHaveLength(3);
+    expect(response.body.telecoms).toHaveLength(2);
+    expect(response.body.addresses).toHaveLength(2);
+    expect(response.body.relationships).toEqual([
+      expect.objectContaining({
+        relationshipCode: PatientRelationshipCode.GUARDIAN,
+        isGuardian: true,
+      }),
+    ]);
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        fullName: 'Bayi Ny. Sari',
+        medicalRecNo: expect.stringMatching(/^RM-2026-/),
+      }),
     );
   });
 
