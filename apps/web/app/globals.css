@@ -76,12 +76,20 @@
     --focus-ring-offset: 2px;
   }
 
+  html {
+    scroll-padding-top: 6rem;
+  }
+
   * {
     border-color: hsl(var(--border));
   }
 
   body {
     @apply min-h-screen bg-background font-sans text-foreground antialiased;
+  }
+
+  :where(h1, h2, h3, p, span, strong, code, pre) {
+    overflow-wrap: anywhere;
   }
 
   ::selection {

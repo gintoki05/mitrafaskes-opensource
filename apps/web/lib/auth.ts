@@ -9,6 +9,7 @@ import {
 
 const TOKEN_KEY = 'mitrafaskes_token';
 const USER_KEY = 'mitrafaskes_user';
+const SESSION_CHANGE_EVENT = 'mitrafaskes:session-change';
 
 export interface SessionUser {
   id: string;
@@ -46,11 +47,33 @@ export function getSession(): Session | null {
 export function saveSession(accessToken: string, user: SessionUser): void {
   localStorage.setItem(TOKEN_KEY, accessToken);
   localStorage.setItem(USER_KEY, JSON.stringify(user));
+  notifySessionChange();
 }
 
 export function clearSession(): void {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
+  notifySessionChange();
+}
+
+function notifySessionChange(): void {
+  window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
+}
+
+export function subscribeToSession(onStoreChange: () => void): () => void {
+  const handleStorageChange = (event: StorageEvent) => {
+    if (event.key === TOKEN_KEY || event.key === USER_KEY || event.key === null) {
+      onStoreChange();
+    }
+  };
+
+  window.addEventListener(SESSION_CHANGE_EVENT, onStoreChange);
+  window.addEventListener('storage', handleStorageChange);
+
+  return () => {
+    window.removeEventListener(SESSION_CHANGE_EVENT, onStoreChange);
+    window.removeEventListener('storage', handleStorageChange);
+  };
 }
 
 export function can(user: SessionUser | null, permission: AccessPermission): boolean {

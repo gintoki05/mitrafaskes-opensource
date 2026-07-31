@@ -92,7 +92,12 @@ Dokumen ini memuat analisis mendalam mengenai **Psikologi Pengguna (User Psychol
 
 ## 🎨 4. Palet Warna & Kontras Ergonomis (Prevent Eye Strain)
 
-- **Background Utama**: Dark Mode Slate (`#0f172a` / `#020617`) mengurangi radiasi cahaya putih ke mata dokter.
-- **Teal / Emerald (`#14b8a6` / `#10b981`)**: Warna tenang medis yang menandakan aksi aman, sukses, dan status terintegrasi SATUSEHAT.
-- **Amber (`#f59e0b`)**: Menandakan status antrean menunggu (Triage).
-- **Rose (`#f43f5e`)**: Menandakan alergi obat pasien atau error sinkronisasi.
+Palet aktif mengikuti `docs/design_system.md`: permukaan **terang-netral** untuk keterbacaan data klinis jangka panjang, tanpa menyediakan dark mode pada fase fondasi saat ini.
+
+- **Background utama (`#F8FAFC`) dan kartu putih (`#FFFFFF`)**: Memisahkan struktur halaman secara tenang dengan teks utama slate gelap (`#0F172A`) agar kontras konsisten.
+- **Hijau klinis (`#1F7A4F`)**: Aksen tindakan utama, fokus keyboard, serta status aman/sukses.
+- **Amber (`#AB6A0B`)**: Menandakan status menunggu atau kondisi yang memerlukan perhatian.
+- **Merah (`#B42525`)**: Menandakan alergi, kegagalan, tindakan destruktif, atau akses ditolak.
+- **Biru informasi (`#146B97`)**: Menandakan informasi pendukung yang bukan aksi utama.
+
+Warna tidak boleh menjadi satu-satunya pembeda. Setiap status tetap memakai label teks eksplisit dan, bila ruang memungkinkan, ikon yang sesuai.
