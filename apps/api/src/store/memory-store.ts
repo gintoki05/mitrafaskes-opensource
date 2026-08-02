@@ -25,7 +25,12 @@ export interface MasterIcd10 {
 
 export interface SatusehatSyncLog {
   id: string;
-  resourceType: 'Encounter' | 'Condition' | 'Observation' | 'MedicationRequest';
+  resourceType:
+    | 'Organization'
+    | 'Encounter'
+    | 'Condition'
+    | 'Observation'
+    | 'MedicationRequest';
   resourceId: string;
   status: 'PENDING' | 'SUCCESS' | 'FAILED';
   payload: any;

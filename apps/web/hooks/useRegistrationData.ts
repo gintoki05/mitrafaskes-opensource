@@ -68,14 +68,14 @@ function registrationDataReducer(
 
 async function requestPatients(query = ''): Promise<Patient[]> {
   const response = await apiFetch(
-    `http://localhost:4000/api/patients?search=${encodeURIComponent(query)}`,
+    `/api/patients?search=${encodeURIComponent(query)}`,
   );
   if (!response.ok) throw new Error('Daftar pasien tidak dapat dimuat.');
   return response.json() as Promise<Patient[]>;
 }
 
 async function requestEncounters(): Promise<Encounter[]> {
-  const response = await apiFetch('http://localhost:4000/api/encounters');
+  const response = await apiFetch('/api/encounters');
   if (!response.ok) throw new Error('Antrean rawat jalan tidak dapat dimuat.');
   return response.json() as Promise<Encounter[]>;
 }

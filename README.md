@@ -1,6 +1,6 @@
 # Mitra Faskes - Open Source Rekam Medis Elektronik (RME) Indonesia
 
-Aplikasi Rekam Medis Elektronik (RME) Open Source untuk Dokter Praktik Mandiri, Klinik Pratama, dan Fasilitas Kesehatan Tingkat Pertama (FKTP) yang dirancang sesuai **Permenkes No. 24 Tahun 2022** dan terintegrasi otomatis dengan **SATUSEHAT Kemenkes RI** (Spesifikasi HL7 FHIR).
+Aplikasi Rekam Medis Elektronik (RME) Open Source untuk Dokter Praktik Mandiri, Klinik Pratama, dan Fasilitas Kesehatan Tingkat Pertama (FKTP) yang dirancang sesuai **Permenkes No. 24 Tahun 2022** dengan fondasi interoperabilitas **SATUSEHAT Kemenkes RI** (Spesifikasi HL7 FHIR).
 
 ## Fitur Utama
 
@@ -12,9 +12,10 @@ Aplikasi Rekam Medis Elektronik (RME) Open Source untuk Dokter Praktik Mandiri, 
    - Pemeriksaan Fisik & Vital Signs (Tekanan Darah, Nadi, Suhu, BB, TB).
    - Auto-complete Diagnosis ICD-10 (Nama Indonesia & Inggris).
    - Input Resep Obat / KFA.
-3. **SATUSEHAT Kemenkes Sync Engine**
+3. **Fondasi Integrasi SATUSEHAT Kemenkes**
    - Transformer Otomatis HL7 FHIR (`Encounter`, `Condition`, `Observation`, `MedicationRequest`).
-   - Audit Trail & Status Sinkronisasi Kemenkes dengan fitur Retry.
+   - OAuth2 `client_credentials` server-side dengan cache token dan status koneksi.
+   - Audit trail dan status sinkronisasi sebagai dasar adapter resource SATUSEHAT berikutnya.
 4. **PC Lokal & LAN Ready**
    - Dapat dioperasikan secara lokal di Klinik tanpa bergantung koneksi server eksternal untuk data RME internal.
 
@@ -51,7 +52,9 @@ npm run dev:api
 npm run dev:web
 ```
 
-Akses Frontend di `http://localhost:3000` dan Backend API di `http://localhost:4000`.
+Salin `apps/api/.env.example` menjadi `apps/api/.env` dan `apps/web/.env.example` menjadi `apps/web/.env.local`, lalu sesuaikan `DATABASE_URL` dan `NEXT_PUBLIC_API_URL` untuk environment yang digunakan. Frontend tidak lagi menyimpan alamat API di dalam source code.
+
+Konfigurasi OAuth2 SATUSEHAT tersedia di [`docs/satusehat_authentication.md`](docs/satusehat_authentication.md), sedangkan tahap Organization ada di [`docs/satusehat_organization.md`](docs/satusehat_organization.md).
 
 ## Lisensi
 [MIT License](LICENSE)

@@ -3,9 +3,11 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SessionPermissionGuard } from './auth/session-permission.guard';
 import { PatientsModule } from './patients/patients.module';
+import { MasterDataModule } from './master-data/master-data.module';
+import { SatusehatModule } from './satusehat/satusehat.module';
 
 @Module({
-  imports: [PatientsModule],
+  imports: [PatientsModule, MasterDataModule, SatusehatModule],
   controllers: [AppController],
   providers: [AppService, SessionPermissionGuard],
 })

@@ -1,3 +1,4 @@
+import './env';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
@@ -20,6 +21,10 @@ async function bootstrap() {
     .addTag('Patients', 'Registrasi dan pencarian data pasien.')
     .addTag('Encounters', 'Pengelolaan kunjungan dan antrean pasien.')
     .addTag('Master Data', 'Data referensi klinis, termasuk ICD-10.')
+    .addTag(
+      'Master Faskes',
+      'Pengaturan organisasi, unit layanan, dan lokasi fasilitas kesehatan.',
+    )
     .addTag('Medical Records', 'Pencatatan rekam medis elektronik (RME).')
     .addTag('SATUSEHAT', 'Status dan sinkronisasi data ke SATUSEHAT.')
     .build();
@@ -30,12 +35,14 @@ async function bootstrap() {
     jsonDocumentUrl: 'api/docs-json',
   });
 
-  const PORT = process.env.PORT || 4000;
-  await app.listen(PORT);
+  const port = Number(process.env.PORT || 4000);
+  const host = process.env.HOST || '0.0.0.0';
+  const publicApiUrl = process.env.PUBLIC_API_URL || `http://${host}:${port}`;
+  await app.listen(port, host);
   console.log(`====================================================`);
   console.log(`   MITRA FASKES NESTJS API SERVER RUNNING            `);
-  console.log(`   Port: http://localhost:${PORT}                    `);
-  console.log(`   Swagger: http://localhost:${PORT}/api/docs        `);
+  console.log(`   API: ${publicApiUrl}                              `);
+  console.log(`   Swagger: ${publicApiUrl}/api/docs                 `);
   console.log(`====================================================`);
 }
-bootstrap();
+void bootstrap();

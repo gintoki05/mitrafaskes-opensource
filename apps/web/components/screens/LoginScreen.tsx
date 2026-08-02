@@ -2,10 +2,18 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Activity, UserCheck, Stethoscope, Lock } from 'lucide-react';
-import { defaultRoute, saveSession } from '@/lib/auth';
+import {
+  Activity,
+  ArrowRight,
+  LockKeyhole,
+  ShieldCheck,
+  Stethoscope,
+  UserCheck,
+} from 'lucide-react';
+import { apiFetch, defaultRoute, saveSession } from '@/lib/auth';
 import { ScreenState } from '@/components/ScreenState';
 import { useSession } from '@/hooks/useSession';
+import { Button } from '@/components/ui/button';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -25,7 +33,7 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:4000/api/auth/login', {
+      const res = await apiFetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
@@ -49,95 +57,133 @@ export default function LoginPage() {
   const selectQuickUser = (user: string, pass: string) => {
     setUsername(user);
     setPassword(pass);
+    setError('');
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
-      <div className="w-full max-w-md rounded-[var(--radius-panel)] border border-border bg-card p-8 shadow-lg">
-        <div className="flex flex-col items-center mb-8 text-center">
-          <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-[var(--radius-panel)] bg-primary shadow-md shadow-primary/20">
-            <Activity className="h-8 w-8 text-primary-foreground stroke-[2.5]" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground">
-            Mitra Faskes RME
-          </h1>
-        </div>
-
-        {error && (
-          <ScreenState
-            kind="error"
-            title="Tidak dapat masuk"
-            description={error}
-            compact
-            className="mb-4"
-          />
-        )}
-
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div>
-            <label htmlFor="username" className="mb-1 block text-xs font-semibold text-foreground">Username</label>
-            <input
-              id="username"
-              type="text"
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              className="clinical-field w-full px-4 py-2.5 text-sm transition-colors focus-visible:border-ring"
-              required
-            />
+    <div className="login-screen grid w-full min-w-0 overflow-hidden rounded-[var(--radius-panel)] border border-border bg-card shadow-[0_18px_45px_hsl(var(--foreground)/0.08)] lg:grid-cols-[minmax(19rem,0.78fr)_minmax(28rem,1.22fr)]">
+      <section className="login-brand-panel flex min-h-[18rem] flex-col justify-between bg-[hsl(var(--sidebar-background))] p-6 text-sidebar-foreground sm:p-8 lg:min-h-0 lg:p-10" aria-label="Tentang Mitra Faskes">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-card text-primary shadow-sm">
+              <Activity className="h-6 w-6 stroke-[2.5]" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-base font-bold tracking-tight">Mitra Faskes</p>
+              <p className="text-xs text-sidebar-foreground/75">Rekam Medis Elektronik</p>
+            </div>
           </div>
 
-          <div>
-            <label htmlFor="password" className="mb-1 block text-xs font-semibold text-foreground">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="clinical-field w-full px-4 py-2.5 text-sm transition-colors focus-visible:border-ring"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            aria-busy={loading}
-            className="flex w-full items-center justify-center gap-2 rounded-[var(--radius-control)] bg-primary py-3 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 transition-colors hover:bg-primary/85 disabled:bg-muted disabled:text-muted-foreground"
-          >
-            <Lock className="w-4 h-4" />
-            {loading ? 'Proses...' : 'Masuk ke Sistem'}
-          </button>
-        </form>
-
-        <div className="mt-8 border-t border-border pt-6">
-          <span className="mb-3 block text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-            Akun Demo Praktis (Klik untuk Mengisi)
-          </span>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => selectQuickUser('admin', 'admin123')}
-              className="group rounded-[var(--radius-card)] border border-border bg-background p-2.5 text-left transition-colors hover:bg-muted"
-            >
-              <div className="flex items-center gap-2 text-xs font-bold text-primary">
-                <UserCheck className="w-3.5 h-3.5" /> Admin
-              </div>
-              <div className="truncate text-[11px] text-muted-foreground">Siti Rahma (Operasi)</div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => selectQuickUser('dr_budi', 'dok123')}
-              className="group rounded-[var(--radius-card)] border border-border bg-background p-2.5 text-left transition-colors hover:bg-muted"
-            >
-              <div className="flex items-center gap-2 text-xs font-bold text-success">
-                <Stethoscope className="w-3.5 h-3.5" /> Dokter
-              </div>
-              <div className="truncate text-[11px] text-muted-foreground">dr. Budi Santoso</div>
-            </button>
+          <div className="mt-12 max-w-sm lg:mt-20">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-sidebar-foreground/70">Ruang kerja klinik</p>
+            <h1 className="mt-4 text-3xl font-bold leading-tight tracking-[-0.03em] sm:text-4xl">
+              Satu alur untuk setiap kunjungan.
+            </h1>
+            <p className="mt-5 max-w-md text-sm leading-7 text-sidebar-foreground/80">
+              Kelola pendaftaran, antrean, pemeriksaan dokter, dan sinkronisasi SATUSEHAT dari ruang kerja yang sama.
+            </p>
           </div>
         </div>
-      </div>
+
+        <div className="mt-10 border-t border-sidebar-foreground/20 pt-5">
+          <div className="flex items-start gap-3 text-sm">
+            <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-accent" aria-hidden="true" />
+            <div>
+              <p className="font-semibold">Akses berbasis peran</p>
+              <p className="mt-1 text-xs leading-relaxed text-sidebar-foreground/70">Menu dan tindakan mengikuti tanggung jawab setiap pengguna fasilitas.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="flex min-w-0 flex-col justify-center bg-card p-6 sm:p-10 lg:p-14" aria-labelledby="login-title">
+        <div className="mx-auto w-full max-w-md">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Selamat datang kembali</p>
+            <h2 id="login-title" className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Masuk ke sistem</h2>
+            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Gunakan akun fasilitas kesehatan Anda untuk melanjutkan pekerjaan.</p>
+          </div>
+
+          {error ? (
+            <ScreenState
+              kind="error"
+              title="Tidak dapat masuk"
+              description={error}
+              compact
+              className="mt-6"
+            />
+          ) : null}
+
+          <form onSubmit={handleLogin} className="mt-8 space-y-5">
+            <div>
+              <label htmlFor="username" className="mb-2 block text-sm font-semibold text-foreground">Username</label>
+              <input
+                id="username"
+                type="text"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                autoComplete="username"
+                className="clinical-field min-h-11 w-full px-3.5 text-sm transition-colors focus-visible:border-ring"
+                required
+              />
+            </div>
+
+            <div>
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <label htmlFor="password" className="block text-sm font-semibold text-foreground">Password</label>
+                <span className="text-xs text-muted-foreground">Akun internal fasilitas</span>
+              </div>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+                className="clinical-field min-h-11 w-full px-3.5 text-sm transition-colors focus-visible:border-ring"
+                required
+              />
+            </div>
+
+            <Button type="submit" size="lg" disabled={loading} aria-busy={loading} className="w-full">
+              <LockKeyhole className="h-4 w-4" aria-hidden="true" />
+              {loading ? 'Memproses...' : 'Masuk ke sistem'}
+              {!loading ? <ArrowRight className="ml-auto h-4 w-4" aria-hidden="true" /> : null}
+            </Button>
+          </form>
+
+          <div className="mt-9 border-t border-border pt-6">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Akun demo</span>
+              <span className="text-xs text-muted-foreground">Klik untuk mengisi</span>
+            </div>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => selectQuickUser('admin', 'admin123')}
+                className="group rounded-[var(--radius-control)] border border-border bg-background p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/[0.035]"
+              >
+                <div className="flex items-center gap-2 text-sm font-bold text-primary">
+                  <UserCheck className="h-4 w-4" aria-hidden="true" />
+                  Admin
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">Siti Rahma · Operasi</div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => selectQuickUser('dr_budi', 'dok123')}
+                className="group rounded-[var(--radius-control)] border border-border bg-background p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/[0.035]"
+              >
+                <div className="flex items-center gap-2 text-sm font-bold text-primary">
+                  <Stethoscope className="h-4 w-4" aria-hidden="true" />
+                  Dokter
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">dr. Budi Santoso</div>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

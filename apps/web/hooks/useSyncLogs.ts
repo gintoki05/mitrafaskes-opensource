@@ -64,7 +64,7 @@ function syncLogsReducer(state: SyncLogsState, action: SyncLogsAction): SyncLogs
 }
 
 async function requestLogs(): Promise<SyncLog[]> {
-  const response = await apiFetch('http://localhost:4000/api/satusehat/logs');
+  const response = await apiFetch('/api/satusehat/logs');
   if (!response.ok) throw new Error('Log sinkronisasi tidak dapat dimuat.');
   return response.json() as Promise<SyncLog[]>;
 }
@@ -115,7 +115,7 @@ export function useSyncLogs() {
     dispatch({ type: 'retry-start', logId });
     try {
       const response = await apiFetch(
-        `http://localhost:4000/api/satusehat/sync/${logId}/retry`,
+        `/api/satusehat/sync/${logId}/retry`,
         { method: 'POST' },
       );
       if (!response.ok) throw new Error('Retry sinkronisasi tidak dapat dijalankan.');

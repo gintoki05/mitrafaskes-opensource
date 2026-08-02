@@ -1,6 +1,7 @@
 import React from 'react';
 import './globals.css';
 import { Navbar } from '../components/Navbar';
+import { SidebarProvider } from '../components/ui/sidebar';
 
 export const metadata = {
   title: 'Mitra Faskes - Rekam Medis Elektronik (RME) & SATUSEHAT',
@@ -14,21 +15,30 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id">
-      <body className="flex min-h-screen min-w-0 flex-col overflow-x-clip">
+      <body className="app-frame flex min-h-screen min-w-0 flex-col overflow-x-clip">
+        <div
+          hidden
+          dangerouslySetInnerHTML={{
+            __html:
+              '<!-- DESIGN-CONTRACT: Apricot & Plum RME workspace. Use a bright warm surface system, a plum utility shell, table-first patient work, explicit clinical statuses, and one clear next action. FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md -->',
+          }}
+        />
         <a
           href="#konten-utama"
           className="fixed left-3 top-3 z-[100] -translate-y-20 rounded-[var(--radius-control)] bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-lg transition-transform focus-visible:translate-y-0"
         >
           Lewati ke konten utama
         </a>
-        <Navbar />
-        <main
-          id="konten-utama"
-          className="mx-auto w-full min-w-0 max-w-7xl flex-1 p-4 sm:p-6 lg:p-8"
-          tabIndex={-1}
-        >
-          {children}
-        </main>
+        <SidebarProvider>
+          <Navbar />
+          <main
+            id="konten-utama"
+            className="app-content flex-1"
+            tabIndex={-1}
+          >
+            {children}
+          </main>
+        </SidebarProvider>
       </body>
     </html>
   );

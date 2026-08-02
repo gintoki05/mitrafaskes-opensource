@@ -20,6 +20,8 @@ export enum AccessPermission {
   SYNC_STATUS_READ = 'sync.status-read',
   SYNC_RETRY = 'sync.retry',
   SYNC_PAYLOAD_READ = 'sync.payload-read',
+  MASTER_DATA_READ = 'master-data.read',
+  MASTER_DATA_WRITE = 'master-data.write',
 }
 
 export const ALL_USER_ROLES = [
@@ -73,6 +75,8 @@ export const ROLE_PERMISSIONS: Readonly<
     AccessPermission.SYNC_STATUS_READ,
     AccessPermission.SYNC_RETRY,
     AccessPermission.SYNC_PAYLOAD_READ,
+    AccessPermission.MASTER_DATA_READ,
+    AccessPermission.MASTER_DATA_WRITE,
   ]),
 };
 

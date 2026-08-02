@@ -23,11 +23,15 @@ import {
   SessionPermissionGuard,
 } from './auth/session-permission.guard';
 import { PatientsService } from './patients/patients.service';
+import { SatusehatAuthService } from './satusehat/satusehat-auth.service';
 
 @Controller('api')
 @UseGuards(SessionPermissionGuard)
 export class AppController {
-  constructor(private readonly patients: PatientsService) {}
+  constructor(
+    private readonly patients: PatientsService,
+    private readonly satusehatAuth: SatusehatAuthService,
+  ) {}
 
   @Get()
   @ApiTags('General')
@@ -318,6 +322,13 @@ export class AppController {
       return MemoryStore.syncLogs;
     }
     return MemoryStore.syncLogs.map(({ payload, ...log }) => log);
+  }
+
+  @Get('satusehat/auth/status')
+  @ApiTags('SATUSEHAT')
+  @RequirePermission(AccessPermission.SYNC_STATUS_READ)
+  getSatusehatAuthStatus() {
+    return this.satusehatAuth.getConnectionStatus();
   }
 
   @Post('satusehat/sync/:logId/retry')

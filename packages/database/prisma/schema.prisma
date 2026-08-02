@@ -91,6 +91,126 @@ enum SyncStatus {
   FAILED
 }
 
+enum OrganizationType {
+  HEALTHCARE_FACILITY
+  SUB_ORGANIZATION
+}
+
+enum ServiceUnitType {
+  POLYCLINIC
+  DEPARTMENT
+  SUPPORT
+  OTHER
+}
+
+enum LocationType {
+  BUILDING
+  FLOOR
+  ROOM
+  OTHER
+}
+
+enum LocationStatus {
+  ACTIVE
+  SUSPENDED
+  INACTIVE
+}
+
+enum LocationMode {
+  INSTANCE
+  KIND
+}
+
+model HealthcareOrganization {
+  id          String               @id @default(uuid())
+  code        String               @unique @db.VarChar(64)
+  name        String               @db.VarChar(150)
+  type        OrganizationType     @default(HEALTHCARE_FACILITY)
+  parentId    String?
+  addressText String?              @db.VarChar(500)
+  phone       String?              @db.VarChar(32)
+  email       String?              @db.VarChar(255)
+  active      Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  parent      HealthcareOrganization?  @relation("OrganizationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children    HealthcareOrganization[] @relation("OrganizationHierarchy")
+  serviceUnits ServiceUnit[]
+  locations   Location[]           @relation("OrganizationLocations")
+
+  @@index([parentId, active])
+  @@index([active, name])
+}
+
+model ServiceUnit {
+  id             String               @id @default(uuid())
+  organizationId String
+  parentId       String?
+  code           String               @db.VarChar(64)
+  name           String               @db.VarChar(150)
+  type           ServiceUnitType      @default(POLYCLINIC)
+  active         Boolean              @default(true)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  organization   HealthcareOrganization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  parent         ServiceUnit?         @relation("ServiceUnitHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children       ServiceUnit[]        @relation("ServiceUnitHierarchy")
+  locations      Location[]           @relation("ServiceUnitLocations")
+
+  @@unique([organizationId, code])
+  @@index([organizationId, active, name])
+  @@index([parentId])
+}
+
+model Location {
+  id             String                @id @default(uuid())
+  organizationId String
+  serviceUnitId  String?
+  parentId       String?
+  code           String                @db.VarChar(64)
+  name           String                @db.VarChar(150)
+  type           LocationType          @default(ROOM)
+  description    String?               @db.VarChar(500)
+  status         LocationStatus       @default(ACTIVE)
+  mode           LocationMode          @default(INSTANCE)
+  physicalTypeCode String?             @db.VarChar(32)
+  addressText    String?               @db.VarChar(500)
+  city           String?               @db.VarChar(100)
+  postalCode     String?               @db.VarChar(16)
+  countryCode    String                @default("ID") @db.VarChar(2)
+  active         Boolean               @default(true)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  organization   HealthcareOrganization @relation("OrganizationLocations", fields: [organizationId], references: [id], onDelete: Restrict)
+  serviceUnit    ServiceUnit?          @relation("ServiceUnitLocations", fields: [serviceUnitId], references: [id], onDelete: SetNull)
+  parent         Location?             @relation("LocationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children       Location[]            @relation("LocationHierarchy")
+
+  @@unique([organizationId, code])
+  @@index([organizationId, active, name])
+  @@index([serviceUnitId])
+  @@index([parentId])
+}
+
+// Generic linkage keeps external provider identifiers out of domain models.
+// SATUSEHAT is the first adapter, but the shape remains provider-agnostic.
+model ExternalResourceLink {
+  id                 String   @id @default(uuid())
+  provider           String   @db.VarChar(64)
+  environment        String   @db.VarChar(32)
+  resourceType       String   @db.VarChar(64)
+  localResourceType  String   @db.VarChar(64)
+  localResourceId    String
+  externalResourceId String   @db.VarChar(128)
+  lastSyncedAt       DateTime?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([provider, environment, resourceType, localResourceType, localResourceId], name: "localResourceScope")
+  @@unique([provider, environment, resourceType, externalResourceId], name: "externalResourceScope")
+  @@index([localResourceType, localResourceId])
+}
+
 model User {
   id           String      @id @default(uuid())
   username     String      @unique

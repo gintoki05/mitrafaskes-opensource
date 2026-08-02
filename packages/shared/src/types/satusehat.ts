@@ -6,13 +6,53 @@ export enum SyncStatus {
 
 export interface SatusehatSyncLog {
   id: string;
-  resourceType: 'Encounter' | 'Condition' | 'Observation' | 'MedicationRequest';
+  resourceType:
+    | 'Organization'
+    | 'Encounter'
+    | 'Condition'
+    | 'Observation'
+    | 'MedicationRequest';
   resourceId: string;
   status: SyncStatus;
   payload: any;
   satusehatId?: string;
   errorMessage?: string;
   updatedAt: string;
+}
+
+export interface SatusehatOrganizationPayload {
+  resourceType: 'Organization';
+  id?: string;
+  identifier: {
+    use: 'official';
+    system: string;
+    value: string;
+  }[];
+  active: boolean;
+  type: {
+    coding: {
+      system: 'http://terminology.hl7.org/CodeSystem/organization-type';
+      code: 'prov' | 'dept';
+      display: string;
+    }[];
+  }[];
+  name: string;
+  telecom?: {
+    system: 'phone' | 'email';
+    value: string;
+    use: 'work';
+  }[];
+  address?: {
+    use: 'work';
+    type: 'both';
+    text: string;
+    line: string[];
+    country: string;
+  }[];
+  partOf?: {
+    reference: string;
+    display?: string;
+  };
 }
 
 export interface SatusehatEncounterPayload {

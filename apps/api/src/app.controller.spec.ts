@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PatientsService } from './patients/patients.service';
+import { SatusehatAuthService } from './satusehat/satusehat-auth.service';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -17,6 +18,12 @@ describe('AppController', () => {
             findMany: jest.fn(),
             findById: jest.fn(),
             create: jest.fn(),
+          },
+        },
+        {
+          provide: SatusehatAuthService,
+          useValue: {
+            getConnectionStatus: jest.fn(),
           },
         },
       ],

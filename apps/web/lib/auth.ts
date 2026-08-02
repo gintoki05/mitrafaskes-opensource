@@ -6,6 +6,7 @@ import {
   hasPermission,
   UserRole,
 } from '@mitrafaskes/shared';
+import { resolveApiInput } from './api';
 
 const TOKEN_KEY = 'mitrafaskes_token';
 const USER_KEY = 'mitrafaskes_user';
@@ -115,7 +116,7 @@ export function authHeaders(): HeadersInit {
 }
 
 export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
-  const response = await fetch(input, {
+  const response = await fetch(resolveApiInput(input), {
     ...init,
     headers: { ...authHeaders(), ...init.headers },
   });

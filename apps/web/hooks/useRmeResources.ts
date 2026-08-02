@@ -53,14 +53,14 @@ function rmeResourcesReducer(state: RmeResourcesState, action: RmeResourcesActio
 }
 
 async function requestEncounters(): Promise<Encounter[]> {
-  const response = await apiFetch('http://localhost:4000/api/encounters');
+  const response = await apiFetch('/api/encounters');
   if (!response.ok) throw new Error('Antrean pasien tidak dapat dimuat.');
   return response.json() as Promise<Encounter[]>;
 }
 
 async function requestIcd10(query: string): Promise<Icd10Entry[]> {
   const response = await apiFetch(
-    `http://localhost:4000/api/master/icd10?q=${encodeURIComponent(query)}`,
+    `/api/master/icd10?q=${encodeURIComponent(query)}`,
   );
   if (!response.ok) throw new Error('Referensi ICD-10 tidak dapat dimuat.');
   return response.json() as Promise<Icd10Entry[]>;

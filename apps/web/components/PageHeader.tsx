@@ -12,10 +12,10 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="clinical-panel flex min-w-0 flex-col justify-between gap-4 p-4 sm:p-6 md:flex-row md:items-center">
+    <header className="page-heading">
       <div className="min-w-0">
-        <h1 className="flex items-start gap-2 text-xl font-bold leading-tight text-foreground">
-          <span className="mt-0.5 shrink-0 text-primary" aria-hidden="true">
+        <h1 className="flex items-start gap-2 font-heading font-bold text-primary">
+          <span className="mt-0.5 shrink-0" aria-hidden="true">
             {icon}
           </span>
           <span>{title}</span>
