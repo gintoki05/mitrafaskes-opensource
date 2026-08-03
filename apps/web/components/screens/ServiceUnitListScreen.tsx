@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useCallback, useMemo, useState } from "react";
+import { type SubmitEvent, useCallback, useMemo, useState } from "react";
 import { Layers3, Plus } from "lucide-react";
 import {
   AccessPermission,
@@ -82,7 +82,7 @@ export default function ServiceUnitListScreen() {
     setQuery((current) => ({ ...current, ...changes, page: 1 }));
   };
 
-  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSearchSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFilters({ search: searchDraft.trim() || undefined });
   };

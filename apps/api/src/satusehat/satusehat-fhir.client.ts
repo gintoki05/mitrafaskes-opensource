@@ -3,6 +3,9 @@ import { SatusehatAuthService } from './satusehat-auth.service';
 
 const DEFAULT_HTTP_TIMEOUT_MS = 10_000;
 
+type FhirRequestMethod = 'GET' | 'POST' | 'PUT';
+type FhirQuery = Record<string, string | undefined>;
+
 export class SatusehatFhirError extends Error {
   constructor(
     public readonly code: string,
@@ -22,6 +25,10 @@ export class SatusehatFhirClient {
     return this.request('GET', ['Organization', id]);
   }
 
+  searchOrganizations(query: FhirQuery): Promise<unknown> {
+    return this.request('GET', ['Organization'], undefined, query);
+  }
+
   createOrganization(payload: unknown): Promise<unknown> {
     return this.request('POST', ['Organization'], payload);
   }
@@ -31,11 +38,12 @@ export class SatusehatFhirClient {
   }
 
   private async request(
-    method: 'GET' | 'POST' | 'PUT',
+    method: FhirRequestMethod,
     pathSegments: string[],
     body?: unknown,
+    query?: FhirQuery,
   ): Promise<unknown> {
-    const resourceUrl = this.buildResourceUrl(pathSegments);
+    const resourceUrl = this.buildResourceUrl(pathSegments, query);
     const accessToken = await this.auth.getAccessToken();
     const controller = new AbortController();
     const timeout = setTimeout(
@@ -89,7 +97,7 @@ export class SatusehatFhirClient {
     return responseBody;
   }
 
-  private buildResourceUrl(pathSegments: string[]): URL {
+  private buildResourceUrl(pathSegments: string[], query?: FhirQuery): URL {
     const baseUrl = process.env.SATUSEHAT_FHIR_BASE_URL?.trim().replace(
       /\/+$/,
       '',
@@ -103,9 +111,13 @@ export class SatusehatFhirClient {
     }
 
     try {
-      return new URL(
+      const resourceUrl = new URL(
         `${baseUrl}/${pathSegments.map((segment) => encodeURIComponent(segment)).join('/')}`,
       );
+      for (const [key, value] of Object.entries(query ?? {})) {
+        if (value) resourceUrl.searchParams.set(key, value);
+      }
+      return resourceUrl;
     } catch {
       throw new SatusehatFhirError(
         'SATUSEHAT_FHIR_URL_INVALID',

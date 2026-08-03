@@ -2,13 +2,14 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { OrganizationSummary } from "@mitrafaskes/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit3, Eye, Power } from "lucide-react";
+import { Edit3, Eye, Link2, Power } from "lucide-react";
 import { organizationTypes } from "./constants";
 
 type OrganizationColumnOptions = {
   canWrite: boolean;
   organizations: OrganizationSummary[];
   onPreview: (organization: OrganizationSummary) => void;
+  onLink: (organization: OrganizationSummary) => void;
   onEdit: (organization: OrganizationSummary) => void;
   onToggleStatus: (organization: OrganizationSummary) => void;
 };
@@ -23,6 +24,7 @@ export function getOrganizationColumns({
   canWrite,
   organizations,
   onPreview,
+  onLink,
   onEdit,
   onToggleStatus,
 }: OrganizationColumnOptions): ColumnDef<OrganizationSummary>[] {
@@ -106,6 +108,16 @@ export function getOrganizationColumns({
           </Button>
           {canWrite ? (
             <>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-xs"
+                onClick={() => onLink(row.original)}
+                aria-label={`Hubungkan SATUSEHAT untuk ${row.original.name}`}
+                title="Hubungkan Organization SATUSEHAT"
+              >
+                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+              </Button>
               <Button
                 type="button"
                 variant="outline"

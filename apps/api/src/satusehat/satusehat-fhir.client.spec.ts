@@ -71,4 +71,43 @@ describe('SatusehatFhirClient', () => {
     ).rejects.toMatchObject({ code: 'SATUSEHAT_FHIR_BASE_URL_MISSING' });
     expect(getAccessToken).not.toHaveBeenCalled();
   });
+
+  it('searches Organization resources with SATUSEHAT query parameters', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: jest.fn().mockResolvedValue(
+        JSON.stringify({
+          resourceType: 'Bundle',
+          type: 'searchset',
+          total: 1,
+          entry: [],
+        }),
+      ),
+    });
+    const auth = {
+      getAccessToken: jest.fn().mockResolvedValue('access-token'),
+    } as unknown as SatusehatAuthService;
+    const client = new SatusehatFhirClient(auth);
+
+    await expect(
+      client.searchOrganizations({
+        name: 'Klinik Mitra Sehat',
+        partof: '100000004',
+      }),
+    ).resolves.toEqual(expect.objectContaining({ resourceType: 'Bundle' }));
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      new URL(
+        'https://satusehat.example.test/fhir-r4/v1/Organization?name=Klinik+Mitra+Sehat&partof=100000004',
+      ),
+      expect.objectContaining({
+        method: 'GET',
+        headers: {
+          Accept: 'application/json',
+          Authorization: 'Bearer access-token',
+        },
+      }),
+    );
+  });
 });

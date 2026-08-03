@@ -1,3 +1,5 @@
+import type { OrganizationSummary } from './master-data';
+
 export enum SyncStatus {
   PENDING = 'PENDING',
   SUCCESS = 'SUCCESS',
@@ -24,6 +26,55 @@ export interface SatusehatAuthStatus {
     message: string;
     httpStatus?: number;
   };
+}
+
+export interface SatusehatOrganizationSearchQuery {
+  id?: string;
+  name?: string;
+  partOf?: string;
+  parentLocalId?: string;
+}
+
+export interface SatusehatOrganizationIdentifier {
+  system: string;
+  value: string;
+}
+
+export interface SatusehatOrganizationRemoteSummary {
+  externalResourceId: string;
+  name: string;
+  active: boolean;
+  typeCode?: string;
+  typeDisplay?: string;
+  parentExternalResourceId?: string;
+  parentDisplay?: string;
+  identifiers: SatusehatOrganizationIdentifier[];
+  addressText?: string;
+  phone?: string;
+  email?: string;
+  linkedLocalResourceId?: string;
+}
+
+export interface SatusehatOrganizationSearchResponse {
+  items: SatusehatOrganizationRemoteSummary[];
+  total: number;
+}
+
+export interface SatusehatOrganizationLinkRequest {
+  externalResourceId: string;
+}
+
+export interface SatusehatOrganizationImportRequest {
+  externalResourceId: string;
+  code: string;
+  parentId?: string;
+}
+
+export interface SatusehatOrganizationMutationResponse {
+  operation: 'LINK_EXISTING' | 'IMPORT';
+  localResourceId: string;
+  externalResourceId: string;
+  organization: OrganizationSummary;
 }
 
 export interface SatusehatSyncLog {

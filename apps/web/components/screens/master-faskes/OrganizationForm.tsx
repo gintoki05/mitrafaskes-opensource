@@ -1,14 +1,17 @@
 "use client";
 
-import { type FormEvent, useState } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Controller, useForm } from "react-hook-form";
 import { Building2, Save } from "lucide-react";
 import type { OrganizationSummary } from "@mitrafaskes/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ComboboxField } from "@/components/ui/combobox";
+import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { emptyOrganization, organizationTypes } from "./constants";
-import { FieldLabel, SelectField } from "./FormField";
+import { SelectField } from "./FormField";
+import { organizationFormSchema } from "./schemas";
 import type {
   FormMode,
   OrganizationForm as OrganizationFormValues,
@@ -37,23 +40,21 @@ export function OrganizationForm({
   excludeId,
   onCancel,
 }: OrganizationFormProps) {
-  const [form, setForm] = useState(
-    initialValues ?? emptyOrganization,
-  );
+  const {
+    control,
+    formState: { errors, isSubmitting },
+    register,
+    reset,
+    handleSubmit,
+  } = useForm<OrganizationFormValues>({
+    resolver: zodResolver(organizationFormSchema),
+    defaultValues: initialValues ?? emptyOrganization,
+    mode: "onBlur",
+  });
 
-  const update = <K extends keyof OrganizationFormValues>(
-    field: K,
-    value: OrganizationFormValues[K],
-  ) => {
-    setForm((current) => ({ ...current, [field]: value }));
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (await onSubmit(form)) {
-      setForm(emptyOrganization);
-    }
-  };
+  const submit = handleSubmit(async (values) => {
+    if (await onSubmit(values)) reset(emptyOrganization);
+  });
 
   return (
     <Card>
@@ -65,114 +66,147 @@ export function OrganizationForm({
       </CardHeader>
       <CardContent className="pt-4">
         {canWrite ? (
-          <form className="space-y-3" onSubmit={handleSubmit}>
-            <div>
+          <form className="space-y-3" onSubmit={submit} noValidate>
+            <Field data-invalid={Boolean(errors.code)}>
               <FieldLabel htmlFor="organization-code">Kode master</FieldLabel>
               <Input
+                {...register("code")}
                 id="organization-code"
-                value={form.code}
-                onChange={(event) => update("code", event.target.value)}
                 placeholder="KLINIK-UTAMA"
-                required
+                aria-invalid={Boolean(errors.code)}
+                aria-describedby="organization-code-error"
               />
-            </div>
-            <div>
+              <FieldError id="organization-code-error" errors={[errors.code]} />
+            </Field>
+
+            <Field data-invalid={Boolean(errors.name)}>
               <FieldLabel htmlFor="organization-name">
                 Nama organisasi / faskes
               </FieldLabel>
               <Input
+                {...register("name")}
                 id="organization-name"
-                value={form.name}
-                onChange={(event) => update("name", event.target.value)}
                 placeholder="Klinik Mitra Sehat"
-                required
+                aria-invalid={Boolean(errors.name)}
+                aria-describedby="organization-name-error"
               />
-            </div>
-            <div>
-              <FieldLabel htmlFor="organization-type">
-                Jenis organisasi
-              </FieldLabel>
-              <SelectField
-                id="organization-type"
-                value={form.type}
-                onChange={(value) =>
-                  update("type", value as OrganizationFormValues["type"])
-                }
-              >
-                {organizationTypes.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </SelectField>
-            </div>
-            <div>
-              <FieldLabel htmlFor="organization-parent">
-                Organisasi induk (opsional)
-              </FieldLabel>
-              <ComboboxField
-                id="organization-parent"
-                value={form.parentId}
-                onChange={(parentId) => update("parentId", parentId)}
-                placeholder="Tidak ada, sebagai induk"
-                options={organizations
-                  .filter((organization) => organization.id !== excludeId)
-                  .map((organization) => ({
-                    value: organization.id,
-                    label: `${organization.code} - ${organization.name}`,
-                  }))}
-              />
-            </div>
-            <div>
+              <FieldError id="organization-name-error" errors={[errors.name]} />
+            </Field>
+
+            <Controller
+              name="type"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="organization-type">Jenis organisasi</FieldLabel>
+                  <SelectField
+                    id="organization-type"
+                    value={field.value}
+                    onChange={(value) => field.onChange(value)}
+                    aria-label="Jenis organisasi"
+                  >
+                    {organizationTypes.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </SelectField>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+
+            <Controller
+              name="parentId"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="organization-parent">
+                    Organisasi induk (opsional)
+                  </FieldLabel>
+                  <ComboboxField
+                    id="organization-parent"
+                    value={field.value}
+                    onChange={field.onChange}
+                    placeholder="Tidak ada, sebagai induk"
+                    options={organizations
+                      .filter((organization) => organization.id !== excludeId)
+                      .map((organization) => ({
+                        value: organization.id,
+                        label: `${organization.code} - ${organization.name}`,
+                      }))}
+                  />
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+
+            <Field data-invalid={Boolean(errors.addressText)}>
               <FieldLabel htmlFor="organization-address">Alamat</FieldLabel>
               <Input
+                {...register("addressText")}
                 id="organization-address"
-                value={form.addressText}
-                onChange={(event) => update("addressText", event.target.value)}
                 placeholder="Alamat faskes"
+                aria-invalid={Boolean(errors.addressText)}
+                aria-describedby="organization-address-error"
               />
-            </div>
+              <FieldError id="organization-address-error" errors={[errors.addressText]} />
+            </Field>
+
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div>
+              <Field data-invalid={Boolean(errors.phone)}>
                 <FieldLabel htmlFor="organization-phone">Telepon</FieldLabel>
                 <Input
+                  {...register("phone")}
                   id="organization-phone"
-                  value={form.phone}
-                  onChange={(event) => update("phone", event.target.value)}
                   placeholder="021..."
+                  aria-invalid={Boolean(errors.phone)}
+                  aria-describedby="organization-phone-error"
                 />
-              </div>
-              <div>
+                <FieldError id="organization-phone-error" errors={[errors.phone]} />
+              </Field>
+              <Field data-invalid={Boolean(errors.email)}>
                 <FieldLabel htmlFor="organization-email">Email</FieldLabel>
                 <Input
+                  {...register("email")}
                   id="organization-email"
                   type="email"
-                  value={form.email}
-                  onChange={(event) => update("email", event.target.value)}
                   placeholder="admin@..."
+                  aria-invalid={Boolean(errors.email)}
+                  aria-describedby="organization-email-error"
                 />
-              </div>
+                <FieldError id="organization-email-error" errors={[errors.email]} />
+              </Field>
             </div>
-            <div>
-              <FieldLabel htmlFor="organization-active">Status</FieldLabel>
-              <SelectField
-                id="organization-active"
-                value={form.active ? "true" : "false"}
-                onChange={(value) => update("active", value === "true")}
-              >
-                <option value="true">Aktif</option>
-                <option value="false">Nonaktif</option>
-              </SelectField>
-            </div>
+
+            <Controller
+              name="active"
+              control={control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="organization-active">Status</FieldLabel>
+                  <SelectField
+                    id="organization-active"
+                    value={field.value ? "true" : "false"}
+                    onChange={(value) => field.onChange(value === "true")}
+                  >
+                    <option value="true">Aktif</option>
+                    <option value="false">Nonaktif</option>
+                  </SelectField>
+                  <FieldError errors={[fieldState.error]} />
+                </Field>
+              )}
+            />
+
             <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               {onCancel ? (
-                <Button type="button" variant="outline" onClick={onCancel}>
+                <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
                   Batal
                 </Button>
               ) : null}
               <Button
                 type="submit"
-                disabled={submitting !== null}
+                disabled={submitting !== null || isSubmitting}
                 className="text-xs font-bold sm:min-w-44"
               >
                 <Save className="h-4 w-4" />

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Stethoscope, Zap } from 'lucide-react';
 import { AccessPermission } from '@mitrafaskes/shared';
 import { RouteGuard } from '@/components/RouteGuard';
@@ -9,25 +9,12 @@ import { PageHeader } from '@/components/PageHeader';
 import { ScreenState } from '@/components/ScreenState';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { useRmeResources } from '@/hooks/useRmeResources';
-import type { Icd10Entry } from '@/lib/clinical-types';
 import { RmeEncounterQueue } from './rme/RmeEncounterQueue';
 import { RmeForm, RmeFormPlaceholder } from './rme/RmeForm';
-import type { RmeDiagnosis, RmePrescription, RmePrescriptionField, RmePresetBundle } from './rme/types';
+import type { RmeFormValues } from './rme/rme-form-schema';
 
 export default function RmePage() {
-  const [anamnesis, setAnamnesis] = useState('Pasien mengeluh demam dan batuk sejak 2 hari yang lalu.');
-  const [systolic, setSystolic] = useState('120');
-  const [diastolic, setDiastolic] = useState('80');
-  const [heartRate, setHeartRate] = useState('78');
-  const [temperature, setTemperature] = useState('37.2');
   const [icdSearch, setIcdSearch] = useState('');
-  const [selectedDiagnoses, setSelectedDiagnoses] = useState<RmeDiagnosis[]>([
-    { icd10Code: 'J00', nameIndo: 'Nasofaringitis Akut (Flu / Batuk Pilek)', isPrimary: true },
-  ]);
-  const [prescriptions, setPrescriptions] = useState<RmePrescription[]>([
-    { medicineName: 'Paracetamol 500mg', dosage: '1 Tablet', frequency: '3x Sehari sesudah makan', quantity: 10 },
-    { medicineName: 'Amoxicillin 500mg', dosage: '1 Kaplet', frequency: '3x Sehari sesudah makan', quantity: 15 },
-  ]);
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [saveError, setSaveError] = useState('');
@@ -50,57 +37,7 @@ export default function RmePage() {
 
   useKeyboardShortcut('Enter', handleSaveShortcut);
 
-  const handleAddDiagnosis = (icd: Icd10Entry) => {
-    if (!selectedDiagnoses.some((diagnosis) => diagnosis.icd10Code === icd.code)) {
-      setSelectedDiagnoses([
-        ...selectedDiagnoses,
-        { icd10Code: icd.code, nameIndo: icd.nameIndo, isPrimary: selectedDiagnoses.length === 0 },
-      ]);
-    }
-    setIcdSearch('');
-  };
-
-  const handleRemoveDiagnosis = (code: string) => {
-    setSelectedDiagnoses(selectedDiagnoses.filter((diagnosis) => diagnosis.icd10Code !== code));
-  };
-
-  const handleAddPrescription = () => {
-    setPrescriptions([...prescriptions, { medicineName: '', dosage: '1 Tablet', frequency: '3x Sehari', quantity: 10 }]);
-  };
-
-  const handleVitalChange = (field: 'systolic' | 'diastolic' | 'temperature' | 'heartRate', value: string) => {
-    const setters = { systolic: setSystolic, diastolic: setDiastolic, temperature: setTemperature, heartRate: setHeartRate };
-    setters[field](value);
-  };
-
-  const handleUpdatePrescription = (index: number, field: RmePrescriptionField, value: string | number) => {
-    setPrescriptions(prescriptions.map((prescription, itemIndex) => (
-      itemIndex === index ? { ...prescription, [field]: value } : prescription
-    )));
-  };
-
-  const applyPresetBundle = (type: RmePresetBundle) => {
-    if (type === 'ISPA') {
-      setSelectedDiagnoses([{ icd10Code: 'J00', nameIndo: 'Nasofaringitis Akut (Flu / Batuk Pilek)', isPrimary: true }]);
-      setPrescriptions([
-        { medicineName: 'Paracetamol 500mg', dosage: '1 Tablet', frequency: '3x Sehari sesudah makan', quantity: 10 },
-        { medicineName: 'CTM 4mg', dosage: '1 Tablet', frequency: '3x Sehari sesudah makan', quantity: 10 },
-        { medicineName: 'Vitamin C 50mg', dosage: '1 Tablet', frequency: '2x Sehari sesudah makan', quantity: 10 },
-      ]);
-    } else if (type === 'GASTRITIS') {
-      setSelectedDiagnoses([{ icd10Code: 'K29.7', nameIndo: 'Gastritis, Tidak Spesifik (Sakit Maag)', isPrimary: true }]);
-      setPrescriptions([
-        { medicineName: 'Antasida Doen', dosage: '1 Tablet Kunyah', frequency: '3x Sehari sebelum makan', quantity: 12 },
-        { medicineName: 'Omeprazole 20mg', dosage: '1 Kapsul', frequency: '2x Sehari sebelum makan', quantity: 10 },
-      ]);
-    } else if (type === 'HYPERTENSION') {
-      setSelectedDiagnoses([{ icd10Code: 'I10', nameIndo: 'Hipertensi Esensial (Tekanan Darah Tinggi)', isPrimary: true }]);
-      setPrescriptions([{ medicineName: 'Amlodipine 5mg', dosage: '1 Tablet', frequency: '1x Sehari pagi hari', quantity: 30 }]);
-    }
-  };
-
-  const handleSaveRme = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleSaveRme = async (values: RmeFormValues) => {
     if (!selectedEncounter) return;
 
     setSaving(true);
@@ -113,13 +50,7 @@ export default function RmePage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           encounterId: selectedEncounter.id,
-          anamnesis,
-          systolic,
-          diastolic,
-          heartRate,
-          temperature,
-          diagnoses: selectedDiagnoses,
-          prescriptions,
+          ...values,
         }),
       });
 
@@ -168,29 +99,16 @@ export default function RmePage() {
           <div className="min-w-0 space-y-6 lg:col-span-3">
             {selectedEncounter ? (
               <RmeForm
+                key={selectedEncounter.id}
                 encounter={selectedEncounter}
-                anamnesis={anamnesis}
-                systolic={systolic}
-                diastolic={diastolic}
-                heartRate={heartRate}
-                temperature={temperature}
                 icdSearch={icdSearch}
                 icdResults={icdResults}
-                selectedDiagnoses={selectedDiagnoses}
-                prescriptions={prescriptions}
                 saving={saving}
                 onSubmit={handleSaveRme}
-                onAnamnesisChange={setAnamnesis}
-                onVitalChange={handleVitalChange}
                 onIcdSearchChange={(value) => {
                   setIcdSearch(value);
                   void searchIcd10(value);
                 }}
-                onAddDiagnosis={handleAddDiagnosis}
-                onRemoveDiagnosis={handleRemoveDiagnosis}
-                onAddPrescription={handleAddPrescription}
-                onUpdatePrescription={handleUpdatePrescription}
-                onApplyPresetBundle={applyPresetBundle}
               />
             ) : (
               <RmeFormPlaceholder encountersLoading={encountersLoading} />

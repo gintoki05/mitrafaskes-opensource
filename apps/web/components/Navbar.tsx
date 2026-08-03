@@ -34,8 +34,8 @@ type NavigationItem = {
 const navigationItems: readonly NavigationItem[] = [
   {
     href: '/pendaftaran',
-    label: 'Daftar Rekam Medis',
-    shortLabel: 'RME',
+    label: 'Pendaftaran & Antrean',
+    shortLabel: 'Pendaftaran',
     permission: AccessPermission.QUEUE_READ,
     icon: UserCheck,
   },

@@ -1,6 +1,6 @@
 'use client';
 
-import type { FormEvent, ReactNode } from 'react';
+import type { ReactNode, SubmitEvent } from 'react';
 import {
   flexRender,
   getCoreRowModel,
@@ -46,7 +46,7 @@ type MasterFaskesTableProps<TData> = {
   search: string;
   searchLabel: string;
   onSearchChange: (value: string) => void;
-  onSearchSubmit: (event: FormEvent<HTMLFormElement>) => void;
+  onSearchSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   filters?: ReactNode;
   hasActiveFilters?: boolean;
   onClearFilters?: () => void;

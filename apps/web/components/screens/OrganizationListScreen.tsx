@@ -1,7 +1,7 @@
 "use client";
 
-import { type FormEvent, useCallback, useMemo, useState } from "react";
-import { Building2, Plus } from "lucide-react";
+import { type SubmitEvent, useCallback, useMemo, useState } from "react";
+import { Building2, Download, Plus } from "lucide-react";
 import {
   AccessPermission,
   type MasterDataListQuery,
@@ -20,6 +20,8 @@ import { MasterFaskesSubnav } from "./master-faskes/MasterFaskesSubnav";
 import { MasterFaskesTable } from "./master-faskes/MasterFaskesTable";
 import { OrganizationForm } from "./master-faskes/OrganizationForm";
 import { OrganizationSyncDialog } from "./master-faskes/OrganizationSyncDialog";
+import { OrganizationImportDialog } from "./master-faskes/OrganizationImportDialog";
+import { OrganizationLinkDialog } from "./master-faskes/OrganizationLinkDialog";
 import { SelectField } from "./master-faskes/FormField";
 import { getOrganizationColumns } from "./master-faskes/organizationColumns";
 import { organizationToForm } from "./master-faskes/mappers";
@@ -54,6 +56,9 @@ export default function OrganizationListScreen() {
   const [editing, setEditing] = useState<OrganizationSummary | null>(null);
   const [syncOrganization, setSyncOrganization] =
     useState<OrganizationSummary | null>(null);
+  const [linkOrganization, setLinkOrganization] =
+    useState<OrganizationSummary | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState<SubmittingKind | null>(null);
   const [operationError, setOperationError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
@@ -85,7 +90,7 @@ export default function OrganizationListScreen() {
     setQuery((current) => ({ ...current, ...changes, page: 1 }));
   };
 
-  const handleSearchSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSearchSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     setFilters({ search: searchDraft.trim() || undefined });
   };
@@ -114,6 +119,16 @@ export default function OrganizationListScreen() {
     setEditing(null);
     setDialogOpen(true);
   };
+
+  const openImport = () => {
+    setOperationError("");
+    setImportDialogOpen(true);
+  };
+
+  const openLink = useCallback((organization: OrganizationSummary) => {
+    setOperationError("");
+    setLinkOrganization(organization);
+  }, []);
 
   const openEdit = useCallback((organization: OrganizationSummary) => {
     setOperationError("");
@@ -195,10 +210,11 @@ export default function OrganizationListScreen() {
         canWrite,
         organizations,
         onPreview: setSyncOrganization,
+        onLink: openLink,
         onEdit: openEdit,
         onToggleStatus: (organization) => void toggleStatus(organization),
       }),
-    [canWrite, organizations, openEdit, toggleStatus],
+    [canWrite, organizations, openEdit, openLink, toggleStatus],
   );
 
   return (
@@ -210,10 +226,16 @@ export default function OrganizationListScreen() {
           description="Kelola organisasi induk dan sub-organisasi yang menjadi dasar struktur fasilitas kesehatan."
           action={
             canWrite ? (
-              <Button type="button" onClick={openCreate}>
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Tambah organisasi
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="secondary" onClick={openImport}>
+                  <Download className="h-4 w-4" aria-hidden="true" />
+                  Tarik dari SATUSEHAT
+                </Button>
+                <Button type="button" onClick={openCreate}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Tambah organisasi
+                </Button>
+              </div>
             ) : undefined
           }
         />
@@ -313,6 +335,28 @@ export default function OrganizationListScreen() {
         onClose={() => setSyncOrganization(null)}
         onSynced={() => {
           void refreshOptions();
+        }}
+      />
+      <OrganizationLinkDialog
+        open={linkOrganization !== null}
+        organization={linkOrganization}
+        canWrite={canWrite}
+        onClose={() => setLinkOrganization(null)}
+        onLinked={async () => {
+          await refreshList();
+          await refreshOptions();
+          setSuccessMessage("Organization SATUSEHAT berhasil dihubungkan.");
+        }}
+      />
+      <OrganizationImportDialog
+        open={importDialogOpen}
+        organizations={organizations}
+        canWrite={canWrite}
+        onClose={() => setImportDialogOpen(false)}
+        onImported={async () => {
+          await refreshList();
+          await refreshOptions();
+          setSuccessMessage("Organization SATUSEHAT berhasil diimpor.");
         }}
       />
     </RouteGuard>

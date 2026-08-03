@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Activity,
   ArrowRight,
@@ -10,25 +11,44 @@ import {
   Stethoscope,
   UserCheck,
 } from 'lucide-react';
+import { useForm, type SubmitHandler } from 'react-hook-form';
+import { z } from 'zod';
 import { apiFetch, defaultRoute, saveSession } from '@/lib/auth';
 import { ScreenState } from '@/components/ScreenState';
 import { useSession } from '@/hooks/useSession';
 import { Button } from '@/components/ui/button';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+
+const loginSchema = z.object({
+  username: z.string().min(1, 'Username wajib diisi'),
+  password: z.string().min(1, 'Password wajib diisi'),
+});
+
+type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const [username, setUsername] = useState('dr_budi');
-  const [password, setPassword] = useState('dok123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const session = useSession();
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+    setValue,
+  } = useForm<LoginFormValues>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      username: 'dr_budi',
+      password: 'dok123',
+    },
+  });
 
   useEffect(() => {
     if (session) router.replace(defaultRoute(session.user));
   }, [router, session]);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin: SubmitHandler<LoginFormValues> = async ({ username, password }) => {
     setLoading(true);
     setError('');
 
@@ -55,8 +75,8 @@ export default function LoginPage() {
   };
 
   const selectQuickUser = (user: string, pass: string) => {
-    setUsername(user);
-    setPassword(pass);
+    setValue('username', user, { shouldValidate: true });
+    setValue('password', pass, { shouldValidate: true });
     setError('');
   };
 
@@ -114,35 +134,37 @@ export default function LoginPage() {
             />
           ) : null}
 
-          <form onSubmit={handleLogin} className="mt-8 space-y-5">
-            <div>
-              <label htmlFor="username" className="mb-2 block text-sm font-semibold text-foreground">Username</label>
+          <form onSubmit={handleSubmit(handleLogin)} className="mt-8 space-y-5" noValidate>
+            <Field data-invalid={Boolean(errors.username)}>
+              <FieldLabel htmlFor="username">Username</FieldLabel>
               <input
+                {...register('username')}
                 id="username"
                 type="text"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
                 autoComplete="username"
                 className="clinical-field min-h-11 w-full px-3.5 text-sm transition-colors focus-visible:border-ring"
-                required
+                aria-invalid={Boolean(errors.username)}
+                aria-describedby="username-error"
               />
-            </div>
+              <FieldError id="username-error" errors={[errors.username]} />
+            </Field>
 
-            <div>
+            <Field data-invalid={Boolean(errors.password)}>
               <div className="mb-2 flex items-center justify-between gap-3">
-                <label htmlFor="password" className="block text-sm font-semibold text-foreground">Password</label>
+                <FieldLabel htmlFor="password">Password</FieldLabel>
                 <span className="text-xs text-muted-foreground">Akun internal fasilitas</span>
               </div>
               <input
+                {...register('password')}
                 id="password"
                 type="password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
                 autoComplete="current-password"
                 className="clinical-field min-h-11 w-full px-3.5 text-sm transition-colors focus-visible:border-ring"
-                required
+                aria-invalid={Boolean(errors.password)}
+                aria-describedby="password-error"
               />
-            </div>
+              <FieldError id="password-error" errors={[errors.password]} />
+            </Field>
 
             <Button type="submit" size="lg" disabled={loading} aria-busy={loading} className="w-full">
               <LockKeyhole className="h-4 w-4" aria-hidden="true" />

@@ -26,9 +26,9 @@ When collapsed, the main content and topbar follow the narrower rail width so th
 
 The login surface is a split workspace: an ink-navy product/context panel and a focused white authentication panel. Demo accounts remain available for local development. Labels are visible, credentials use browser autocomplete hints, and the primary action is full-width.
 
-### Daftar Rekam Medis
+### Pendaftaran & Antrean
 
-The registration screen is table-first. The page heading is followed by a search-led toolbar, a semantic patient table, lightweight row actions, and a separate queue status surface. Patient creation is a focused dialog rather than a competing page-level card.
+The registration screen focuses on creating patients and managing the active queue. Patient creation is a focused dialog, while the queue remains a separate status surface rather than competing with the clinical examination workspace.
 
 ### RME and integration screens
 

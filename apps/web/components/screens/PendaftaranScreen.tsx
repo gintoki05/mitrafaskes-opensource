@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import { useState, type SubmitEvent } from 'react';
 import { Clock3, UserCheck, UserPlus } from 'lucide-react';
 import { AccessPermission } from '@mitrafaskes/shared';
 import { RouteGuard } from '@/components/RouteGuard';
@@ -12,6 +12,7 @@ import { useRegistrationData } from '@/hooks/useRegistrationData';
 import { useSession } from '@/hooks/useSession';
 import { PatientDirectory } from './pendaftaran/PatientDirectory';
 import { PatientRegistrationDialog } from './pendaftaran/PatientRegistrationDialog';
+import type { PatientRegistrationFormValues } from './pendaftaran/patient-registration-schema';
 import { QueuePanel } from './pendaftaran/QueuePanel';
 
 export default function PendaftaranPage() {
@@ -19,12 +20,6 @@ export default function PendaftaranPage() {
   const [successMessage, setSuccessMessage] = useState('');
   const [operationError, setOperationError] = useState('');
   const [showModal, setShowModal] = useState(false);
-  const [nik, setNik] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [birthDate, setBirthDate] = useState('1992-05-10');
-  const [gender, setGender] = useState('MALE');
-  const [address, setAddress] = useState('');
-  const [phone] = useState('');
   const session = useSession();
   const currentUser = session?.user ?? null;
   const canWritePatient = can(currentUser, AccessPermission.PATIENT_WRITE);
@@ -40,33 +35,32 @@ export default function PendaftaranPage() {
     refreshEncounters,
   } = useRegistrationData();
 
-  const handleSearchSubmit = (event: React.FormEvent) => {
+  const handleSearchSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     void refreshPatients(search);
   };
 
-  const handleCreatePatient = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const handleCreatePatient = async (values: PatientRegistrationFormValues) => {
     setOperationError('');
     setSuccessMessage('');
     try {
       const response = await apiFetch('/api/patients', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nik, fullName, birthDate, gender, address, phone }),
+        body: JSON.stringify({ ...values, phone: '' }),
       });
       if (response.ok) {
         setShowModal(false);
-        setNik('');
-        setFullName('');
         setSuccessMessage('Data pasien berhasil disimpan.');
         void refreshPatients();
+        return true;
       } else {
         throw new Error('Data pasien tidak dapat disimpan.');
       }
     } catch (error) {
       console.error(error);
       setOperationError(error instanceof Error ? error.message : 'Data pasien tidak dapat disimpan.');
+      return false;
     }
   };
 
@@ -100,8 +94,8 @@ export default function PendaftaranPage() {
       <div className="min-w-0 space-y-6 sm:space-y-7">
         <PageHeader
           icon={<UserCheck className="h-6 w-6" />}
-          title="Daftar Rekam Medis"
-          description="Cari pasien berdasarkan NIK, nomor rekam medis, atau nama. Kelola pendaftaran dan antrean poli dari satu ruang kerja."
+          title="Pendaftaran & Antrean"
+          description="Daftarkan pasien baru dan kelola antrean poli dari satu ruang kerja."
           action={
             <>
               <Button
@@ -147,18 +141,8 @@ export default function PendaftaranPage() {
         <QueuePanel encounters={encounters} encountersLoading={encountersLoading} encountersError={encountersError} />
         <PatientRegistrationDialog
           open={showModal}
-          nik={nik}
-          fullName={fullName}
-          birthDate={birthDate}
-          gender={gender}
-          address={address}
           onClose={() => setShowModal(false)}
           onSubmit={handleCreatePatient}
-          onNikChange={setNik}
-          onFullNameChange={setFullName}
-          onBirthDateChange={setBirthDate}
-          onGenderChange={setGender}
-          onAddressChange={setAddress}
         />
       </div>
     </RouteGuard>

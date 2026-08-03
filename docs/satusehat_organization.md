@@ -24,15 +24,66 @@ Sinkronisasi ke sandbox:
 POST /api/master/organizations/:id/satusehat/sync
 ```
 
+Pencarian Organization yang sudah ada di SATUSEHAT:
+
+```text
+GET /api/master/organizations/satusehat/search?id={satusehat-id}
+GET /api/master/organizations/satusehat/search?name={nama}
+GET /api/master/organizations/satusehat/search?partof={parent-satusehat-id}
+GET /api/master/organizations/satusehat/search?parentLocalId={parent-local-id}
+```
+
+Hubungkan resource SATUSEHAT ke Organization lokal tanpa membuat resource baru:
+
+```text
+POST /api/master/organizations/:id/satusehat/link
+{
+  "externalResourceId": "{satusehat-id}"
+}
+```
+
+Impor resource SATUSEHAT menjadi Organization lokal sekaligus membuat link:
+
+```text
+POST /api/master/organizations/satusehat/import
+{
+  "externalResourceId": "{satusehat-id}",
+  "code": "POLI-UMUM",
+  "parentId": "{local-parent-id}"
+}
+```
+
 Keduanya menggunakan sesi API lokal. Preview membutuhkan `master-data.read`, sedangkan sinkronisasi membutuhkan `master-data.write`.
+
+Pencarian membutuhkan `master-data.read`. Link dan import membutuhkan
+`master-data.write`.
+
+## Aturan link dan import
+
+- Jika Organization sudah ada di SATUSEHAT, gunakan link atau import. Sistem
+  tidak melakukan `POST` ulang untuk resource yang sudah memiliki ID eksternal.
+- ID lokal disimpan di `HealthcareOrganization.id`, sedangkan ID SATUSEHAT
+  disimpan di `ExternalResourceLink.externalResourceId`.
+- Satu ID Organization SATUSEHAT tidak boleh terhubung ke dua Organization lokal.
+- Organization induk lokal hanya dapat di-link ke
+  `SATUSEHAT_ORGANIZATION_ID`.
+- Sub-organisasi hanya dapat diimpor atau di-link jika `Organization.partOf`
+  cocok dengan organisasi induk lokal yang sudah terhubung.
+- Import mengambil nama, status, kontak, alamat, dan relasi parent dari resource
+  SATUSEHAT. Kode organisasi tetap diminta dari pengguna karena merupakan kode
+  operasional lokal.
 
 ## Urutan penggunaan
 
 1. Isi `SATUSEHAT_ORGANIZATION_ID` dan kredensial sandbox di `apps/api/.env`.
-2. Buat satu organisasi lokal bertipe `HEALTHCARE_FACILITY` tanpa parent.
-3. Jalankan preview untuk memeriksa payload.
-4. Jalankan sync; API memverifikasi Organization induk SATUSEHAT dan membuat linkage lokal.
-5. Buat `SUB_ORGANIZATION` di bawah organisasi induk.
-6. Preview lalu sync sub-organisasi tersebut. Parent SATUSEHAT akan diisi pada `Organization.partOf`.
+2. Buat satu organisasi lokal bertipe `HEALTHCARE_FACILITY` tanpa parent, atau
+   gunakan link jika data lokalnya sudah ada.
+3. Jika Organization induk sudah ada di SATUSEHAT, buka pencarian lalu link
+   resource tersebut ke organisasi lokal. Untuk sub-organisasi yang sudah ada,
+   pilih parent lokal yang sesuai lalu import.
+4. Untuk Organization baru, jalankan preview lalu sync; API akan membuat
+   resource SATUSEHAT dan menyimpan linkage lokal.
+5. Buat atau import `SUB_ORGANIZATION` di bawah organisasi induk. Parent
+   SATUSEHAT akan diisi atau diverifikasi melalui `Organization.partOf`.
 
 Unit layanan dan `Location` akan mengikuti setelah struktur Organization ini tervalidasi di sandbox.

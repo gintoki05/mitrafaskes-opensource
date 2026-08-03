@@ -1,9 +1,12 @@
 'use client';
 
-import type { FormEventHandler } from 'react';
+import { useEffect } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Controller, useForm } from 'react-hook-form';
 import { CheckCircle2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -12,38 +15,46 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  patientRegistrationDefaults,
+  patientRegistrationSchema,
+  type PatientRegistrationFormValues,
+} from './patient-registration-schema';
 
 type PatientRegistrationDialogProps = {
   open: boolean;
-  nik: string;
-  fullName: string;
-  birthDate: string;
-  gender: string;
-  address: string;
   onClose: () => void;
-  onSubmit: FormEventHandler<HTMLFormElement>;
-  onNikChange: (value: string) => void;
-  onFullNameChange: (value: string) => void;
-  onBirthDateChange: (value: string) => void;
-  onGenderChange: (value: string) => void;
-  onAddressChange: (value: string) => void;
+  onSubmit: (values: PatientRegistrationFormValues) => Promise<boolean>;
 };
 
 export function PatientRegistrationDialog({
   open,
-  nik,
-  fullName,
-  birthDate,
-  gender,
-  address,
   onClose,
   onSubmit,
-  onNikChange,
-  onFullNameChange,
-  onBirthDateChange,
-  onGenderChange,
-  onAddressChange,
 }: PatientRegistrationDialogProps) {
+  const {
+    control,
+    formState: { errors, isSubmitting },
+    register,
+    reset,
+    handleSubmit,
+  } = useForm<PatientRegistrationFormValues>({
+    resolver: zodResolver(patientRegistrationSchema),
+    defaultValues: patientRegistrationDefaults,
+    mode: 'onBlur',
+  });
+
+  useEffect(() => {
+    if (open) reset(patientRegistrationDefaults);
+  }, [open, reset]);
+
+  const submit = handleSubmit(async (values) => {
+    if (await onSubmit(values)) {
+      reset(patientRegistrationDefaults);
+      onClose();
+    }
+  });
+
   if (!open) return null;
 
   return (
@@ -68,46 +79,102 @@ export function PatientRegistrationDialog({
           </p>
         </CardHeader>
         <CardContent className="pt-5">
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="registration-nik" className="mb-1.5 block text-xs font-semibold text-foreground">NIK (16 digit sesuai KTP)</label>
-              <Input id="registration-nik" type="text" maxLength={16} inputMode="numeric" value={nik} onChange={(event) => onNikChange(event.target.value)} placeholder="Contoh: 3171012304900001" className="font-mono text-sm" autoFocus required />
-            </div>
-            <div>
-              <label htmlFor="registration-name" className="mb-1.5 block text-xs font-semibold text-foreground">Nama lengkap pasien</label>
-              <Input id="registration-name" type="text" value={fullName} onChange={(event) => onFullNameChange(event.target.value)} placeholder="Nama sesuai KTP" className="text-sm" required />
-            </div>
+          <form onSubmit={submit} className="space-y-4" noValidate>
+            <Field data-invalid={Boolean(errors.nik)}>
+              <FieldLabel htmlFor="registration-nik">NIK (16 digit sesuai KTP)</FieldLabel>
+              <Input
+                {...register('nik')}
+                id="registration-nik"
+                type="text"
+                maxLength={16}
+                inputMode="numeric"
+                placeholder="Contoh: 3171012304900001"
+                className="font-mono text-sm"
+                autoFocus
+                aria-invalid={Boolean(errors.nik)}
+                aria-describedby="registration-nik-error"
+              />
+              <FieldError id="registration-nik-error" errors={[errors.nik]} />
+            </Field>
+
+            <Field data-invalid={Boolean(errors.fullName)}>
+              <FieldLabel htmlFor="registration-name">Nama lengkap pasien</FieldLabel>
+              <Input
+                {...register('fullName')}
+                id="registration-name"
+                type="text"
+                placeholder="Nama sesuai KTP"
+                className="text-sm"
+                aria-invalid={Boolean(errors.fullName)}
+                aria-describedby="registration-name-error"
+              />
+              <FieldError id="registration-name-error" errors={[errors.fullName]} />
+            </Field>
+
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label htmlFor="registration-birth-date" className="mb-1.5 block text-xs font-semibold text-foreground">Tanggal lahir</label>
-                <Input id="registration-birth-date" type="date" value={birthDate} onChange={(event) => onBirthDateChange(event.target.value)} className="text-sm" required />
-              </div>
-              <div>
-                <label htmlFor="registration-gender" className="mb-1.5 block text-xs font-semibold text-foreground">Jenis kelamin</label>
-                <Select
-                  value={gender || null}
-                  onValueChange={(value) => onGenderChange(value ?? '')}
-                >
-                  <SelectTrigger
-                    id="registration-gender"
-                    className="clinical-field min-h-9 w-full px-3 py-2 text-sm"
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MALE">Laki-laki</SelectItem>
-                    <SelectItem value="FEMALE">Perempuan</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Field data-invalid={Boolean(errors.birthDate)}>
+                <FieldLabel htmlFor="registration-birth-date">Tanggal lahir</FieldLabel>
+                <Input
+                  {...register('birthDate')}
+                  id="registration-birth-date"
+                  type="date"
+                  className="text-sm"
+                  aria-invalid={Boolean(errors.birthDate)}
+                  aria-describedby="registration-birth-date-error"
+                />
+                <FieldError id="registration-birth-date-error" errors={[errors.birthDate]} />
+              </Field>
+
+              <Controller
+                name="gender"
+                control={control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="registration-gender">Jenis kelamin</FieldLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={(value) => field.onChange(value ?? '')}
+                    >
+                      <SelectTrigger
+                        id="registration-gender"
+                        className="clinical-field min-h-9 w-full px-3 py-2 text-sm"
+                        aria-invalid={fieldState.invalid}
+                        aria-describedby="registration-gender-error"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="MALE">Laki-laki</SelectItem>
+                        <SelectItem value="FEMALE">Perempuan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FieldError id="registration-gender-error" errors={[fieldState.error]} />
+                  </Field>
+                )}
+              />
             </div>
-            <div>
-              <label htmlFor="registration-address" className="mb-1.5 block text-xs font-semibold text-foreground">Alamat tempat tinggal</label>
-              <Input id="registration-address" type="text" value={address} onChange={(event) => onAddressChange(event.target.value)} placeholder="Jl. Melati No. 12" className="text-sm" />
-            </div>
+
+            <Field data-invalid={Boolean(errors.address)}>
+              <FieldLabel htmlFor="registration-address">Alamat tempat tinggal</FieldLabel>
+              <Input
+                {...register('address')}
+                id="registration-address"
+                type="text"
+                placeholder="Jl. Melati No. 12"
+                aria-invalid={Boolean(errors.address)}
+                aria-describedby="registration-address-error"
+              />
+              <FieldError id="registration-address-error" errors={[errors.address]} />
+            </Field>
+
             <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
-              <Button type="button" variant="outline" onClick={onClose}>Batal</Button>
-              <Button type="submit"><CheckCircle2 className="h-4 w-4" aria-hidden="true" />Simpan pasien</Button>
+              <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                {isSubmitting ? 'Menyimpan...' : 'Simpan pasien'}
+              </Button>
             </div>
           </form>
         </CardContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import type { FormEventHandler } from 'react';
+import type { SubmitEventHandler } from 'react';
 import { Filter, Search, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +14,7 @@ type PatientDirectoryProps = {
   search: string;
   canCreateQueue: boolean;
   onSearchChange: (value: string) => void;
-  onSearchSubmit: FormEventHandler<HTMLFormElement>;
+  onSearchSubmit: SubmitEventHandler<HTMLFormElement>;
   onQueuePatient: (patientId: string) => void;
 };
 
@@ -122,4 +122,3 @@ export function PatientDirectory({
     </section>
   );
 }
-
