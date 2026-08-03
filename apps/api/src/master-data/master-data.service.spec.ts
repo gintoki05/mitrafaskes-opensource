@@ -118,3 +118,98 @@ describe('MasterDataService hierarchy invariants', () => {
     expect(prisma.location.update).not.toHaveBeenCalled();
   });
 });
+
+describe('MasterDataService list queries', () => {
+  it('returns paginated organizations with search, status, and sorting', async () => {
+    const organization = {
+      id: 'org-1',
+      code: 'KLINIK-1',
+      name: 'Klinik Mitra',
+      type: 'HEALTHCARE_FACILITY',
+      parentId: null,
+      addressText: 'Jakarta',
+      phone: null,
+      email: null,
+      active: true,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    const findMany = jest.fn().mockResolvedValue([organization]);
+    const count = jest.fn().mockResolvedValue(21);
+    const service = new MasterDataService({
+      healthcareOrganization: { findMany, count },
+    } as never);
+
+    const result = await service.findOrganizations({
+      search: 'mitra',
+      active: true,
+      page: 2,
+      pageSize: 10,
+      sort: 'code',
+      direction: 'desc',
+    });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        skip: 10,
+        take: 10,
+        orderBy: [{ code: 'desc' }, { name: 'asc' }],
+        where: expect.objectContaining({
+          active: true,
+          OR: expect.arrayContaining([
+            { code: { contains: 'mitra', mode: 'insensitive' } },
+            { name: { contains: 'mitra', mode: 'insensitive' } },
+          ]),
+        }),
+      }),
+    );
+    expect(count).toHaveBeenCalledWith(expect.any(Object));
+    expect(result).toEqual({
+      items: [
+        expect.objectContaining({ id: 'org-1', name: 'Klinik Mitra' }),
+      ],
+      meta: { page: 2, pageSize: 10, total: 21 },
+    });
+  });
+
+  it('applies organization and service-unit filters to locations', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const service = new MasterDataService({
+      location: { findMany, count },
+    } as never);
+
+    await service.findLocations({
+      organizationId: 'org-1',
+      serviceUnitId: 'unit-1',
+      status: 'SUSPENDED',
+      type: 'ROOM',
+    });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          organizationId: 'org-1',
+          serviceUnitId: 'unit-1',
+          status: 'SUSPENDED',
+          type: 'ROOM',
+        },
+      }),
+    );
+  });
+
+  it('caps an oversized page request at the API maximum', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const service = new MasterDataService({
+      serviceUnit: { findMany, count },
+    } as never);
+
+    const result = await service.findServiceUnits({ page: 0, pageSize: 999 });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ skip: 0, take: 100 }),
+    );
+    expect(result.meta).toEqual({ page: 1, pageSize: 100, total: 0 });
+  });
+});

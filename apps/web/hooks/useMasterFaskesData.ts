@@ -73,6 +73,16 @@ async function postMasterData<T>(path: string, input: unknown): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+async function patchMasterData<T>(path: string, input: unknown): Promise<T> {
+  const response = await apiFetch(`/api/master/${path}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(input),
+  });
+  if (!response.ok) throw await readApiError(response, 'Master faskes tidak dapat diperbarui.');
+  return response.json() as Promise<T>;
+}
+
 export function useMasterFaskesData() {
   const [state, dispatch] = useReducer(reducer, initialState);
 
@@ -98,8 +108,20 @@ export function useMasterFaskesData() {
     return result;
   }, [refresh]);
 
+  const updateOrganization = useCallback(async (id: string, input: unknown): Promise<OrganizationSummary> => {
+    const result = await patchMasterData<OrganizationSummary>(`organizations/${id}`, input);
+    await refresh();
+    return result;
+  }, [refresh]);
+
   const createServiceUnit = useCallback(async (input: unknown): Promise<ServiceUnitSummary> => {
     const result = await postMasterData<ServiceUnitSummary>('service-units', input);
+    await refresh();
+    return result;
+  }, [refresh]);
+
+  const updateServiceUnit = useCallback(async (id: string, input: unknown): Promise<ServiceUnitSummary> => {
+    const result = await patchMasterData<ServiceUnitSummary>(`service-units/${id}`, input);
     await refresh();
     return result;
   }, [refresh]);
@@ -110,12 +132,21 @@ export function useMasterFaskesData() {
     return result;
   }, [refresh]);
 
+  const updateLocation = useCallback(async (id: string, input: unknown): Promise<LocationSummary> => {
+    const result = await patchMasterData<LocationSummary>(`locations/${id}`, input);
+    await refresh();
+    return result;
+  }, [refresh]);
+
   return {
     ...state,
     ...state.data,
     refresh,
     createOrganization,
+    updateOrganization,
     createServiceUnit,
+    updateServiceUnit,
     createLocation,
+    updateLocation,
   };
 }

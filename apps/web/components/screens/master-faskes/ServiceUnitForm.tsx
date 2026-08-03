@@ -5,10 +5,12 @@ import { Layers3, Save } from "lucide-react";
 import type { OrganizationSummary, ServiceUnitSummary } from "@mitrafaskes/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ComboboxField } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { emptyServiceUnit, serviceUnitTypes } from "./constants";
 import { FieldLabel, SelectField } from "./FormField";
 import type {
+  FormMode,
   ServiceUnitForm as ServiceUnitFormValues,
   SubmitHandler,
   SubmittingKind,
@@ -20,6 +22,10 @@ type ServiceUnitFormProps = {
   serviceUnits: ServiceUnitSummary[];
   submitting: SubmittingKind | null;
   onSubmit: SubmitHandler<ServiceUnitFormValues>;
+  initialValues?: ServiceUnitFormValues;
+  mode?: FormMode;
+  excludeId?: string;
+  onCancel?: () => void;
 };
 
 export function ServiceUnitForm({
@@ -28,14 +34,22 @@ export function ServiceUnitForm({
   serviceUnits,
   submitting,
   onSubmit,
+  initialValues,
+  mode = "create",
+  excludeId,
+  onCancel,
 }: ServiceUnitFormProps) {
-  const [form, setForm] = useState(emptyServiceUnit);
+  const [form, setForm] = useState(
+    initialValues ?? emptyServiceUnit,
+  );
   const serviceUnitParents = useMemo(
     () =>
       serviceUnits.filter(
-        (unit) => unit.organizationId === form.organizationId,
+        (unit) =>
+          unit.organizationId === form.organizationId &&
+          unit.id !== excludeId,
       ),
-    [form.organizationId, serviceUnits],
+    [excludeId, form.organizationId, serviceUnits],
   );
 
   const update = <K extends keyof ServiceUnitFormValues>(
@@ -74,20 +88,18 @@ export function ServiceUnitForm({
               <FieldLabel htmlFor="unit-organization">
                 Organisasi induk
               </FieldLabel>
-              <SelectField
+              <ComboboxField
                 id="unit-organization"
                 value={form.organizationId}
                 onChange={handleOrganizationChange}
-              >
-                <option value="">Pilih organisasi</option>
-                {organizations.map((organization) => (
-                  <option key={organization.id} value={organization.id}>
-                    {organization.code} — {organization.name}
-                  </option>
-                ))}
-              </SelectField>
+                placeholder="Pilih organisasi"
+                options={organizations.map((organization) => ({
+                  value: organization.id,
+                  label: `${organization.code} - ${organization.name}`,
+                }))}
+              />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <FieldLabel htmlFor="unit-code">Kode unit</FieldLabel>
                 <Input
@@ -129,30 +141,48 @@ export function ServiceUnitForm({
             </div>
             <div>
               <FieldLabel htmlFor="unit-parent">Unit induk (opsional)</FieldLabel>
-              <SelectField
+              <ComboboxField
                 id="unit-parent"
                 value={form.parentId}
                 disabled={!form.organizationId}
                 onChange={(parentId) => update("parentId", parentId)}
+                placeholder="Tidak ada"
+                options={serviceUnitParents.map((unit) => ({
+                  value: unit.id,
+                  label: `${unit.code} - ${unit.name}`,
+                }))}
+              />
+            </div>
+            <div>
+              <FieldLabel htmlFor="unit-active">Status</FieldLabel>
+              <SelectField
+                id="unit-active"
+                value={form.active ? "true" : "false"}
+                onChange={(value) => update("active", value === "true")}
               >
-                <option value="">Tidak ada</option>
-                {serviceUnitParents.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.code} — {unit.name}
-                  </option>
-                ))}
+                <option value="true">Aktif</option>
+                <option value="false">Nonaktif</option>
               </SelectField>
             </div>
-            <Button
-              type="submit"
-              disabled={submitting !== null || !form.organizationId}
-              className="w-full text-xs font-bold"
-            >
-              <Save className="h-4 w-4" />
-              {submitting === "unit"
-                ? "Menyimpan..."
-                : "Simpan unit layanan"}
-            </Button>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              {onCancel ? (
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  Batal
+                </Button>
+              ) : null}
+              <Button
+                type="submit"
+                disabled={submitting !== null || !form.organizationId}
+                className="text-xs font-bold sm:min-w-44"
+              >
+                <Save className="h-4 w-4" />
+                {submitting === "unit"
+                  ? "Menyimpan..."
+                  : mode === "edit"
+                    ? "Simpan perubahan"
+                    : "Simpan unit layanan"}
+              </Button>
+            </div>
           </form>
         ) : (
           <p className="text-xs text-muted-foreground">

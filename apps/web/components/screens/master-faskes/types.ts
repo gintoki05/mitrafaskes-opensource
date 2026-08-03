@@ -14,6 +14,7 @@ export type OrganizationForm = {
   addressText: string;
   phone: string;
   email: string;
+  active: boolean;
 };
 
 export type ServiceUnitForm = {
@@ -22,6 +23,7 @@ export type ServiceUnitForm = {
   code: string;
   name: string;
   type: ServiceUnitType;
+  active: boolean;
 };
 
 export type LocationForm = {
@@ -39,8 +41,11 @@ export type LocationForm = {
   city: string;
   postalCode: string;
   countryCode: string;
+  active: boolean;
 };
 
 export type SubmittingKind = "organization" | "unit" | "location";
 
 export type SubmitHandler<T> = (input: T) => Promise<boolean>;
+
+export type FormMode = "create" | "edit";

@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import type { SatusehatAuthStatus as SatusehatAuthStatusContract } from '@mitrafaskes/shared';
 
 const DEFAULT_ENVIRONMENT = 'sandbox';
 const DEFAULT_HTTP_TIMEOUT_MS = 10_000;
@@ -22,22 +23,7 @@ interface CachedToken {
   expiresAt: number;
 }
 
-export interface SatusehatAuthStatus {
-  environment: string;
-  oauthBaseUrl: string;
-  credentialsConfigured: boolean;
-  organizationConfigured: boolean;
-  status: 'NOT_CONFIGURED' | 'CONNECTED' | 'ERROR';
-  token: {
-    available: boolean;
-    expiresAt?: string;
-  };
-  error?: {
-    code: string;
-    message: string;
-    httpStatus?: number;
-  };
-}
+export type SatusehatAuthStatus = SatusehatAuthStatusContract;
 
 export class SatusehatAuthError extends Error {
   constructor(

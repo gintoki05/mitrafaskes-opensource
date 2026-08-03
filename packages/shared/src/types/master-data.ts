@@ -60,3 +60,31 @@ export interface MasterFaskesData {
   serviceUnits: ServiceUnitSummary[];
   locations: LocationSummary[];
 }
+
+export type MasterDataListSort = 'code' | 'name' | 'active' | 'createdAt';
+
+export type MasterDataSortDirection = 'asc' | 'desc';
+
+export interface MasterDataListQuery {
+  search?: string;
+  active?: boolean;
+  type?: string;
+  status?: string;
+  organizationId?: string;
+  serviceUnitId?: string;
+  page?: number;
+  pageSize?: number;
+  sort?: MasterDataListSort;
+  direction?: MasterDataSortDirection;
+}
+
+export interface MasterDataListMeta {
+  page: number;
+  pageSize: number;
+  total: number;
+}
+
+export interface MasterDataListResponse<T> {
+  items: T[];
+  meta: MasterDataListMeta;
+}

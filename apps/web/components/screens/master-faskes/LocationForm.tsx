@@ -9,10 +9,17 @@ import type {
 } from "@mitrafaskes/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ComboboxField } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
-import { emptyLocation, locationModes, locationStatuses, locationTypes } from "./constants";
+import {
+  emptyLocation,
+  locationModes,
+  locationStatuses,
+  locationTypes,
+} from "./constants";
 import { FieldLabel, SelectField } from "./FormField";
 import type {
+  FormMode,
   LocationForm as LocationFormValues,
   SubmitHandler,
   SubmittingKind,
@@ -25,6 +32,10 @@ type LocationFormProps = {
   locations: LocationSummary[];
   submitting: SubmittingKind | null;
   onSubmit: SubmitHandler<LocationFormValues>;
+  initialValues?: LocationFormValues;
+  mode?: FormMode;
+  excludeId?: string;
+  onCancel?: () => void;
 };
 
 export function LocationForm({
@@ -34,8 +45,14 @@ export function LocationForm({
   locations,
   submitting,
   onSubmit,
+  initialValues,
+  mode = "create",
+  excludeId,
+  onCancel,
 }: LocationFormProps) {
-  const [form, setForm] = useState(emptyLocation);
+  const [form, setForm] = useState(
+    initialValues ?? emptyLocation,
+  );
   const selectedServiceUnits = useMemo(
     () =>
       serviceUnits.filter(
@@ -46,9 +63,11 @@ export function LocationForm({
   const selectedLocationParents = useMemo(
     () =>
       locations.filter(
-        (location) => location.organizationId === form.organizationId,
+        (location) =>
+          location.organizationId === form.organizationId &&
+          location.id !== excludeId,
       ),
-    [form.organizationId, locations],
+    [excludeId, form.organizationId, locations],
   );
 
   const update = <K extends keyof LocationFormValues>(
@@ -92,20 +111,18 @@ export function LocationForm({
               <FieldLabel htmlFor="location-organization">
                 Organisasi induk
               </FieldLabel>
-              <SelectField
+              <ComboboxField
                 id="location-organization"
                 value={form.organizationId}
                 onChange={handleOrganizationChange}
-              >
-                <option value="">Pilih organisasi</option>
-                {organizations.map((organization) => (
-                  <option key={organization.id} value={organization.id}>
-                    {organization.code} — {organization.name}
-                  </option>
-                ))}
-              </SelectField>
+                placeholder="Pilih organisasi"
+                options={organizations.map((organization) => ({
+                  value: organization.id,
+                  label: `${organization.code} - ${organization.name}`,
+                }))}
+              />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <FieldLabel htmlFor="location-code">Kode lokasi</FieldLabel>
                 <Input
@@ -133,9 +150,9 @@ export function LocationForm({
                 </SelectField>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <FieldLabel htmlFor="location-status">Status</FieldLabel>
+                <FieldLabel htmlFor="location-status">Status location</FieldLabel>
                 <SelectField
                   id="location-status"
                   value={form.status}
@@ -177,7 +194,7 @@ export function LocationForm({
                 required
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <FieldLabel htmlFor="location-physical-type">
                   Kode physical type
@@ -208,37 +225,33 @@ export function LocationForm({
               <FieldLabel htmlFor="location-unit">
                 Unit layanan (opsional)
               </FieldLabel>
-              <SelectField
+              <ComboboxField
                 id="location-unit"
                 value={form.serviceUnitId}
                 disabled={!form.organizationId}
                 onChange={(serviceUnitId) => update("serviceUnitId", serviceUnitId)}
-              >
-                <option value="">Tidak ditetapkan</option>
-                {selectedServiceUnits.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    {unit.code} — {unit.name}
-                  </option>
-                ))}
-              </SelectField>
+                placeholder="Tidak ditetapkan"
+                options={selectedServiceUnits.map((unit) => ({
+                  value: unit.id,
+                  label: `${unit.code} - ${unit.name}`,
+                }))}
+              />
             </div>
             <div>
               <FieldLabel htmlFor="location-parent">
                 Lokasi induk (opsional)
               </FieldLabel>
-              <SelectField
+              <ComboboxField
                 id="location-parent"
                 value={form.parentId}
                 disabled={!form.organizationId}
                 onChange={(parentId) => update("parentId", parentId)}
-              >
-                <option value="">Tidak ada</option>
-                {selectedLocationParents.map((location) => (
-                  <option key={location.id} value={location.id}>
-                    {location.code} — {location.name}
-                  </option>
-                ))}
-              </SelectField>
+                placeholder="Tidak ada"
+                options={selectedLocationParents.map((location) => ({
+                  value: location.id,
+                  label: `${location.code} - ${location.name}`,
+                }))}
+              />
             </div>
             <div>
               <FieldLabel htmlFor="location-description">
@@ -253,7 +266,7 @@ export function LocationForm({
                 placeholder="Opsional"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <FieldLabel htmlFor="location-address">
                   Alamat lokasi
@@ -284,14 +297,36 @@ export function LocationForm({
                 placeholder="12345"
               />
             </div>
-            <Button
-              type="submit"
-              disabled={submitting !== null || !form.organizationId}
-              className="w-full text-xs font-bold"
-            >
-              <Save className="h-4 w-4" />
-              {submitting === "location" ? "Menyimpan..." : "Simpan location"}
-            </Button>
+            <div>
+              <FieldLabel htmlFor="location-active">Status data</FieldLabel>
+              <SelectField
+                id="location-active"
+                value={form.active ? "true" : "false"}
+                onChange={(value) => update("active", value === "true")}
+              >
+                <option value="true">Aktif</option>
+                <option value="false">Nonaktif</option>
+              </SelectField>
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              {onCancel ? (
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  Batal
+                </Button>
+              ) : null}
+              <Button
+                type="submit"
+                disabled={submitting !== null || !form.organizationId}
+                className="text-xs font-bold sm:min-w-44"
+              >
+                <Save className="h-4 w-4" />
+                {submitting === "location"
+                  ? "Menyimpan..."
+                  : mode === "edit"
+                    ? "Simpan perubahan"
+                    : "Simpan location"}
+              </Button>
+            </div>
           </form>
         ) : (
           <p className="text-xs text-muted-foreground">

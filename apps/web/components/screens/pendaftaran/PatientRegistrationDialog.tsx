@@ -5,6 +5,13 @@ import { CheckCircle2, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 type PatientRegistrationDialogProps = {
   open: boolean;
@@ -77,10 +84,21 @@ export function PatientRegistrationDialog({
               </div>
               <div>
                 <label htmlFor="registration-gender" className="mb-1.5 block text-xs font-semibold text-foreground">Jenis kelamin</label>
-                <select id="registration-gender" value={gender} onChange={(event) => onGenderChange(event.target.value)} className="clinical-field min-h-9 w-full px-3 py-2 text-sm">
-                  <option value="MALE">Laki-laki</option>
-                  <option value="FEMALE">Perempuan</option>
-                </select>
+                <Select
+                  value={gender || null}
+                  onValueChange={(value) => onGenderChange(value ?? '')}
+                >
+                  <SelectTrigger
+                    id="registration-gender"
+                    className="clinical-field min-h-9 w-full px-3 py-2 text-sm"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MALE">Laki-laki</SelectItem>
+                    <SelectItem value="FEMALE">Perempuan</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div>
@@ -97,4 +115,3 @@ export function PatientRegistrationDialog({
     </div>
   );
 }
-

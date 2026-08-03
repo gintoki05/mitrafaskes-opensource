@@ -5,10 +5,12 @@ import { Building2, Save } from "lucide-react";
 import type { OrganizationSummary } from "@mitrafaskes/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ComboboxField } from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import { emptyOrganization, organizationTypes } from "./constants";
 import { FieldLabel, SelectField } from "./FormField";
 import type {
+  FormMode,
   OrganizationForm as OrganizationFormValues,
   SubmitHandler,
   SubmittingKind,
@@ -19,6 +21,10 @@ type OrganizationFormProps = {
   organizations: OrganizationSummary[];
   submitting: SubmittingKind | null;
   onSubmit: SubmitHandler<OrganizationFormValues>;
+  initialValues?: OrganizationFormValues;
+  mode?: FormMode;
+  excludeId?: string;
+  onCancel?: () => void;
 };
 
 export function OrganizationForm({
@@ -26,8 +32,14 @@ export function OrganizationForm({
   organizations,
   submitting,
   onSubmit,
+  initialValues,
+  mode = "create",
+  excludeId,
+  onCancel,
 }: OrganizationFormProps) {
-  const [form, setForm] = useState(emptyOrganization);
+  const [form, setForm] = useState(
+    initialValues ?? emptyOrganization,
+  );
 
   const update = <K extends keyof OrganizationFormValues>(
     field: K,
@@ -98,18 +110,18 @@ export function OrganizationForm({
               <FieldLabel htmlFor="organization-parent">
                 Organisasi induk (opsional)
               </FieldLabel>
-              <SelectField
+              <ComboboxField
                 id="organization-parent"
                 value={form.parentId}
                 onChange={(parentId) => update("parentId", parentId)}
-              >
-                <option value="">Tidak ada, sebagai induk</option>
-                {organizations.map((organization) => (
-                  <option key={organization.id} value={organization.id}>
-                    {organization.code} — {organization.name}
-                  </option>
-                ))}
-              </SelectField>
+                placeholder="Tidak ada, sebagai induk"
+                options={organizations
+                  .filter((organization) => organization.id !== excludeId)
+                  .map((organization) => ({
+                    value: organization.id,
+                    label: `${organization.code} - ${organization.name}`,
+                  }))}
+              />
             </div>
             <div>
               <FieldLabel htmlFor="organization-address">Alamat</FieldLabel>
@@ -120,7 +132,7 @@ export function OrganizationForm({
                 placeholder="Alamat faskes"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
                 <FieldLabel htmlFor="organization-phone">Telepon</FieldLabel>
                 <Input
@@ -141,16 +153,36 @@ export function OrganizationForm({
                 />
               </div>
             </div>
-            <Button
-              type="submit"
-              disabled={submitting !== null}
-              className="w-full text-xs font-bold"
-            >
-              <Save className="h-4 w-4" />
-              {submitting === "organization"
-                ? "Menyimpan..."
-                : "Simpan organisasi"}
-            </Button>
+            <div>
+              <FieldLabel htmlFor="organization-active">Status</FieldLabel>
+              <SelectField
+                id="organization-active"
+                value={form.active ? "true" : "false"}
+                onChange={(value) => update("active", value === "true")}
+              >
+                <option value="true">Aktif</option>
+                <option value="false">Nonaktif</option>
+              </SelectField>
+            </div>
+            <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              {onCancel ? (
+                <Button type="button" variant="outline" onClick={onCancel}>
+                  Batal
+                </Button>
+              ) : null}
+              <Button
+                type="submit"
+                disabled={submitting !== null}
+                className="text-xs font-bold sm:min-w-44"
+              >
+                <Save className="h-4 w-4" />
+                {submitting === "organization"
+                  ? "Menyimpan..."
+                  : mode === "edit"
+                    ? "Simpan perubahan"
+                    : "Simpan organisasi"}
+              </Button>
+            </div>
           </form>
         ) : (
           <p className="text-xs text-muted-foreground">

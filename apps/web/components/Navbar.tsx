@@ -1,26 +1,37 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity,
   Building2,
-  CircleCheck,
+  ChevronDown,
   HelpCircle,
   LogOut,
   RefreshCw,
   Search,
   ShieldCheck,
   Stethoscope,
+  type LucideIcon,
   UserCheck,
 } from 'lucide-react';
 import { AccessPermission, ROLE_LABELS } from '@mitrafaskes/shared';
 import { can, clearSession, defaultRoute } from '@/lib/auth';
 import { useSession } from '@/hooks/useSession';
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import { SatusehatConnectionBadge } from '@/components/SatusehatConnectionBadge';
 
-const navigationItems = [
+type NavigationItem = {
+  href: string;
+  label: string;
+  shortLabel: string;
+  permission: AccessPermission;
+  icon: LucideIcon;
+  children?: readonly { href: string; label: string }[];
+};
+
+const navigationItems: readonly NavigationItem[] = [
   {
     href: '/pendaftaran',
     label: 'Daftar Rekam Medis',
@@ -41,6 +52,12 @@ const navigationItems = [
     shortLabel: 'Master',
     permission: AccessPermission.MASTER_DATA_READ,
     icon: Building2,
+    children: [
+      { href: '/master-faskes', label: 'Ikhtisar struktur' },
+      { href: '/master-faskes/organisasi', label: 'Organisasi / Faskes' },
+      { href: '/master-faskes/unit-layanan', label: 'Unit layanan / Poli' },
+      { href: '/master-faskes/lokasi', label: 'Location / Ruangan' },
+    ],
   },
   {
     href: '/satusehat',
@@ -49,7 +66,7 @@ const navigationItems = [
     permission: AccessPermission.SYNC_STATUS_READ,
     icon: RefreshCw,
   },
-] as const;
+];
 
 export function Navbar() {
   const pathname = usePathname();
@@ -58,6 +75,7 @@ export function Navbar() {
   const user = session?.user ?? null;
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === 'collapsed';
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   const handleLogout = () => {
     clearSession();
@@ -125,25 +143,70 @@ export function Navbar() {
             {availableNavigation.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const hasChildren = Boolean(item.children);
+              const isOpen = openSections[item.href] ?? active;
 
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  aria-current={active ? 'page' : undefined}
-                  aria-label={item.label}
-                  title={collapsed ? item.label : undefined}
-                  className={`flex min-h-10 items-center rounded-[var(--radius-control)] text-sm font-semibold transition-colors ${
-                    collapsed ? 'justify-center px-0' : 'gap-3 px-3'
-                  } ${
-                    active
-                      ? 'bg-sidebar-active text-sidebar-active-foreground'
-                      : 'text-sidebar-foreground/90 hover:bg-white/12 hover:text-white'
-                  }`}
-                >
-                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  <span className={collapsed ? 'sr-only' : 'truncate'}>{item.label}</span>
-                </Link>
+                <div key={item.href}>
+                  <div className="flex items-center gap-1">
+                    <Link
+                      href={item.href}
+                      aria-current={pathname === item.href ? 'page' : undefined}
+                      aria-label={item.label}
+                      title={collapsed ? item.label : undefined}
+                      className={`flex min-h-10 min-w-0 flex-1 items-center rounded-[var(--radius-control)] text-sm font-semibold transition-colors ${
+                        collapsed ? 'justify-center px-0' : 'gap-3 px-3'
+                      } ${
+                        active
+                          ? 'bg-sidebar-active text-sidebar-active-foreground'
+                          : 'text-sidebar-foreground/90 hover:bg-white/12 hover:text-white'
+                      }`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <span className={collapsed ? 'sr-only' : 'truncate'}>{item.label}</span>
+                    </Link>
+                    {hasChildren && !collapsed ? (
+                      <button
+                        type="button"
+                        aria-label={`${isOpen ? 'Tutup' : 'Buka'} submenu ${item.label}`}
+                        aria-expanded={isOpen}
+                        onClick={() =>
+                          setOpenSections((current) => ({
+                            ...current,
+                            [item.href]: !isOpen,
+                          }))
+                        }
+                        className="flex h-9 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-sidebar-muted transition-colors hover:bg-white/12 hover:text-white"
+                      >
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ) : null}
+                  </div>
+                  {hasChildren && !collapsed && isOpen ? (
+                    <div className="ml-7 mt-1 space-y-1 border-l border-white/15 pl-2">
+                      {item.children?.map((child) => {
+                        const childActive = pathname === child.href;
+                        return (
+                          <Link
+                            key={child.href}
+                            href={child.href}
+                            aria-current={childActive ? 'page' : undefined}
+                            className={`flex min-h-9 items-center rounded-[var(--radius-control)] px-3 text-xs font-semibold transition-colors ${
+                              childActive
+                                ? 'bg-sidebar-active text-sidebar-active-foreground'
+                                : 'text-sidebar-foreground/80 hover:bg-white/12 hover:text-white'
+                            }`}
+                          >
+                            <span className="truncate">{child.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  ) : null}
+                </div>
               );
             })}
           </div>
@@ -194,10 +257,7 @@ export function Navbar() {
         </div>
 
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-          <span className="hidden items-center gap-1.5 rounded-full bg-white/12 px-3 py-1.5 text-[11px] font-semibold text-white sm:flex">
-            <CircleCheck className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
-            Terhubung SATUSEHAT
-          </span>
+          {can(user, AccessPermission.SYNC_STATUS_READ) ? <SatusehatConnectionBadge /> : null}
           {user ? (
             <div className="hidden min-w-0 items-center gap-2 sm:flex">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-bold text-primary">

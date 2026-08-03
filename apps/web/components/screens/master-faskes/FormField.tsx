@@ -1,4 +1,16 @@
-import type { ReactNode } from "react";
+import {
+  Children,
+  isValidElement,
+  type ReactNode,
+} from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export function FieldLabel({
   htmlFor,
@@ -23,22 +35,71 @@ export function SelectField({
   onChange,
   children,
   disabled,
+  className,
+  "aria-label": ariaLabel,
 }: {
   id: string;
   value: string;
   onChange: (value: string) => void;
   children: ReactNode;
   disabled?: boolean;
+  className?: string;
+  "aria-label"?: string;
 }) {
+  const options = Children.toArray(children).flatMap((child) => {
+    if (
+      !isValidElement<{
+        value?: string;
+        disabled?: boolean;
+        children?: ReactNode;
+      }>(child) ||
+      child.type !== "option"
+    ) {
+      return [];
+    }
+
+    const optionValue = child.props.value ?? "";
+    return [
+      {
+        value: optionValue || null,
+        label: child.props.children,
+        disabled: child.props.disabled,
+      },
+    ];
+  });
+
   return (
-    <select
-      id={id}
-      value={value}
+    <Select
+      value={value || null}
       disabled={disabled}
-      onChange={(event) => onChange(event.target.value)}
-      className="clinical-field min-h-8 w-full px-2.5 py-1 text-sm"
+      onValueChange={(nextValue) => onChange(nextValue ?? "")}
     >
-      {children}
-    </select>
+      <SelectTrigger
+        id={id}
+        aria-label={ariaLabel}
+        className={cn(
+          "clinical-field min-h-8 w-full px-2.5 py-1 text-sm",
+          className,
+        )}
+      >
+        <SelectValue
+          placeholder={
+            options.find((option) => option.value === null)?.label ??
+            "Pilih pilihan"
+          }
+        />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((option, index) => (
+          <SelectItem
+            key={`${option.value ?? "empty"}-${index}`}
+            value={option.value}
+            disabled={option.disabled}
+          >
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }

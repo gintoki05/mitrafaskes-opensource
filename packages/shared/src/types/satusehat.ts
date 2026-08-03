@@ -4,6 +4,28 @@ export enum SyncStatus {
   FAILED = 'FAILED',
 }
 
+export type SatusehatAuthConnectionState =
+  | 'NOT_CONFIGURED'
+  | 'CONNECTED'
+  | 'ERROR';
+
+export interface SatusehatAuthStatus {
+  environment: string;
+  oauthBaseUrl: string;
+  credentialsConfigured: boolean;
+  organizationConfigured: boolean;
+  status: SatusehatAuthConnectionState;
+  token: {
+    available: boolean;
+    expiresAt?: string;
+  };
+  error?: {
+    code: string;
+    message: string;
+    httpStatus?: number;
+  };
+}
+
 export interface SatusehatSyncLog {
   id: string;
   resourceType:

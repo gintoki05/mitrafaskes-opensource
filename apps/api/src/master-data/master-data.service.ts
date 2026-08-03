@@ -4,9 +4,17 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import {
+  LocationStatus,
+  LocationType,
+  OrganizationType,
+  Prisma,
+  ServiceUnitType,
+} from '@prisma/client';
 import {
   LocationSummary,
+  MasterDataListQuery,
+  MasterDataListResponse,
   MasterFaskesData,
   OrganizationSummary,
   ServiceUnitSummary,
@@ -80,6 +88,41 @@ const isKnownRequestError = (
 ): error is Prisma.PrismaClientKnownRequestError =>
   error instanceof Prisma.PrismaClientKnownRequestError;
 
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
+
+type NormalizedListQuery = Omit<MasterDataListQuery, 'page' | 'pageSize'> & {
+  page: number;
+  pageSize: number;
+};
+
+const normalizeListQuery = (
+  query: MasterDataListQuery = {},
+): NormalizedListQuery => {
+  const page = Number.isInteger(query.page) && query.page! > 0
+    ? query.page!
+    : DEFAULT_PAGE;
+  const pageSize = Number.isInteger(query.pageSize) && query.pageSize! > 0
+    ? Math.min(query.pageSize!, MAX_PAGE_SIZE)
+    : DEFAULT_PAGE_SIZE;
+
+  return { ...query, page, pageSize };
+};
+
+const searchOr = (search: string | undefined, fields: string[]) =>
+  search
+    ? fields.map((field) => ({
+        [field]: { contains: search, mode: 'insensitive' as const },
+      }))
+    : undefined;
+
+const orderBy = (query: NormalizedListQuery) => {
+  const field = query.sort ?? 'name';
+  const direction = query.direction ?? 'asc';
+  return [{ [field]: direction }, { name: 'asc' }] as Record<string, string>[];
+};
+
 @Injectable()
 export class MasterDataService {
   constructor(private readonly prisma: PrismaService) {}
@@ -101,6 +144,91 @@ export class MasterDataService {
       organizations: organizations.map(toOrganization),
       serviceUnits: serviceUnits.map(toServiceUnit),
       locations: locations.map(toLocation),
+    };
+  }
+
+  async findOrganizations(
+    input: MasterDataListQuery = {},
+  ): Promise<MasterDataListResponse<OrganizationSummary>> {
+    const query = normalizeListQuery(input);
+    const where: Prisma.HealthcareOrganizationWhereInput = {};
+    const search = searchOr(query.search, ['code', 'name', 'addressText']);
+
+    if (search) where.OR = search;
+    if (query.active !== undefined) where.active = query.active;
+    if (query.type) where.type = query.type as OrganizationType;
+
+    const [records, total] = await Promise.all([
+      this.prisma.healthcareOrganization.findMany({
+        where,
+        orderBy: orderBy(query),
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      this.prisma.healthcareOrganization.count({ where }),
+    ]);
+
+    return {
+      items: records.map(toOrganization),
+      meta: { page: query.page, pageSize: query.pageSize, total },
+    };
+  }
+
+  async findServiceUnits(
+    input: MasterDataListQuery = {},
+  ): Promise<MasterDataListResponse<ServiceUnitSummary>> {
+    const query = normalizeListQuery(input);
+    const where: Prisma.ServiceUnitWhereInput = {};
+    const search = searchOr(query.search, ['code', 'name']);
+
+    if (search) where.OR = search;
+    if (query.active !== undefined) where.active = query.active;
+    if (query.type) where.type = query.type as ServiceUnitType;
+    if (query.organizationId) where.organizationId = query.organizationId;
+
+    const [records, total] = await Promise.all([
+      this.prisma.serviceUnit.findMany({
+        where,
+        orderBy: orderBy(query),
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      this.prisma.serviceUnit.count({ where }),
+    ]);
+
+    return {
+      items: records.map(toServiceUnit),
+      meta: { page: query.page, pageSize: query.pageSize, total },
+    };
+  }
+
+  async findLocations(
+    input: MasterDataListQuery = {},
+  ): Promise<MasterDataListResponse<LocationSummary>> {
+    const query = normalizeListQuery(input);
+    const where: Prisma.LocationWhereInput = {};
+    const search = searchOr(query.search, ['code', 'name', 'city']);
+
+    if (search) where.OR = search;
+    if (query.active !== undefined) where.active = query.active;
+    if (query.type) where.type = query.type as LocationType;
+    if (query.status) where.status = query.status as LocationStatus;
+    if (query.organizationId) where.organizationId = query.organizationId;
+    if (query.serviceUnitId) where.serviceUnitId = query.serviceUnitId;
+
+    const [records, total] = await Promise.all([
+      this.prisma.location.findMany({
+        where,
+        orderBy: orderBy(query),
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
+      }),
+      this.prisma.location.count({ where }),
+    ]);
+
+    return {
+      items: records.map(toLocation),
+      meta: { page: query.page, pageSize: query.pageSize, total },
     };
   }
 

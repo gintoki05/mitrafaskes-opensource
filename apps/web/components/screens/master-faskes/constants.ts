@@ -54,6 +54,7 @@ export const emptyOrganization: OrganizationForm = {
   addressText: "",
   phone: "",
   email: "",
+  active: true,
 };
 
 export const emptyServiceUnit: ServiceUnitForm = {
@@ -62,6 +63,7 @@ export const emptyServiceUnit: ServiceUnitForm = {
   code: "",
   name: "",
   type: "POLYCLINIC",
+  active: true,
 };
 
 export const emptyLocation: LocationForm = {
@@ -79,4 +81,5 @@ export const emptyLocation: LocationForm = {
   city: "",
   postalCode: "",
   countryCode: "ID",
+  active: true,
 };
