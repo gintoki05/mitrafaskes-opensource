@@ -10,6 +10,7 @@ type SyncLogsState = {
   logsLoading: boolean;
   retryingId: string | null;
   error: string;
+  retryError: string;
   successMessage: string;
 };
 
@@ -28,6 +29,7 @@ const initialState: SyncLogsState = {
   logsLoading: true,
   retryingId: null,
   error: '',
+  retryError: '',
   successMessage: '',
 };
 
@@ -50,16 +52,22 @@ function syncLogsReducer(state: SyncLogsState, action: SyncLogsAction): SyncLogs
     case 'select-log':
       return { ...state, selectedLog: action.log };
     case 'retry-start':
-      return { ...state, retryingId: action.logId, error: '', successMessage: '' };
+      return {
+        ...state,
+        retryingId: action.logId,
+        error: '',
+        retryError: '',
+        successMessage: '',
+      };
     case 'retry-success':
       return {
         ...withSelectedLog(state, action.logs),
         retryingId: null,
-        error: '',
+        retryError: '',
         successMessage: 'Permintaan retry berhasil dikirim.',
       };
     case 'retry-failure':
-      return { ...state, retryingId: null, error: action.error };
+      return { ...state, retryingId: null, retryError: action.error };
   }
 }
 

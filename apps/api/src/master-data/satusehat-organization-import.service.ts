@@ -172,14 +172,15 @@ export class SatusehatOrganizationImportService {
         }
       }
 
+      const importedContact = this.readImportedContact(remote);
       const validated = this.validateImportedOrganization({
         code: request.code,
         name: remote.name,
         type: isRoot ? 'HEALTHCARE_FACILITY' : 'SUB_ORGANIZATION',
         parentId: request.parentId,
         addressText: remote.addressText,
-        phone: remote.phone,
-        email: remote.email,
+        phone: importedContact.phone,
+        email: importedContact.email,
         active: remote.active,
       });
       const organization = await this.masterData.createOrganization(validated);
@@ -241,6 +242,24 @@ export class SatusehatOrganizationImportService {
       }
       throw error;
     }
+  }
+
+  private readImportedContact(
+    remote: Pick<RemoteOrganization, 'phone' | 'email'>,
+  ): { phone?: string; email?: string } {
+    const phone = this.optionalText(remote.phone);
+    const phoneForValidation = phone?.replace(/[\s().-]/g, '');
+    const validPhone =
+      phoneForValidation &&
+      /^(?:\+?[1-9]\d{7,14}|0\d{7,14})$/.test(phoneForValidation);
+
+    const email = this.optionalText(remote.email)?.toLowerCase();
+    const validEmail = email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    return {
+      phone: validPhone ? phone : undefined,
+      email: validEmail ? email : undefined,
+    };
   }
 
   private readImportRequest(

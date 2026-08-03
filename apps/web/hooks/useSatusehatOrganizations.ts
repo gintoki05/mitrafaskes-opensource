@@ -10,15 +10,23 @@ import type {
 } from '@mitrafaskes/shared';
 import { apiFetch } from '@/lib/auth';
 
+type ApiErrorPayload = {
+  message?: string | string[];
+  errors?: { message?: string }[];
+};
+
 async function readApiError(response: Response, fallback: string): Promise<Error> {
   try {
-    const payload = (await response.json()) as {
-      message?: string | string[];
-    };
+    const payload = (await response.json()) as ApiErrorPayload;
     const message = Array.isArray(payload.message)
       ? payload.message.join(' ')
       : payload.message;
-    return new Error(message || fallback);
+    const details = Array.isArray(payload.errors)
+      ? payload.errors
+          .map((issue) => issue?.message)
+          .filter((issue): issue is string => Boolean(issue))
+      : [];
+    return new Error(details.join(' ') || message || fallback);
   } catch {
     return new Error(fallback);
   }

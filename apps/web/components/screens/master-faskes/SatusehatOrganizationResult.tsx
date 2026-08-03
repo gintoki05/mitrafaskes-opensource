@@ -37,9 +37,6 @@ export function SatusehatOrganizationResult({
         <div className="min-w-0 space-y-1.5">
           <div className="flex flex-wrap items-center gap-2">
             <strong className="text-sm text-foreground">{item.name}</strong>
-            <Badge variant="outline" className="font-mono text-[10px]">
-              {item.externalResourceId}
-            </Badge>
             <Badge
               className={
                 item.active
@@ -51,25 +48,28 @@ export function SatusehatOrganizationResult({
             </Badge>
           </div>
           <div className="text-xs text-muted-foreground">
-            {item.typeDisplay || item.typeCode || "Organization"}
+            {item.typeDisplay || item.typeCode || "Organisasi/faskes"}
             {item.parentDisplay ? ` · Induk: ${item.parentDisplay}` : ""}
           </div>
+          <p className="font-mono text-[10px] text-muted-foreground">
+            ID SATUSEHAT: {item.externalResourceId}
+          </p>
           {item.addressText ? (
             <p className="text-xs text-muted-foreground">{item.addressText}</p>
           ) : null}
           {item.identifiers.length > 0 ? (
             <p className="font-mono text-[10px] text-muted-foreground">
-              Identifier: {item.identifiers[0].value}
+              Kode/nomor dari SATUSEHAT: {item.identifiers[0].value}
             </p>
           ) : null}
           {linkedToCurrent ? (
             <p className="flex items-center gap-1 text-xs font-semibold text-success">
               <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              Sudah terhubung ke organisasi ini
+              Data ini sudah terhubung ke organisasi lokal ini
             </p>
           ) : linkedElsewhere ? (
             <p className="text-xs font-semibold text-destructive">
-              Sudah terhubung ke data lokal lain
+              Data ini sudah terhubung ke data lokal lain
             </p>
           ) : null}
         </div>
@@ -82,7 +82,7 @@ export function SatusehatOrganizationResult({
           className="shrink-0"
         >
           <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
-          {selected ? "Dipilih" : "Pilih"}
+          {selected ? "Dipilih" : "Pilih data ini"}
         </Button>
       </CardContent>
     </Card>

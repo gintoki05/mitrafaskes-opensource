@@ -2,6 +2,7 @@ import React from 'react';
 import './globals.css';
 import { Navbar } from '../components/Navbar';
 import { SidebarProvider } from '../components/ui/sidebar';
+import { Toaster } from '../components/ui/sonner';
 
 export const metadata = {
   title: 'Mitra Faskes - Rekam Medis Elektronik (RME) & SATUSEHAT',
@@ -39,6 +40,7 @@ export default function RootLayout({
             {children}
           </main>
         </SidebarProvider>
+        <Toaster position="top-right" closeButton />
       </body>
     </html>
   );

@@ -9,7 +9,6 @@ import {
 } from "@mitrafaskes/shared";
 import { PageHeader } from "@/components/PageHeader";
 import { RouteGuard } from "@/components/RouteGuard";
-import { ScreenState } from "@/components/ScreenState";
 import { Button } from "@/components/ui/button";
 import { useMasterFaskesData } from "@/hooks/useMasterFaskesData";
 import { useMasterFaskesList } from "@/hooks/useMasterFaskesList";
@@ -29,6 +28,7 @@ import type {
   ServiceUnitForm as ServiceUnitFormValues,
   SubmittingKind,
 } from "./master-faskes/types";
+import { toast } from "sonner";
 
 const initialQuery: MasterDataListQuery = {
   page: 1,
@@ -54,8 +54,6 @@ export default function ServiceUnitListScreen() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<ServiceUnitSummary | null>(null);
   const [submitting, setSubmitting] = useState<SubmittingKind | null>(null);
-  const [operationError, setOperationError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   const list = useMasterFaskesList<ServiceUnitSummary>("service-units", query);
   const {
@@ -113,13 +111,11 @@ export default function ServiceUnitListScreen() {
   };
 
   const openCreate = () => {
-    setOperationError("");
     setEditing(null);
     setDialogOpen(true);
   };
 
   const openEdit = useCallback((serviceUnit: ServiceUnitSummary) => {
-    setOperationError("");
     setEditing(serviceUnit);
     setDialogOpen(true);
   }, []);
@@ -133,28 +129,28 @@ export default function ServiceUnitListScreen() {
     input: ServiceUnitFormValues,
   ): Promise<boolean> => {
     setSubmitting("unit");
-    setOperationError("");
-    setSuccessMessage("");
 
     try {
       const payload = { ...input, parentId: input.parentId || undefined };
       if (editing) {
         await updateServiceUnit(editing.id, payload);
-        setSuccessMessage("Unit layanan/poli berhasil diperbarui.");
+        toast.success("Unit layanan/poli berhasil diperbarui.");
       } else {
         await createServiceUnit(payload);
-        setSuccessMessage("Unit layanan/poli berhasil disimpan.");
+        toast.success("Unit layanan/poli berhasil disimpan.");
       }
       closeForm();
       await refreshList();
       await refreshOptions();
       return true;
     } catch (submitError) {
-      setOperationError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Unit layanan tidak dapat disimpan.",
-      );
+      toast.error("Perubahan belum tersimpan", {
+        description:
+          submitError instanceof Error
+            ? submitError.message
+            : "Unit layanan tidak dapat disimpan.",
+        duration: 7000,
+      });
       return false;
     } finally {
       setSubmitting(null);
@@ -163,15 +159,13 @@ export default function ServiceUnitListScreen() {
 
   const toggleStatus = useCallback(
     async (serviceUnit: ServiceUnitSummary) => {
-      setOperationError("");
-      setSuccessMessage("");
       try {
         await updateServiceUnit(serviceUnit.id, {
           ...serviceUnitToForm(serviceUnit),
           active: !serviceUnit.active,
           parentId: serviceUnit.parentId || undefined,
         });
-        setSuccessMessage(
+        toast.success(
           serviceUnit.active
             ? "Unit layanan/poli dinonaktifkan."
             : "Unit layanan/poli diaktifkan.",
@@ -179,11 +173,13 @@ export default function ServiceUnitListScreen() {
         await refreshList();
         await refreshOptions();
       } catch (toggleError) {
-        setOperationError(
-          toggleError instanceof Error
-            ? toggleError.message
-            : "Status unit layanan tidak dapat diperbarui.",
-        );
+        toast.error("Status unit layanan belum diperbarui", {
+          description:
+            toggleError instanceof Error
+              ? toggleError.message
+              : "Status unit layanan tidak dapat diperbarui.",
+          duration: 7000,
+        });
       }
     },
     [refreshList, refreshOptions, updateServiceUnit],
@@ -218,22 +214,6 @@ export default function ServiceUnitListScreen() {
           }
         />
         <MasterFaskesSubnav />
-        {successMessage ? (
-          <ScreenState
-            kind="success"
-            title="Tindakan berhasil"
-            description={successMessage}
-            compact
-          />
-        ) : null}
-        {operationError ? (
-          <ScreenState
-            kind="error"
-            title="Perubahan belum tersimpan"
-            description={operationError}
-            compact
-          />
-        ) : null}
         <MasterFaskesTable
           caption="Daftar unit layanan dan poli"
           emptyTitle="Belum ada unit layanan"

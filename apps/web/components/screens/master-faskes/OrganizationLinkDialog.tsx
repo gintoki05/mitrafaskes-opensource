@@ -14,6 +14,7 @@ import { useSatusehatOrganizations } from '@/hooks/useSatusehatOrganizations';
 import { FieldLabel } from './FormField';
 import { MasterFaskesDialog } from './MasterFaskesDialog';
 import { SatusehatOrganizationResult } from './SatusehatOrganizationResult';
+import { toast } from 'sonner';
 
 type OrganizationLinkDialogProps = {
   open: boolean;
@@ -35,7 +36,7 @@ export function OrganizationLinkDialog({
   return (
     <MasterFaskesDialog
       open
-      label={`Hubungkan Organization SATUSEHAT ${organization.name}`}
+      label={`Hubungkan ${organization.name} dengan SATUSEHAT`}
       onClose={onClose}
       className="max-w-3xl"
     >
@@ -67,8 +68,6 @@ function OrganizationLinkDialogContent({
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
   const [linking, setLinking] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -84,11 +83,13 @@ function OrganizationLinkDialogContent({
         if (!cancelled) {
           setItems([]);
           setLoading(false);
-          setError(
-            requestError instanceof Error
-              ? requestError.message
-              : 'Organization SATUSEHAT tidak dapat dicari.',
-          );
+          toast.error('Pencarian SATUSEHAT gagal', {
+            description:
+              requestError instanceof Error
+                ? requestError.message
+                : 'Data organisasi SATUSEHAT tidak dapat dicari.',
+            duration: 7000,
+          });
         }
       });
 
@@ -102,13 +103,13 @@ function OrganizationLinkDialogContent({
     const queryId = externalId.trim();
     const queryName = name.trim();
     if (!queryId && !queryName) {
-      setError('Isi nama atau ID Organization SATUSEHAT untuk mencari.');
+      toast.error('Pencarian belum berhasil', {
+        description: 'Isi nama atau ID SATUSEHAT untuk mencari data.',
+      });
       return;
     }
 
     setSearching(true);
-    setError('');
-    setSuccess('');
     setSelected(null);
     try {
       const result = await search({
@@ -117,15 +118,19 @@ function OrganizationLinkDialogContent({
       });
       setItems(result.items);
       if (result.items.length === 0) {
-        setError('Organization SATUSEHAT tidak ditemukan.');
+        toast.info('Data organisasi tidak ditemukan', {
+          description: 'Coba gunakan nama yang lebih spesifik atau ID SATUSEHAT.',
+        });
       }
     } catch (requestError) {
       setItems([]);
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Organization SATUSEHAT tidak dapat dicari.',
-      );
+      toast.error('Pencarian SATUSEHAT gagal', {
+        description:
+          requestError instanceof Error
+            ? requestError.message
+            : 'Data organisasi SATUSEHAT tidak dapat dicari.',
+        duration: 7000,
+      });
     } finally {
       setSearching(false);
     }
@@ -134,8 +139,6 @@ function OrganizationLinkDialogContent({
   const link = async () => {
     if (!selected) return;
     setLinking(true);
-    setError('');
-    setSuccess('');
     try {
       await linkExisting(organization.id, {
         externalResourceId: selected.externalResourceId,
@@ -152,14 +155,16 @@ function OrganizationLinkDialogContent({
           ? { ...current, linkedLocalResourceId: organization.id }
           : current,
       );
-      setSuccess('Organization SATUSEHAT berhasil dihubungkan ke data lokal.');
+      toast.success('Data lokal berhasil dihubungkan dengan SATUSEHAT.');
       await onLinked();
     } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : 'Organization SATUSEHAT tidak dapat dihubungkan.',
-      );
+      toast.error('Data organisasi belum terhubung', {
+        description:
+          requestError instanceof Error
+            ? requestError.message
+            : 'Data organisasi SATUSEHAT tidak dapat dihubungkan.',
+        duration: 7000,
+      });
     } finally {
       setLinking(false);
     }
@@ -170,23 +175,20 @@ function OrganizationLinkDialogContent({
       <CardHeader className="border-b border-border">
         <CardTitle className="flex items-center gap-2 text-sm font-bold">
           <Link2 className="h-4 w-4 text-primary" aria-hidden="true" />
-          Hubungkan Organization yang sudah ada
+          Hubungkan data yang sudah ada
         </CardTitle>
         <p className="text-xs text-muted-foreground">
-          Pilih resource SATUSEHAT yang sama dengan organisasi lokal ini. Sistem
-          hanya membuat link dan tidak membuat Organization baru.
+          Gunakan ini jika data sudah ada di Master Faskes dan juga sudah
+          terdaftar di SATUSEHAT. Sistem hanya membuat hubungan, bukan data
+          baru.
         </p>
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
-        {success ? (
-          <ScreenState kind="success" title="Link berhasil" description={success} compact />
-        ) : null}
-        {error ? (
-          <ScreenState kind="error" title="Pencarian belum berhasil" description={error} compact />
-        ) : null}
         <form className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]" onSubmit={(event) => void runSearch(event)}>
           <div>
-            <FieldLabel htmlFor="satusehat-link-name">Nama Organization</FieldLabel>
+            <FieldLabel htmlFor="satusehat-link-name">
+              Nama organisasi / faskes
+            </FieldLabel>
             <Input
               id="satusehat-link-name"
               value={name}
@@ -211,8 +213,8 @@ function OrganizationLinkDialogContent({
         {loading ? (
           <ScreenState
             kind="loading"
-            title="Mencari Organization SATUSEHAT"
-            description="Kandidat Organization sedang diambil."
+            title="Mencari data organisasi SATUSEHAT"
+            description="Data yang cocok sedang diambil."
             compact
           />
         ) : items.length > 0 ? (
@@ -240,7 +242,7 @@ function OrganizationLinkDialogContent({
               aria-busy={linking}
             >
               {linking ? <RefreshCw className="h-4 w-4 motion-safe:animate-spin" /> : <Link2 className="h-4 w-4" />}
-              {linking ? 'Menghubungkan...' : 'Hubungkan pilihan'}
+              {linking ? 'Menghubungkan...' : 'Hubungkan data ini'}
             </Button>
           ) : null}
         </div>

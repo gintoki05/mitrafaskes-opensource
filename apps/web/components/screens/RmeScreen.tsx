@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { ScreenState } from '@/components/ScreenState';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { useRmeResources } from '@/hooks/useRmeResources';
+import { toast } from 'sonner';
 import { RmeEncounterQueue } from './rme/RmeEncounterQueue';
 import { RmeForm, RmeFormPlaceholder } from './rme/RmeForm';
 import type { RmeFormValues } from './rme/rme-form-schema';
@@ -16,8 +17,6 @@ import type { RmeFormValues } from './rme/rme-form-schema';
 export default function RmePage() {
   const [icdSearch, setIcdSearch] = useState('');
   const [saving, setSaving] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
-  const [saveError, setSaveError] = useState('');
   const {
     encounters,
     selectedEncounter,
@@ -41,8 +40,6 @@ export default function RmePage() {
     if (!selectedEncounter) return;
 
     setSaving(true);
-    setSuccessMsg('');
-    setSaveError('');
 
     try {
       const response = await apiFetch('/api/rme', {
@@ -55,14 +52,20 @@ export default function RmePage() {
       });
 
       if (response.ok) {
-        setSuccessMsg('Rekam Medis (RME) Berhasil Disimpan & Otomatis Ditransformasikan ke SATUSEHAT Kemenkes RI!');
+        toast.success('RME berhasil disimpan', {
+          description: 'Rekam medis otomatis ditransformasikan ke SATUSEHAT Kemenkes RI.',
+        });
         void refreshEncounters();
       } else {
         throw new Error('RME tidak dapat disimpan. Periksa data lalu coba lagi.');
       }
     } catch (error) {
       console.error(error);
-      setSaveError(error instanceof Error ? error.message : 'RME tidak dapat disimpan.');
+      toast.error('Penyimpanan RME gagal', {
+        description:
+          error instanceof Error ? error.message : 'RME tidak dapat disimpan.',
+        duration: 7000,
+      });
     } finally {
       setSaving(false);
     }
@@ -83,8 +86,6 @@ export default function RmePage() {
           }
         />
 
-        {successMsg && <ScreenState kind="success" title="RME berhasil disimpan" description={successMsg} compact />}
-        {saveError ? <ScreenState kind="error" title="Penyimpanan gagal" description={saveError} compact /> : null}
         {loadError ? <ScreenState kind="error" title="Antrean tidak tersedia" description={loadError} compact /> : null}
 
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">

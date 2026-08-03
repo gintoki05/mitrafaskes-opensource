@@ -9,7 +9,6 @@ import {
 } from "@mitrafaskes/shared";
 import { PageHeader } from "@/components/PageHeader";
 import { RouteGuard } from "@/components/RouteGuard";
-import { ScreenState } from "@/components/ScreenState";
 import { Button } from "@/components/ui/button";
 import { ComboboxField } from "@/components/ui/combobox";
 import { useMasterFaskesData } from "@/hooks/useMasterFaskesData";
@@ -33,6 +32,7 @@ import type {
   LocationForm as LocationFormValues,
   SubmittingKind,
 } from "./master-faskes/types";
+import { toast } from "sonner";
 
 const initialQuery: MasterDataListQuery = {
   page: 1,
@@ -62,8 +62,6 @@ export default function LocationListScreen() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<LocationSummary | null>(null);
   const [submitting, setSubmitting] = useState<SubmittingKind | null>(null);
-  const [operationError, setOperationError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
 
   const list = useMasterFaskesList<LocationSummary>("locations", query);
   const {
@@ -139,13 +137,11 @@ export default function LocationListScreen() {
   };
 
   const openCreate = () => {
-    setOperationError("");
     setEditing(null);
     setDialogOpen(true);
   };
 
   const openEdit = useCallback((location: LocationSummary) => {
-    setOperationError("");
     setEditing(location);
     setDialogOpen(true);
   }, []);
@@ -159,8 +155,6 @@ export default function LocationListScreen() {
     input: LocationFormValues,
   ): Promise<boolean> => {
     setSubmitting("location");
-    setOperationError("");
-    setSuccessMessage("");
 
     try {
       const payload = {
@@ -170,21 +164,23 @@ export default function LocationListScreen() {
       };
       if (editing) {
         await updateLocation(editing.id, payload);
-        setSuccessMessage("Location/ruangan berhasil diperbarui.");
+        toast.success("Location/ruangan berhasil diperbarui.");
       } else {
         await createLocation(payload);
-        setSuccessMessage("Location/ruangan berhasil disimpan.");
+        toast.success("Location/ruangan berhasil disimpan.");
       }
       closeForm();
       await refreshList();
       await refreshOptions();
       return true;
     } catch (submitError) {
-      setOperationError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Location tidak dapat disimpan.",
-      );
+      toast.error("Perubahan belum tersimpan", {
+        description:
+          submitError instanceof Error
+            ? submitError.message
+            : "Location tidak dapat disimpan.",
+        duration: 7000,
+      });
       return false;
     } finally {
       setSubmitting(null);
@@ -193,8 +189,6 @@ export default function LocationListScreen() {
 
   const toggleStatus = useCallback(
     async (location: LocationSummary) => {
-      setOperationError("");
-      setSuccessMessage("");
       try {
         await updateLocation(location.id, {
           ...locationToForm(location),
@@ -202,7 +196,7 @@ export default function LocationListScreen() {
           serviceUnitId: location.serviceUnitId || undefined,
           parentId: location.parentId || undefined,
         });
-        setSuccessMessage(
+        toast.success(
           location.active
             ? "Location/ruangan dinonaktifkan."
             : "Location/ruangan diaktifkan.",
@@ -210,11 +204,13 @@ export default function LocationListScreen() {
         await refreshList();
         await refreshOptions();
       } catch (toggleError) {
-        setOperationError(
-          toggleError instanceof Error
-            ? toggleError.message
-            : "Status location tidak dapat diperbarui.",
-        );
+        toast.error("Status location belum diperbarui", {
+          description:
+            toggleError instanceof Error
+              ? toggleError.message
+              : "Status location tidak dapat diperbarui.",
+          duration: 7000,
+        });
       }
     },
     [refreshList, refreshOptions, updateLocation],
@@ -249,22 +245,6 @@ export default function LocationListScreen() {
           }
         />
         <MasterFaskesSubnav />
-        {successMessage ? (
-          <ScreenState
-            kind="success"
-            title="Tindakan berhasil"
-            description={successMessage}
-            compact
-          />
-        ) : null}
-        {operationError ? (
-          <ScreenState
-            kind="error"
-            title="Perubahan belum tersimpan"
-            description={operationError}
-            compact
-          />
-        ) : null}
         <MasterFaskesTable
           caption="Daftar location dan ruangan"
           emptyTitle="Belum ada location"

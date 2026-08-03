@@ -1,7 +1,8 @@
 "use client";
 
 import { type SubmitEvent, useCallback, useMemo, useState } from "react";
-import { Building2, Download, Plus } from "lucide-react";
+import Image from "next/image";
+import { Building2, Plus } from "lucide-react";
 import {
   AccessPermission,
   type MasterDataListQuery,
@@ -9,7 +10,6 @@ import {
 } from "@mitrafaskes/shared";
 import { PageHeader } from "@/components/PageHeader";
 import { RouteGuard } from "@/components/RouteGuard";
-import { ScreenState } from "@/components/ScreenState";
 import { Button } from "@/components/ui/button";
 import { useMasterFaskesData } from "@/hooks/useMasterFaskesData";
 import { useMasterFaskesList } from "@/hooks/useMasterFaskesList";
@@ -22,10 +22,12 @@ import { OrganizationForm } from "./master-faskes/OrganizationForm";
 import { OrganizationSyncDialog } from "./master-faskes/OrganizationSyncDialog";
 import { OrganizationImportDialog } from "./master-faskes/OrganizationImportDialog";
 import { OrganizationLinkDialog } from "./master-faskes/OrganizationLinkDialog";
+import { OrganizationStatusAlert } from "./master-faskes/OrganizationStatusAlert";
 import { SelectField } from "./master-faskes/FormField";
 import { getOrganizationColumns } from "./master-faskes/organizationColumns";
 import { organizationToForm } from "./master-faskes/mappers";
 import { emptyOrganization, organizationTypes } from "./master-faskes/constants";
+import { toast } from "sonner";
 import type {
   FormMode,
   OrganizationForm as OrganizationFormValues,
@@ -58,10 +60,11 @@ export default function OrganizationListScreen() {
     useState<OrganizationSummary | null>(null);
   const [linkOrganization, setLinkOrganization] =
     useState<OrganizationSummary | null>(null);
+  const [statusOrganization, setStatusOrganization] =
+    useState<OrganizationSummary | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState<SubmittingKind | null>(null);
-  const [operationError, setOperationError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
 
   const list = useMasterFaskesList<OrganizationSummary>(
     "organizations",
@@ -115,23 +118,19 @@ export default function OrganizationListScreen() {
   };
 
   const openCreate = () => {
-    setOperationError("");
     setEditing(null);
     setDialogOpen(true);
   };
 
   const openImport = () => {
-    setOperationError("");
     setImportDialogOpen(true);
   };
 
   const openLink = useCallback((organization: OrganizationSummary) => {
-    setOperationError("");
     setLinkOrganization(organization);
   }, []);
 
   const openEdit = useCallback((organization: OrganizationSummary) => {
-    setOperationError("");
     setEditing(organization);
     setDialogOpen(true);
   }, []);
@@ -145,8 +144,6 @@ export default function OrganizationListScreen() {
     input: OrganizationFormValues,
   ): Promise<boolean> => {
     setSubmitting("organization");
-    setOperationError("");
-    setSuccessMessage("");
 
     try {
       const payload = {
@@ -155,50 +152,64 @@ export default function OrganizationListScreen() {
       };
       if (editing) {
         await updateOrganization(editing.id, payload);
-        setSuccessMessage("Organisasi/faskes berhasil diperbarui.");
+        toast.success("Organisasi/faskes berhasil diperbarui.");
       } else {
         await createOrganization(payload);
-        setSuccessMessage("Organisasi/faskes berhasil disimpan.");
+        toast.success("Organisasi/faskes berhasil disimpan.");
       }
       closeForm();
       await refreshList();
       await refreshOptions();
       return true;
     } catch (submitError) {
-      setOperationError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Organisasi tidak dapat disimpan.",
-      );
+      toast.error("Perubahan belum tersimpan", {
+        description:
+          submitError instanceof Error
+            ? submitError.message
+            : "Organisasi tidak dapat disimpan.",
+        duration: 7000,
+      });
       return false;
     } finally {
       setSubmitting(null);
     }
   };
 
-  const toggleStatus = useCallback(
+  const openStatusConfirmation = useCallback(
+    (organization: OrganizationSummary) => {
+      setStatusOrganization(organization);
+    },
+    [],
+  );
+
+  const confirmToggleStatus = useCallback(
     async (organization: OrganizationSummary) => {
-      setOperationError("");
-      setSuccessMessage("");
+      setStatusSubmitting(true);
+
       try {
         await updateOrganization(organization.id, {
           ...organizationToForm(organization),
           active: !organization.active,
           parentId: organization.parentId || undefined,
         });
-        setSuccessMessage(
+        toast.success(
           organization.active
             ? "Organisasi/faskes dinonaktifkan."
             : "Organisasi/faskes diaktifkan.",
         );
+        setStatusOrganization(null);
         await refreshList();
         await refreshOptions();
       } catch (toggleError) {
-        setOperationError(
-          toggleError instanceof Error
-            ? toggleError.message
-            : "Status organisasi tidak dapat diperbarui.",
-        );
+        toast.error("Status organisasi belum diperbarui", {
+          description:
+            toggleError instanceof Error
+              ? toggleError.message
+              : "Status organisasi tidak dapat diperbarui.",
+          duration: 7000,
+        });
+      } finally {
+        setStatusSubmitting(false);
       }
     },
     [refreshList, refreshOptions, updateOrganization],
@@ -212,9 +223,9 @@ export default function OrganizationListScreen() {
         onPreview: setSyncOrganization,
         onLink: openLink,
         onEdit: openEdit,
-        onToggleStatus: (organization) => void toggleStatus(organization),
+        onToggleStatus: openStatusConfirmation,
       }),
-    [canWrite, organizations, openEdit, openLink, toggleStatus],
+    [canWrite, openEdit, openLink, openStatusConfirmation, organizations],
   );
 
   return (
@@ -227,9 +238,22 @@ export default function OrganizationListScreen() {
           action={
             canWrite ? (
               <div className="flex flex-wrap gap-2">
-                <Button type="button" variant="secondary" onClick={openImport}>
-                  <Download className="h-4 w-4" aria-hidden="true" />
-                  Tarik dari SATUSEHAT
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={openImport}
+                  title="Ambil organisasi dari SATUSEHAT"
+                >
+                  <span className="flex h-5 w-5 overflow-hidden rounded bg-white" aria-hidden="true">
+                    <Image
+                      src="/satusehat.png"
+                      alt=""
+                      width={40}
+                      height={40}
+                      className="h-full w-full object-cover"
+                    />
+                  </span>
+                  Ambil dari SATUSEHAT
                 </Button>
                 <Button type="button" onClick={openCreate}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
@@ -240,22 +264,6 @@ export default function OrganizationListScreen() {
           }
         />
         <MasterFaskesSubnav />
-        {successMessage ? (
-          <ScreenState
-            kind="success"
-            title="Tindakan berhasil"
-            description={successMessage}
-            compact
-          />
-        ) : null}
-        {operationError ? (
-          <ScreenState
-            kind="error"
-            title="Perubahan belum tersimpan"
-            description={operationError}
-            compact
-          />
-        ) : null}
         <MasterFaskesTable
           caption="Daftar organisasi dan faskes"
           emptyTitle="Belum ada organisasi"
@@ -345,7 +353,6 @@ export default function OrganizationListScreen() {
         onLinked={async () => {
           await refreshList();
           await refreshOptions();
-          setSuccessMessage("Organization SATUSEHAT berhasil dihubungkan.");
         }}
       />
       <OrganizationImportDialog
@@ -356,7 +363,17 @@ export default function OrganizationListScreen() {
         onImported={async () => {
           await refreshList();
           await refreshOptions();
-          setSuccessMessage("Organization SATUSEHAT berhasil diimpor.");
+        }}
+      />
+      <OrganizationStatusAlert
+        organization={statusOrganization}
+        open={statusOrganization !== null}
+        pending={statusSubmitting}
+        onOpenChange={(open) => {
+          if (!open && !statusSubmitting) setStatusOrganization(null);
+        }}
+        onConfirm={() => {
+          if (statusOrganization) void confirmToggleStatus(statusOrganization);
         }}
       />
     </RouteGuard>

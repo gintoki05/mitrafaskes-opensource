@@ -67,9 +67,11 @@ export function SelectField({
       },
     ];
   });
+  const items = options.map(({ value, label }) => ({ value, label }));
 
   return (
     <Select
+      items={items}
       value={value || null}
       disabled={disabled}
       onValueChange={(nextValue) => onChange(nextValue ?? "")}

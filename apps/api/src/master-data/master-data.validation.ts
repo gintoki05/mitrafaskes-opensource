@@ -199,7 +199,11 @@ const readOrganizationContact = (
 ) => {
   const addressText = readOptionalText(body, 'addressText', 500, issues);
   const phone = readOptionalText(body, 'phone', 32, issues);
-  if (phone && !/^(?:\+?[1-9]\d{7,14}|0\d{7,14})$/.test(phone)) {
+  const phoneForValidation = phone?.replace(/[\s().-]/g, '');
+  if (
+    phoneForValidation &&
+    !/^(?:\+?[1-9]\d{7,14}|0\d{7,14})$/.test(phoneForValidation)
+  ) {
     issues.push({
       field: 'phone',
       code: 'INVALID_PHONE_FORMAT',

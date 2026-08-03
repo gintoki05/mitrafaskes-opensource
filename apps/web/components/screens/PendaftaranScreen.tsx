@@ -10,6 +10,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { ScreenState } from '@/components/ScreenState';
 import { useRegistrationData } from '@/hooks/useRegistrationData';
 import { useSession } from '@/hooks/useSession';
+import { toast } from 'sonner';
 import { PatientDirectory } from './pendaftaran/PatientDirectory';
 import { PatientRegistrationDialog } from './pendaftaran/PatientRegistrationDialog';
 import type { PatientRegistrationFormValues } from './pendaftaran/patient-registration-schema';
@@ -17,8 +18,6 @@ import { QueuePanel } from './pendaftaran/QueuePanel';
 
 export default function PendaftaranPage() {
   const [search, setSearch] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
-  const [operationError, setOperationError] = useState('');
   const [showModal, setShowModal] = useState(false);
   const session = useSession();
   const currentUser = session?.user ?? null;
@@ -41,8 +40,6 @@ export default function PendaftaranPage() {
   };
 
   const handleCreatePatient = async (values: PatientRegistrationFormValues) => {
-    setOperationError('');
-    setSuccessMessage('');
     try {
       const response = await apiFetch('/api/patients', {
         method: 'POST',
@@ -51,7 +48,7 @@ export default function PendaftaranPage() {
       });
       if (response.ok) {
         setShowModal(false);
-        setSuccessMessage('Data pasien berhasil disimpan.');
+        toast.success('Data pasien berhasil disimpan.');
         void refreshPatients();
         return true;
       } else {
@@ -59,14 +56,18 @@ export default function PendaftaranPage() {
       }
     } catch (error) {
       console.error(error);
-      setOperationError(error instanceof Error ? error.message : 'Data pasien tidak dapat disimpan.');
+      toast.error('Data pasien belum tersimpan', {
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Data pasien tidak dapat disimpan.',
+        duration: 7000,
+      });
       return false;
     }
   };
 
   const handleDaftarAntrean = async (patientId: string) => {
-    setOperationError('');
-    setSuccessMessage('');
     try {
       const response = await apiFetch('/api/encounters', {
         method: 'POST',
@@ -74,14 +75,20 @@ export default function PendaftaranPage() {
         body: JSON.stringify({ patientId, doctorId: 'doc-001' }),
       });
       if (response.ok) {
-        setSuccessMessage('Pasien berhasil ditambahkan ke antrean.');
+        toast.success('Pasien berhasil ditambahkan ke antrean.');
         void refreshEncounters();
       } else {
         throw new Error('Pasien tidak dapat ditambahkan ke antrean.');
       }
     } catch (error) {
       console.error(error);
-      setOperationError(error instanceof Error ? error.message : 'Pasien tidak dapat ditambahkan ke antrean.');
+      toast.error('Pasien belum masuk antrean', {
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Pasien tidak dapat ditambahkan ke antrean.',
+        duration: 7000,
+      });
     }
   };
 
@@ -118,12 +125,11 @@ export default function PendaftaranPage() {
           }
         />
 
-        {successMessage ? <ScreenState kind="success" title="Tindakan berhasil" description={successMessage} compact /> : null}
-        {patientsError || encountersError || operationError ? (
+        {patientsError || encountersError ? (
           <ScreenState
             kind="error"
             title="Sebagian data tidak dapat dimuat"
-            description={[patientsError, encountersError, operationError].filter(Boolean).join(' ')}
+            description={[patientsError, encountersError].filter(Boolean).join(' ')}
             compact
           />
         ) : null}

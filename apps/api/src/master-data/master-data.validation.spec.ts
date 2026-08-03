@@ -29,6 +29,20 @@ describe('master faskes validation', () => {
     );
   });
 
+  it('accepts common separators in organization phone numbers', () => {
+    expect(
+      validateOrganizationInput({
+        code: 'DPM-ANDI',
+        name: 'Praktik Dokter Andi',
+        phone: '+62 811-1234-5678',
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        phone: '+62 811-1234-5678',
+      }),
+    );
+  });
+
   it('requires a parent for sub-organizations', () => {
     expect(() =>
       validateOrganizationInput({

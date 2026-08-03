@@ -1,6 +1,6 @@
 'use client';
 
-import { type MouseEvent } from 'react';
+import { useEffect, type MouseEvent } from 'react';
 import { RefreshCw, CheckCircle2, AlertTriangle, Clock, Code } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,12 +12,39 @@ import { PageHeader } from '@/components/PageHeader';
 import { ScreenState } from '@/components/ScreenState';
 import { useSession } from '@/hooks/useSession';
 import { useSyncLogs } from '@/hooks/useSyncLogs';
+import { toast } from 'sonner';
 
 export default function SatusehatPage() {
   const session = useSession();
   const canReadPayload = can(session?.user ?? null, AccessPermission.SYNC_PAYLOAD_READ);
   const canRetry = can(session?.user ?? null, AccessPermission.SYNC_RETRY);
-  const { logs, selectedLog, logsLoading, retryingId, error, successMessage, refresh, retry, selectLog } = useSyncLogs();
+  const {
+    logs,
+    selectedLog,
+    logsLoading,
+    retryingId,
+    error,
+    retryError,
+    successMessage,
+    refresh,
+    retry,
+    selectLog,
+  } = useSyncLogs();
+
+  useEffect(() => {
+    if (successMessage) {
+      toast.success('Retry diminta', { description: successMessage });
+    }
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (retryError) {
+      toast.error('Retry sinkronisasi gagal', {
+        description: retryError,
+        duration: 7000,
+      });
+    }
+  }, [retryError]);
 
   return (
     <RouteGuard permission={AccessPermission.SYNC_STATUS_READ}>
@@ -40,9 +67,6 @@ export default function SatusehatPage() {
         }
       />
 
-      {successMessage ? (
-        <ScreenState kind="success" title="Retry diminta" description={successMessage} compact />
-      ) : null}
       {error ? <ScreenState kind="error" title="Sinkronisasi tidak tersedia" description={error} compact /> : null}
 
       <div className={`grid min-w-0 grid-cols-1 gap-6 lg:gap-8 ${canReadPayload ? 'lg:grid-cols-3' : ''}`}>

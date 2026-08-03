@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { apiFetch } from '@/lib/auth';
 import { MasterFaskesDialog } from './MasterFaskesDialog';
+import { toast } from 'sonner';
 
 type OrganizationSyncDialogProps = {
   open: boolean;
@@ -56,7 +57,6 @@ function OrganizationSyncDialogContent({
     error: '',
   });
   const [syncing, setSyncing] = useState(false);
-  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     let cancelled = false;
@@ -97,8 +97,6 @@ function OrganizationSyncDialogContent({
 
   const sync = async () => {
     setSyncing(true);
-    setState((current) => ({ ...current, error: '' }));
-    setSuccess('');
 
     try {
       const response = await apiFetch(
@@ -112,16 +110,16 @@ function OrganizationSyncDialogContent({
         );
       }
       await response.json();
-      setSuccess('Organization berhasil disinkronkan ke SATUSEHAT.');
+      toast.success('Organization berhasil disinkronkan ke SATUSEHAT.');
       onSynced();
     } catch (requestError) {
-      setState((current) => ({
-        ...current,
-        error:
+      toast.error('Sinkronisasi Organization gagal', {
+        description:
           requestError instanceof Error
             ? requestError.message
             : 'Organization tidak dapat disinkronkan ke SATUSEHAT.',
-      }));
+        duration: 7000,
+      });
     } finally {
       setSyncing(false);
     }
@@ -139,14 +137,6 @@ function OrganizationSyncDialogContent({
         </p>
       </CardHeader>
       <CardContent className="space-y-4 pt-4">
-        {success ? (
-          <ScreenState
-            kind="success"
-            title="Sinkronisasi berhasil"
-            description={success}
-            compact
-          />
-        ) : null}
         {state.error ? (
           <ScreenState
             kind="error"
@@ -241,4 +231,3 @@ export function OrganizationSyncDialog({
     </MasterFaskesDialog>
   );
 }
-

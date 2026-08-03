@@ -14,10 +14,10 @@ import {
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { z } from 'zod';
 import { apiFetch, defaultRoute, saveSession } from '@/lib/auth';
-import { ScreenState } from '@/components/ScreenState';
 import { useSession } from '@/hooks/useSession';
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import { toast } from 'sonner';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Username wajib diisi'),
@@ -28,7 +28,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const session = useSession();
   const {
@@ -50,7 +49,6 @@ export default function LoginPage() {
 
   const handleLogin: SubmitHandler<LoginFormValues> = async ({ username, password }) => {
     setLoading(true);
-    setError('');
 
     try {
       const res = await apiFetch('/api/auth/login', {
@@ -68,7 +66,11 @@ export default function LoginPage() {
       saveSession(data.accessToken, data.user);
       router.replace(defaultRoute(data.user));
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Login gagal. Silakan coba lagi.');
+      toast.error('Tidak dapat masuk', {
+        description:
+          err instanceof Error ? err.message : 'Login gagal. Silakan coba lagi.',
+        duration: 7000,
+      });
     } finally {
       setLoading(false);
     }
@@ -77,7 +79,6 @@ export default function LoginPage() {
   const selectQuickUser = (user: string, pass: string) => {
     setValue('username', user, { shouldValidate: true });
     setValue('password', pass, { shouldValidate: true });
-    setError('');
   };
 
   return (
@@ -123,16 +124,6 @@ export default function LoginPage() {
             <h2 id="login-title" className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Masuk ke sistem</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Gunakan akun fasilitas kesehatan Anda untuk melanjutkan pekerjaan.</p>
           </div>
-
-          {error ? (
-            <ScreenState
-              kind="error"
-              title="Tidak dapat masuk"
-              description={error}
-              compact
-              className="mt-6"
-            />
-          ) : null}
 
           <form onSubmit={handleSubmit(handleLogin)} className="mt-8 space-y-5" noValidate>
             <Field data-invalid={Boolean(errors.username)}>

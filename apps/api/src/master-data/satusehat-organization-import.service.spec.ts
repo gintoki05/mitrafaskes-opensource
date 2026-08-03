@@ -159,6 +159,50 @@ describe('SatusehatOrganizationImportService', () => {
       },
     });
   });
+
+  it('does not block import when an optional remote contact is invalid', async () => {
+    process.env.SATUSEHAT_ORGANIZATION_ID = '100000004';
+    process.env.SATUSEHAT_ENVIRONMENT = 'sandbox';
+    const prisma = createPrismaMock();
+    const fhir = createFhirMock();
+    fhir.getOrganization.mockResolvedValue({
+      resourceType: 'Organization',
+      id: '100000004',
+      name: 'Klinik Mitra Sehat',
+      active: true,
+      telecom: [{ system: 'phone', value: 'Telepon belum tersedia' }],
+    });
+    const importedOrganization = {
+      ...rootOrganization,
+      id: 'org-imported',
+      code: 'FASKES-UTAMA',
+    };
+    const masterData = {
+      createOrganization: jest.fn().mockResolvedValue(importedOrganization),
+    };
+    const service = new SatusehatOrganizationImportService(
+      prisma as unknown as PrismaService,
+      fhir as unknown as SatusehatFhirClient,
+      masterData as never,
+    );
+
+    await expect(
+      service.importOrganization({
+        externalResourceId: '100000004',
+        code: 'FASKES-UTAMA',
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        operation: 'IMPORT',
+        localResourceId: 'org-imported',
+      }),
+    );
+    expect(masterData.createOrganization).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phone: undefined,
+      }),
+    );
+  });
 });
 
 function createService(

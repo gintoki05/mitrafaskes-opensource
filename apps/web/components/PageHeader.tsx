@@ -14,8 +14,8 @@ export function PageHeader({
   return (
     <header className="page-heading">
       <div className="min-w-0">
-        <h1 className="flex items-start gap-2 font-heading font-bold text-primary">
-          <span className="mt-0.5 shrink-0" aria-hidden="true">
+        <h1 className="flex items-center gap-2 font-heading font-bold text-primary">
+          <span className="shrink-0" aria-hidden="true">
             {icon}
           </span>
           <span>{title}</span>

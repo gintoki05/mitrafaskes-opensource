@@ -190,7 +190,14 @@ export function MasterFaskesTable<TData>({
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="whitespace-nowrap">
+                <TableHead
+                  key={header.id}
+                  className={
+                    header.column.id === 'actions'
+                      ? 'whitespace-nowrap text-center'
+                      : 'whitespace-nowrap'
+                  }
+                >
                   {header.isPlaceholder ? null : header.column.getCanSort() &&
                     onSortChange ? (
                     <button
