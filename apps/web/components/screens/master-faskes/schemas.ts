@@ -21,20 +21,37 @@ const optionalDecimal = (
     }.`,
   );
 
-export const organizationFormSchema = z.object({
-  code: z.string().trim().min(1, "Kode master wajib diisi."),
-  name: z.string().trim().min(1, "Nama organisasi wajib diisi."),
-  type: z.enum(["HEALTHCARE_FACILITY", "SUB_ORGANIZATION"]),
-  parentId: z.string(),
-  addressText: z.string().trim(),
-  phone: z.string().trim(),
-  email: z
-    .string()
-    .trim()
-    .email("Format email tidak valid.")
-    .or(z.literal("")),
-  active: z.boolean(),
-});
+export const organizationFormSchema = z
+  .object({
+    code: z.string().trim().min(1, "Kode master wajib diisi."),
+    name: z.string().trim().min(1, "Nama organisasi wajib diisi."),
+    type: z.enum(["HEALTHCARE_FACILITY", "SUB_ORGANIZATION"]),
+    parentId: z.string(),
+    addressText: z.string().trim(),
+    phone: z.string().trim(),
+    email: z
+      .string()
+      .trim()
+      .email("Format email tidak valid.")
+      .or(z.literal("")),
+    active: z.boolean(),
+  })
+  .superRefine((values, context) => {
+    if (values.type === "SUB_ORGANIZATION" && !values.parentId) {
+      context.addIssue({
+        code: "custom",
+        path: ["parentId"],
+        message: "Sub-organisasi wajib memiliki organisasi induk.",
+      });
+    }
+    if (values.type === "HEALTHCARE_FACILITY" && values.parentId) {
+      context.addIssue({
+        code: "custom",
+        path: ["parentId"],
+        message: "Faskes/organisasi induk tidak boleh memiliki induk.",
+      });
+    }
+  });
 
 export const serviceUnitFormSchema = z.object({
   organizationId: z.string().min(1, "Organisasi induk wajib dipilih."),

@@ -23,6 +23,8 @@ type ComboboxFieldProps = {
   className?: string;
   inputClassName?: string;
   "aria-label"?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: React.AriaAttributes["aria-invalid"];
 };
 
 export function ComboboxField({
@@ -37,6 +39,8 @@ export function ComboboxField({
   className,
   inputClassName,
   "aria-label": ariaLabel,
+  "aria-describedby": ariaDescribedBy,
+  "aria-invalid": ariaInvalid,
 }: ComboboxFieldProps) {
   const generatedId = React.useId();
   const selectedOption = options.find((option) => option.value === value) ?? null;
@@ -57,9 +61,11 @@ export function ComboboxField({
         <ComboboxPrimitive.Input
           id={id ?? generatedId}
           aria-label={ariaLabel}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid}
           placeholder={placeholder}
           className={cn(
-            "clinical-field min-h-8 w-full px-2.5 py-1 pr-14 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50",
+            "clinical-field min-h-9 w-full px-2.5 py-1 pr-14 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:opacity-50",
             inputClassName,
           )}
         />

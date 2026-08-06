@@ -37,9 +37,17 @@ function FieldLabel({
           <span className="sr-only">Wajib diisi</span>
         </>
       ) : requiredText ? (
-        <span className="ml-1 text-[10px] font-medium text-muted-foreground">
-          {requiredText}
-        </span>
+        <>
+          {" "}
+          <span
+            className={cn(
+              "font-mono text-[10px] font-bold",
+              requiredText === "Wajib" ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            {requiredText}
+          </span>
+        </>
       ) : null}
     </label>
   );

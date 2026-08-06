@@ -1,8 +1,12 @@
 import {
   Children,
   isValidElement,
+  type AriaAttributes,
   type ReactNode,
 } from "react";
+import {
+  FieldLabel as UiFieldLabel,
+} from "@/components/ui/field";
 import {
   Select,
   SelectContent,
@@ -15,17 +19,20 @@ import { cn } from "@/lib/utils";
 export function FieldLabel({
   htmlFor,
   children,
+  required,
 }: {
   htmlFor: string;
   children: ReactNode;
+  required?: boolean | string;
 }) {
   return (
-    <label
+    <UiFieldLabel
       htmlFor={htmlFor}
-      className="mb-1 block text-xs font-semibold text-foreground"
+      required={required}
+      className="mb-1 block"
     >
       {children}
-    </label>
+    </UiFieldLabel>
   );
 }
 
@@ -37,6 +44,8 @@ export function SelectField({
   disabled,
   className,
   "aria-label": ariaLabel,
+  "aria-describedby": ariaDescribedBy,
+  "aria-invalid": ariaInvalid,
 }: {
   id: string;
   value: string;
@@ -45,6 +54,8 @@ export function SelectField({
   disabled?: boolean;
   className?: string;
   "aria-label"?: string;
+  "aria-describedby"?: string;
+  "aria-invalid"?: AriaAttributes["aria-invalid"];
 }) {
   const options = Children.toArray(children).flatMap((child) => {
     if (
@@ -79,8 +90,10 @@ export function SelectField({
       <SelectTrigger
         id={id}
         aria-label={ariaLabel}
+        aria-describedby={ariaDescribedBy}
+        aria-invalid={ariaInvalid}
         className={cn(
-          "clinical-field min-h-8 w-full px-2.5 py-1 text-sm",
+          "clinical-field min-h-9 w-full px-2.5 py-1 text-sm",
           className,
         )}
       >
