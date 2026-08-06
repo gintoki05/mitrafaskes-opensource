@@ -155,7 +155,7 @@ export interface SatusehatLocationPayload {
     postalCode?: string;
     country?: string;
   };
-  position: {
+  position?: {
     longitude: number;
     latitude: number;
     altitude?: number;

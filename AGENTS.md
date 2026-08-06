@@ -53,3 +53,49 @@ Before adding substantial code to an existing file, the AI should:
 3. Split a crowded file before extending it when the new code introduces a new
    responsibility or pushes the file beyond the review thresholds above.
 4. Report which files were changed and which verification commands were run.
+
+## SATUSEHAT integration rules
+
+These rules apply to every feature or resource that interacts with SATUSEHAT,
+including Organization, Location, Practitioner, Patient, and future FHIR
+resources.
+
+- Local data must remain usable and editable independently from SATUSEHAT. A
+  local create or update must not be treated as a remote sync automatically.
+- Every list or detail surface that contains a syncable local record must expose
+  a per-record `Sinkronkan SATUSEHAT` action. The action may open a preview
+  first, but it must provide the complete path to send the selected record.
+- After a successful remote create, update, link, or import, persist the
+  provider/environment/resource linkage in `ExternalResourceLink` and record
+  the attempt in `SatusehatSyncLog`. The linkage is the source of truth for
+  whether a local record has been connected to SATUSEHAT.
+- List responses for syncable resources must expose the linkage status needed by
+  the UI. The UI must display the SATUSEHAT logo and a clear connected status
+  after a successful linkage, and a clear not-yet-synced state when no
+  successful linkage exists. Do not infer this status from local fields or
+  temporary dialog state.
+- Refresh the affected list after a successful sync so the logo, external ID,
+  and current status are visible without a full page reload. A later sync of a
+  linked record must use the resource's update operation and preserve the
+  linkage.
+- Remote failures must not create a false connected status. Keep the failure in
+  `SatusehatSyncLog`, show an actionable error to the user, and retain an
+  existing successful linkage only as a last-known connection while making the
+  latest failure discoverable.
+- Enforce FHIR dependency order before sending a resource. If a referenced
+  Organization, parent Location, Practitioner, or other prerequisite is not
+  linked, block the sync with a specific dependency message and do not attempt
+  an invalid remote request.
+- Reuse the shared SATUSEHAT status/logo and preview/sync patterns. Add unit
+  tests for linkage persistence and failure handling, plus a manual sandbox
+  check for one new record and one repeat sync whenever a new resource adapter
+  is introduced.
+
+## Local runtime cleanup
+
+- Assume the frontend and backend are already running when manual verification
+  is needed. Access the existing project ports directly instead of starting
+  another frontend or backend process.
+- Do not stop, restart, or otherwise take ownership of the user's frontend or
+  backend processes after verification. If a required port is unavailable,
+  report it to the user rather than starting a replacement server.

@@ -1,15 +1,19 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { CheckCircle2, Code, RefreshCw, ShieldCheck } from 'lucide-react';
-import type { OrganizationSummary } from '@mitrafaskes/shared';
-import { ScreenState } from '@/components/ScreenState';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiFetch } from '@/lib/auth';
-import { MasterFaskesDialog } from './MasterFaskesDialog';
-import { toast } from 'sonner';
+import { useEffect, useState } from "react";
+import { CheckCircle2, Code, RefreshCw, ShieldCheck } from "lucide-react";
+import type { OrganizationSummary } from "@mitrafaskes/shared";
+import { ScreenState } from "@/components/ScreenState";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiFetch } from "@/lib/auth";
+import { MasterFaskesDialog } from "./MasterFaskesDialog";
+import {
+  formatSatusehatOperation,
+  SatusehatPreviewSummary,
+} from "./SatusehatPreviewSummary";
+import { toast } from "sonner";
 
 type OrganizationSyncDialogProps = {
   open: boolean;
@@ -31,11 +35,14 @@ type PreviewState = {
   error: string;
 };
 
-async function readApiError(response: Response, fallback: string): Promise<Error> {
+async function readApiError(
+  response: Response,
+  fallback: string,
+): Promise<Error> {
   try {
     const payload = (await response.json()) as { message?: string | string[] };
     const message = Array.isArray(payload.message)
-      ? payload.message.join(' ')
+      ? payload.message.join(" ")
       : payload.message;
     return new Error(message || fallback);
   } catch {
@@ -48,13 +55,13 @@ function OrganizationSyncDialogContent({
   canSync,
   onClose,
   onSynced,
-}: Omit<OrganizationSyncDialogProps, 'open'> & {
+}: Omit<OrganizationSyncDialogProps, "open"> & {
   organization: OrganizationSummary;
 }) {
   const [state, setState] = useState<PreviewState>({
     preview: null,
     loading: true,
-    error: '',
+    error: "",
   });
   const [syncing, setSyncing] = useState(false);
 
@@ -69,12 +76,12 @@ function OrganizationSyncDialogContent({
         if (!response.ok) {
           throw await readApiError(
             response,
-            'Preview Organization SATUSEHAT tidak tersedia.',
+            "Preview Organization SATUSEHAT tidak tersedia.",
           );
         }
         const preview = (await response.json()) as PreviewPayload;
         if (!cancelled) {
-          setState({ preview, loading: false, error: '' });
+          setState({ preview, loading: false, error: "" });
         }
       } catch (requestError) {
         if (!cancelled) {
@@ -84,7 +91,7 @@ function OrganizationSyncDialogContent({
             error:
               requestError instanceof Error
                 ? requestError.message
-                : 'Preview Organization SATUSEHAT tidak tersedia.',
+                : "Preview Organization SATUSEHAT tidak tersedia.",
           });
         }
       }
@@ -101,23 +108,23 @@ function OrganizationSyncDialogContent({
     try {
       const response = await apiFetch(
         `/api/master/organizations/${organization.id}/satusehat/sync`,
-        { method: 'POST' },
+        { method: "POST" },
       );
       if (!response.ok) {
         throw await readApiError(
           response,
-          'Organization tidak dapat disinkronkan ke SATUSEHAT.',
+          "Organization tidak dapat disinkronkan ke SATUSEHAT.",
         );
       }
       await response.json();
-      toast.success('Organization berhasil disinkronkan ke SATUSEHAT.');
+      toast.success("Organization berhasil disinkronkan ke SATUSEHAT.");
       onSynced();
     } catch (requestError) {
-      toast.error('Sinkronisasi Organization gagal', {
+      toast.error("Sinkronisasi Organization gagal", {
         description:
           requestError instanceof Error
             ? requestError.message
-            : 'Organization tidak dapat disinkronkan ke SATUSEHAT.',
+            : "Organization tidak dapat disinkronkan ke SATUSEHAT.",
         duration: 7000,
       });
     } finally {
@@ -156,7 +163,7 @@ function OrganizationSyncDialogContent({
           <>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="font-mono text-[10px]">
-                Operasi: {state.preview.operation ?? 'UNKNOWN'}
+                Operasi: {formatSatusehatOperation(state.preview.operation)}
               </Badge>
               {state.preview.externalResourceId ? (
                 <Badge className="clinical-status-success border text-[10px]">
@@ -168,13 +175,10 @@ function OrganizationSyncDialogContent({
                 </Badge>
               ) : null}
             </div>
-            <pre className="max-h-[50vh] overflow-auto rounded-[var(--radius-card)] border border-border bg-muted p-4 font-mono text-[11px] text-foreground">
-              {JSON.stringify(
-                state.preview.payload ?? state.preview,
-                null,
-                2,
-              )}
-            </pre>
+            <SatusehatPreviewSummary
+              payload={state.preview.payload ?? state.preview}
+              externalResourceId={state.preview.externalResourceId}
+            />
           </>
         ) : null}
         <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
@@ -196,7 +200,7 @@ function OrganizationSyncDialogContent({
               ) : (
                 <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
               )}
-              {syncing ? 'Menyinkronkan...' : 'Sinkronkan ke SATUSEHAT'}
+              {syncing ? "Menyinkronkan..." : "Sinkronkan ke SATUSEHAT"}
             </Button>
           ) : null}
         </div>

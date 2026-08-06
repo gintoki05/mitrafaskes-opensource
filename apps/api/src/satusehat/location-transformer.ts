@@ -27,9 +27,13 @@ export type LocationTransformInput = SatusehatLocationContext;
 export class SatusehatLocationTransformer {
   static transform(input: LocationTransformInput): SatusehatLocationPayload {
     const { location } = input;
-    if (location.latitude === undefined || location.longitude === undefined) {
+    const latitude = location.latitude;
+    const longitude = location.longitude;
+    const hasLatitude = latitude !== undefined;
+    const hasLongitude = longitude !== undefined;
+    if (hasLatitude !== hasLongitude) {
       throw new Error(
-        'Latitude dan longitude wajib diisi untuk sinkronisasi Location SATUSEHAT',
+        'Latitude dan longitude harus diisi bersama-sama untuk sinkronisasi Location SATUSEHAT',
       );
     }
 
@@ -63,10 +67,6 @@ export class SatusehatLocationTransformer {
           },
         ],
       },
-      position: {
-        longitude: location.longitude,
-        latitude: location.latitude,
-      },
       managingOrganization: {
         reference: `Organization/${input.organizationExternalId}`,
         display: input.organizationDisplay,
@@ -74,10 +74,16 @@ export class SatusehatLocationTransformer {
     };
 
     if (input.externalResourceId) payload.id = input.externalResourceId;
-    if (location.description) payload.description = location.description;
-    if (location.altitude !== undefined) {
-      payload.position.altitude = location.altitude;
+    if (hasLatitude && hasLongitude) {
+      payload.position = {
+        longitude,
+        latitude,
+        ...(location.altitude !== undefined
+          ? { altitude: location.altitude }
+          : {}),
+      };
     }
+    if (location.description) payload.description = location.description;
 
     if (
       location.addressText ||

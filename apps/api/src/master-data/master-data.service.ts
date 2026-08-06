@@ -17,6 +17,7 @@ import {
   MasterDataListResponse,
   MasterFaskesData,
   OrganizationSummary,
+  SatusehatLinkageSummary,
   ServiceUnitSummary,
 } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
@@ -26,6 +27,16 @@ import {
   validateOrganizationInput,
   validateServiceUnitInput,
 } from './master-data.validation';
+import {
+  DEFAULT_SATUSEHAT_ENVIRONMENT,
+  LOCAL_ORGANIZATION_RESOURCE_TYPE,
+  ORGANIZATION_RESOURCE_TYPE,
+  SATUSEHAT_PROVIDER,
+} from './satusehat-organization.constants';
+import {
+  LOCAL_LOCATION_RESOURCE_TYPE,
+  LOCATION_RESOURCE_TYPE,
+} from './satusehat-location.constants';
 
 const optional = (value: string | null | undefined): string | undefined =>
   value ?? undefined;
@@ -45,8 +56,26 @@ const optionalNumber = (value: unknown): number | undefined => {
   return undefined;
 };
 
+type SatusehatLinkageRecord = {
+  localResourceId: string;
+  externalResourceId: string;
+  lastSyncedAt: Date | null;
+};
+
+const toSatusehatLinkage = (
+  record?: SatusehatLinkageRecord,
+): SatusehatLinkageSummary | undefined => {
+  if (!record) return undefined;
+
+  return {
+    externalResourceId: record.externalResourceId,
+    lastSyncedAt: record.lastSyncedAt?.toISOString(),
+  };
+};
+
 const toOrganization = (
   record: Prisma.HealthcareOrganizationGetPayload<Prisma.HealthcareOrganizationDefaultArgs>,
+  satusehat?: SatusehatLinkageRecord,
 ): OrganizationSummary => ({
   id: record.id,
   code: record.code,
@@ -56,6 +85,7 @@ const toOrganization = (
   addressText: optional(record.addressText),
   phone: optional(record.phone),
   email: optional(record.email),
+  satusehat: toSatusehatLinkage(satusehat),
   active: record.active,
   createdAt: record.createdAt.toISOString(),
   updatedAt: record.updatedAt.toISOString(),
@@ -77,6 +107,7 @@ const toServiceUnit = (
 
 const toLocation = (
   record: Prisma.LocationGetPayload<Prisma.LocationDefaultArgs>,
+  satusehat?: SatusehatLinkageRecord,
 ): LocationSummary => ({
   id: record.id,
   organizationId: record.organizationId,
@@ -93,6 +124,7 @@ const toLocation = (
   city: optional(record.city),
   postalCode: optional(record.postalCode),
   countryCode: record.countryCode,
+  satusehat: toSatusehatLinkage(satusehat),
   latitude: optionalNumber(record.latitude),
   longitude: optionalNumber(record.longitude),
   altitude: optionalNumber(record.altitude),
@@ -158,10 +190,27 @@ export class MasterDataService {
       }),
     ]);
 
+    const [organizationLinks, locationLinks] = await Promise.all([
+      this.findSatusehatLinkages(
+        ORGANIZATION_RESOURCE_TYPE,
+        LOCAL_ORGANIZATION_RESOURCE_TYPE,
+        organizations.map((organization) => organization.id),
+      ),
+      this.findSatusehatLinkages(
+        LOCATION_RESOURCE_TYPE,
+        LOCAL_LOCATION_RESOURCE_TYPE,
+        locations.map((location) => location.id),
+      ),
+    ]);
+
     return {
-      organizations: organizations.map(toOrganization),
+      organizations: organizations.map((organization) =>
+        toOrganization(organization, organizationLinks.get(organization.id)),
+      ),
       serviceUnits: serviceUnits.map(toServiceUnit),
-      locations: locations.map(toLocation),
+      locations: locations.map((location) =>
+        toLocation(location, locationLinks.get(location.id)),
+      ),
     };
   }
 
@@ -185,9 +234,16 @@ export class MasterDataService {
       }),
       this.prisma.healthcareOrganization.count({ where }),
     ]);
+    const linkages = await this.findSatusehatLinkages(
+      ORGANIZATION_RESOURCE_TYPE,
+      LOCAL_ORGANIZATION_RESOURCE_TYPE,
+      records.map((record) => record.id),
+    );
 
     return {
-      items: records.map(toOrganization),
+      items: records.map((record) =>
+        toOrganization(record, linkages.get(record.id)),
+      ),
       meta: { page: query.page, pageSize: query.pageSize, total },
     };
   }
@@ -243,11 +299,48 @@ export class MasterDataService {
       }),
       this.prisma.location.count({ where }),
     ]);
+    const linkages = await this.findSatusehatLinkages(
+      LOCATION_RESOURCE_TYPE,
+      LOCAL_LOCATION_RESOURCE_TYPE,
+      records.map((record) => record.id),
+    );
 
     return {
-      items: records.map(toLocation),
+      items: records.map((record) => toLocation(record, linkages.get(record.id))),
       meta: { page: query.page, pageSize: query.pageSize, total },
     };
+  }
+
+  private async findSatusehatLinkages(
+    resourceType: string,
+    localResourceType: string,
+    localResourceIds: string[],
+  ): Promise<Map<string, SatusehatLinkageRecord>> {
+    const linkages = new Map<string, SatusehatLinkageRecord>();
+    if (localResourceIds.length === 0) return linkages;
+
+    const records = await this.prisma.externalResourceLink.findMany({
+      where: {
+        provider: SATUSEHAT_PROVIDER,
+        environment:
+          process.env.SATUSEHAT_ENVIRONMENT?.trim() ||
+          DEFAULT_SATUSEHAT_ENVIRONMENT,
+        resourceType,
+        localResourceType,
+        localResourceId: { in: localResourceIds },
+      },
+      select: {
+        localResourceId: true,
+        externalResourceId: true,
+        lastSyncedAt: true,
+      },
+    });
+
+    for (const record of records) {
+      linkages.set(record.localResourceId, record);
+    }
+
+    return linkages;
   }
 
   async createOrganization(input: unknown): Promise<OrganizationSummary> {

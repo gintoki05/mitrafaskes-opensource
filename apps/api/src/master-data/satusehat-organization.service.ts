@@ -21,6 +21,8 @@ const PROVIDER = 'SATUSEHAT';
 const RESOURCE_TYPE = 'Organization';
 const LOCAL_RESOURCE_TYPE = 'HealthcareOrganization';
 const DEFAULT_ENVIRONMENT = 'sandbox';
+const LINK_CONFLICT_MESSAGE =
+  'Organization induk SATUSEHAT sudah terhubung ke fasilitas lokal lain. Gunakan fasilitas yang sudah terhubung atau ubah Organization ini menjadi SUB_ORGANIZATION.';
 
 type OrganizationSyncOperation = 'LINK_EXISTING_ROOT' | 'CREATE' | 'UPDATE';
 
@@ -398,6 +400,12 @@ export class SatusehatOrganizationService {
     if (error instanceof ConflictException) return error;
     if (error instanceof NotFoundException) return error;
     if (error instanceof ServiceUnavailableException) return error;
+    if (this.isLinkConflict(error)) {
+      return new ConflictException({
+        code: 'SATUSEHAT_ORGANIZATION_LINK_CONFLICT',
+        message: LINK_CONFLICT_MESSAGE,
+      });
+    }
     if (error instanceof SatusehatFhirError) {
       return new BadGatewayException({
         code: error.code,
@@ -412,9 +420,19 @@ export class SatusehatOrganizationService {
   }
 
   private safeErrorMessage(error: unknown): string {
+    if (this.isLinkConflict(error)) return LINK_CONFLICT_MESSAGE;
     if (error instanceof SatusehatFhirError) return error.message;
     if (error instanceof Error) return error.message;
     return 'Sinkronisasi Organization ke SATUSEHAT gagal';
+  }
+
+  private isLinkConflict(
+    error: unknown,
+  ): error is Prisma.PrismaClientKnownRequestError {
+    return (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    );
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

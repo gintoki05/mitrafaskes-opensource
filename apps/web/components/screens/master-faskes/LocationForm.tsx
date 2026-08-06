@@ -368,11 +368,8 @@ export function LocationForm({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Field data-invalid={Boolean(errors.latitude)}>
-                <FieldLabel
-                  htmlFor="location-latitude"
-                  required="Wajib untuk sync SATUSEHAT"
-                >
-                  Latitude
+                <FieldLabel htmlFor="location-latitude">
+                  Latitude (opsional)
                 </FieldLabel>
                 <Input
                   {...register("latitude")}
@@ -387,11 +384,8 @@ export function LocationForm({
               </Field>
 
               <Field data-invalid={Boolean(errors.longitude)}>
-                <FieldLabel
-                  htmlFor="location-longitude"
-                  required="Wajib untuk sync SATUSEHAT"
-                >
-                  Longitude
+                <FieldLabel htmlFor="location-longitude">
+                  Longitude (opsional)
                 </FieldLabel>
                 <Input
                   {...register("longitude")}

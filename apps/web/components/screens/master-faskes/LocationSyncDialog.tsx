@@ -1,18 +1,22 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { CheckCircle2, Code, RefreshCw, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from "react";
+import { CheckCircle2, Code, RefreshCw, ShieldCheck } from "lucide-react";
 import type {
   LocationSummary,
   SatusehatLocationPreview,
-} from '@mitrafaskes/shared';
-import { ScreenState } from '@/components/ScreenState';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { apiFetch } from '@/lib/auth';
-import { toast } from 'sonner';
-import { MasterFaskesDialog } from './MasterFaskesDialog';
+} from "@mitrafaskes/shared";
+import { ScreenState } from "@/components/ScreenState";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiFetch } from "@/lib/auth";
+import { toast } from "sonner";
+import { MasterFaskesDialog } from "./MasterFaskesDialog";
+import {
+  formatSatusehatOperation,
+  SatusehatPreviewSummary,
+} from "./SatusehatPreviewSummary";
 
 type LocationSyncDialogProps = {
   open: boolean;
@@ -32,11 +36,14 @@ type ApiErrorPayload = {
   message?: string | string[];
 };
 
-async function readApiError(response: Response, fallback: string): Promise<Error> {
+async function readApiError(
+  response: Response,
+  fallback: string,
+): Promise<Error> {
   try {
     const payload = (await response.json()) as ApiErrorPayload;
     const message = Array.isArray(payload.message)
-      ? payload.message.join(' ')
+      ? payload.message.join(" ")
       : payload.message;
     return new Error(message || fallback);
   } catch {
@@ -49,13 +56,13 @@ function LocationSyncDialogContent({
   canSync,
   onClose,
   onSynced,
-}: Omit<LocationSyncDialogProps, 'open'> & {
+}: Omit<LocationSyncDialogProps, "open"> & {
   location: LocationSummary;
 }) {
   const [state, setState] = useState<PreviewState>({
     preview: null,
     loading: true,
-    error: '',
+    error: "",
   });
   const [syncing, setSyncing] = useState(false);
 
@@ -70,11 +77,11 @@ function LocationSyncDialogContent({
         if (!response.ok) {
           throw await readApiError(
             response,
-            'Preview Location SATUSEHAT tidak tersedia.',
+            "Preview Location SATUSEHAT tidak tersedia.",
           );
         }
         const preview = (await response.json()) as SatusehatLocationPreview;
-        if (!cancelled) setState({ preview, loading: false, error: '' });
+        if (!cancelled) setState({ preview, loading: false, error: "" });
       } catch (requestError) {
         if (!cancelled) {
           setState({
@@ -83,7 +90,7 @@ function LocationSyncDialogContent({
             error:
               requestError instanceof Error
                 ? requestError.message
-                : 'Preview Location SATUSEHAT tidak tersedia.',
+                : "Preview Location SATUSEHAT tidak tersedia.",
           });
         }
       }
@@ -100,23 +107,23 @@ function LocationSyncDialogContent({
     try {
       const response = await apiFetch(
         `/api/master/locations/${location.id}/satusehat/sync`,
-        { method: 'POST' },
+        { method: "POST" },
       );
       if (!response.ok) {
         throw await readApiError(
           response,
-          'Location tidak dapat disinkronkan ke SATUSEHAT.',
+          "Location tidak dapat disinkronkan ke SATUSEHAT.",
         );
       }
       await response.json();
-      toast.success('Location berhasil disinkronkan ke SATUSEHAT.');
+      toast.success("Location berhasil disinkronkan ke SATUSEHAT.");
       onSynced();
     } catch (requestError) {
-      toast.error('Sinkronisasi Location gagal', {
+      toast.error("Sinkronisasi Location gagal", {
         description:
           requestError instanceof Error
             ? requestError.message
-            : 'Location tidak dapat disinkronkan ke SATUSEHAT.',
+            : "Location tidak dapat disinkronkan ke SATUSEHAT.",
         duration: 7000,
       });
     } finally {
@@ -155,7 +162,7 @@ function LocationSyncDialogContent({
           <>
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="outline" className="font-mono text-[10px]">
-                Operasi: {state.preview.operation}
+                Operasi: {formatSatusehatOperation(state.preview.operation)}
               </Badge>
               {state.preview.externalResourceId ? (
                 <Badge className="clinical-status-success border text-[10px]">
@@ -167,9 +174,10 @@ function LocationSyncDialogContent({
                 </Badge>
               ) : null}
             </div>
-            <pre className="max-h-[50vh] overflow-auto rounded-[var(--radius-card)] border border-border bg-muted p-4 font-mono text-[11px] text-foreground">
-              {JSON.stringify(state.preview.payload, null, 2)}
-            </pre>
+            <SatusehatPreviewSummary
+              payload={state.preview.payload}
+              externalResourceId={state.preview.externalResourceId}
+            />
           </>
         ) : null}
         <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
@@ -191,7 +199,7 @@ function LocationSyncDialogContent({
               ) : (
                 <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
               )}
-              {syncing ? 'Menyinkronkan...' : 'Sinkronkan ke SATUSEHAT'}
+              {syncing ? "Menyinkronkan..." : "Sinkronkan ke SATUSEHAT"}
             </Button>
           ) : null}
         </div>

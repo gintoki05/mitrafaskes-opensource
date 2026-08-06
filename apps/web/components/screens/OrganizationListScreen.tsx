@@ -342,6 +342,7 @@ export default function OrganizationListScreen() {
         canSync={canWrite}
         onClose={() => setSyncOrganization(null)}
         onSynced={() => {
+          void refreshList();
           void refreshOptions();
         }}
       />

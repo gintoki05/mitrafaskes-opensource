@@ -123,13 +123,23 @@ describe('SatusehatLocationTransformer', () => {
     expect(payload).not.toHaveProperty('id');
   });
 
-  it('requires latitude and longitude', () => {
+  it('omits position when latitude and longitude are both absent', () => {
+    const payload = SatusehatLocationTransformer.transform(
+      context({
+        location: location({ latitude: undefined, longitude: undefined }),
+      }),
+    );
+
+    expect(payload).not.toHaveProperty('position');
+  });
+
+  it('requires latitude and longitude to be provided together', () => {
     expect(() =>
       SatusehatLocationTransformer.transform(
         context({
           location: location({ latitude: undefined }),
         }),
       ),
-    ).toThrow('Latitude dan longitude wajib diisi');
+    ).toThrow('Latitude dan longitude harus diisi bersama-sama');
   });
 });

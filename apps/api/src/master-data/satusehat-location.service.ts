@@ -246,25 +246,26 @@ export class SatusehatLocationService {
   }
 
   private ensureCoordinates(location: LocationSummary): void {
-    if (location.latitude === undefined) {
+    const latitude = location.latitude;
+    const longitude = location.longitude;
+    const hasLatitude = latitude !== undefined;
+    const hasLongitude = longitude !== undefined;
+    if (hasLatitude !== hasLongitude) {
       throw new ConflictException({
-        code: 'SATUSEHAT_LOCATION_LATITUDE_REQUIRED',
-        message: 'Latitude wajib diisi sebelum Location disinkronkan',
-      });
-    }
-    if (location.longitude === undefined) {
-      throw new ConflictException({
-        code: 'SATUSEHAT_LOCATION_LONGITUDE_REQUIRED',
-        message: 'Longitude wajib diisi sebelum Location disinkronkan',
+        code: 'SATUSEHAT_LOCATION_COORDINATES_PAIR_REQUIRED',
+        message:
+          'Latitude dan longitude harus diisi bersama-sama sebelum Location disinkronkan',
       });
     }
     if (
-      !Number.isFinite(location.latitude) ||
-      location.latitude < -90 ||
-      location.latitude > 90 ||
-      !Number.isFinite(location.longitude) ||
-      location.longitude < -180 ||
-      location.longitude > 180
+      hasLatitude &&
+      hasLongitude &&
+      (!Number.isFinite(latitude) ||
+        latitude < -90 ||
+        latitude > 90 ||
+        !Number.isFinite(longitude) ||
+        longitude < -180 ||
+        longitude > 180)
     ) {
       throw new ConflictException({
         code: 'SATUSEHAT_LOCATION_COORDINATES_INVALID',

@@ -14,8 +14,13 @@ Referensi resmi:
 
 - Organization pengelola harus sudah memiliki `ExternalResourceLink` SATUSEHAT.
 - Location induk harus sudah disinkronkan sebelum Location anak.
-- Latitude dan longitude diisi sebelum preview atau sync SATUSEHAT. Altitude
-  bersifat opsional.
+- Latitude dan longitude bersifat opsional untuk draft lokal dan sync. Jika
+  hanya salah satu diisi, sync akan ditolak; jika keduanya diisi, keduanya
+  dikirim sebagai `Location.position`. Altitude juga bersifat opsional.
+- Catatan kompatibilitas: pemetaan FHIR resmi SATUSEHAT menandai latitude dan
+  longitude sebagai mandatory, tetapi implementasi ini mengikuti perilaku
+  sandbox yang menerima Location tanpa `position`; kegagalan validasi remote
+  tetap dicatat sebagai `FAILED` pada log sinkronisasi.
 - `serviceUnitId` adalah relasi internal Mitra Faskes dan tidak dikirim sebagai
   referensi FHIR pada tahap ini.
 
@@ -83,7 +88,8 @@ Preview membutuhkan `master-data.read`, sedangkan sync membutuhkan
   `bu`, `lvl`, `ro`, dan `oth`.
 - `status` lokal dipetakan ke `active`, `suspended`, atau `inactive`. Data
   lokal yang `active=false` selalu dikirim sebagai `inactive`.
-- `latitude`, `longitude`, dan `altitude` dipetakan ke `position`.
+- `latitude` dan `longitude` yang tersedia lengkap dipetakan ke `position`;
+  altitude dikirim bila tersedia.
 
 Location baru dikirim dengan `POST`. Location yang sudah memiliki linkage
 dikirim ulang dengan `PUT`, lalu UUID SATUSEHAT dan status operasi dicatat di

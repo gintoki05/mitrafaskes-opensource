@@ -138,6 +138,7 @@ describe('MasterDataService list queries', () => {
     const count = jest.fn().mockResolvedValue(21);
     const service = new MasterDataService({
       healthcareOrganization: { findMany, count },
+      externalResourceLink: { findMany: jest.fn().mockResolvedValue([]) },
     } as never);
 
     const result = await service.findOrganizations({
@@ -177,6 +178,7 @@ describe('MasterDataService list queries', () => {
     const count = jest.fn().mockResolvedValue(0);
     const service = new MasterDataService({
       location: { findMany, count },
+      externalResourceLink: { findMany: jest.fn().mockResolvedValue([]) },
     } as never);
 
     await service.findLocations({
@@ -211,5 +213,81 @@ describe('MasterDataService list queries', () => {
       expect.objectContaining({ skip: 0, take: 100 }),
     );
     expect(result.meta).toEqual({ page: 1, pageSize: 100, total: 0 });
+  });
+
+  it('includes the SATUSEHAT linkage on organization and location summaries', async () => {
+    const organization = {
+      id: 'org-1',
+      code: 'KLINIK-1',
+      name: 'Klinik Mitra',
+      type: 'HEALTHCARE_FACILITY',
+      parentId: null,
+      addressText: null,
+      phone: null,
+      email: null,
+      active: true,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    const location = {
+      id: 'location-1',
+      organizationId: 'org-1',
+      serviceUnitId: null,
+      parentId: null,
+      code: 'ROOM-1',
+      name: 'Ruang 1',
+      type: 'ROOM',
+      description: null,
+      status: 'ACTIVE',
+      mode: 'INSTANCE',
+      physicalTypeCode: null,
+      addressText: null,
+      city: null,
+      postalCode: null,
+      countryCode: 'IDN',
+      latitude: null,
+      longitude: null,
+      altitude: null,
+      active: true,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    const organizationFindMany = jest.fn().mockResolvedValue([organization]);
+    const locationFindMany = jest.fn().mockResolvedValue([location]);
+    const linkFindMany = jest
+      .fn()
+      .mockResolvedValueOnce([
+        {
+          localResourceId: 'org-1',
+          externalResourceId: 'sat-org-1',
+          lastSyncedAt: new Date('2026-01-02T00:00:00.000Z'),
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          localResourceId: 'location-1',
+          externalResourceId: 'sat-location-1',
+          lastSyncedAt: new Date('2026-01-03T00:00:00.000Z'),
+        },
+      ]);
+    const service = new MasterDataService({
+      healthcareOrganization: {
+        findMany: organizationFindMany,
+      },
+      location: { findMany: locationFindMany },
+      serviceUnit: { findMany: jest.fn().mockResolvedValue([]) },
+      externalResourceLink: { findMany: linkFindMany },
+    } as never);
+
+    const result = await service.findAll();
+
+    expect(result.organizations[0].satusehat).toEqual({
+      externalResourceId: 'sat-org-1',
+      lastSyncedAt: '2026-01-02T00:00:00.000Z',
+    });
+    expect(result.locations[0].satusehat).toEqual({
+      externalResourceId: 'sat-location-1',
+      lastSyncedAt: '2026-01-03T00:00:00.000Z',
+    });
   });
 });

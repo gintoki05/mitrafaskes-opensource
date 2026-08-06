@@ -1,3 +1,4 @@
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { SatusehatFhirClient } from '../satusehat/satusehat-fhir.client';
 import { SatusehatOrganizationService } from './satusehat-organization.service';
@@ -144,6 +145,60 @@ describe('SatusehatOrganizationService', () => {
         data: contains({
           status: 'SUCCESS',
           satusehatId: 'org-child-external',
+        }),
+      }),
+    );
+  });
+
+  it('returns a clear message when the SATUSEHAT linkage is already used', async () => {
+    process.env.SATUSEHAT_ORGANIZATION_ID = '100000004';
+    process.env.SATUSEHAT_ENVIRONMENT = 'sandbox';
+    const prisma = createPrismaMock();
+    prisma.healthcareOrganization.findUnique.mockResolvedValue(
+      rootOrganization,
+    );
+    prisma.externalResourceLink.findUnique.mockResolvedValue(null);
+    prisma.externalResourceLink.upsert.mockRejectedValue(
+      new Prisma.PrismaClientKnownRequestError(
+        'Unique constraint failed on the fields: (`provider`,`environment`,`resourceType`,`externalResourceId`)',
+        {
+          code: 'P2002',
+          clientVersion: '5.10.0',
+          meta: {
+            target: [
+              'provider',
+              'environment',
+              'resourceType',
+              'externalResourceId',
+            ],
+          },
+        },
+      ),
+    );
+    prisma.satusehatSyncLog.create.mockResolvedValue({ id: 'sync-conflict' });
+    const fhir = createFhirMock();
+    fhir.getOrganization.mockResolvedValue({
+      resourceType: 'Organization',
+      id: '100000004',
+    });
+    const service = new SatusehatOrganizationService(
+      prisma as unknown as PrismaService,
+      fhir as unknown as SatusehatFhirClient,
+    );
+
+    await expect(service.syncOrganization('org-root')).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'SATUSEHAT_ORGANIZATION_LINK_CONFLICT',
+        message:
+          'Organization induk SATUSEHAT sudah terhubung ke fasilitas lokal lain. Gunakan fasilitas yang sudah terhubung atau ubah Organization ini menjadi SUB_ORGANIZATION.',
+      }),
+    });
+    expect(prisma.satusehatSyncLog.update).toHaveBeenCalledWith(
+      contains({
+        data: contains({
+          status: 'FAILED',
+          errorMessage:
+            'Organization induk SATUSEHAT sudah terhubung ke fasilitas lokal lain. Gunakan fasilitas yang sudah terhubung atau ubah Organization ini menjadi SUB_ORGANIZATION.',
         }),
       }),
     );

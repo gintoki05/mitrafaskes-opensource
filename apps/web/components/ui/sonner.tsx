@@ -12,6 +12,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
     <Sonner
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
+      richColors
       icons={{
         success: (
           <CircleCheckIcon className="size-4" />
@@ -34,6 +35,18 @@ const Toaster = ({ ...props }: ToasterProps) => {
           "--normal-bg": "hsl(var(--popover))",
           "--normal-text": "hsl(var(--popover-foreground))",
           "--normal-border": "hsl(var(--border))",
+          "--success-bg": "hsl(var(--success))",
+          "--success-text": "hsl(var(--success-foreground))",
+          "--success-border": "hsl(var(--success))",
+          "--info-bg": "hsl(var(--info))",
+          "--info-text": "hsl(var(--info-foreground))",
+          "--info-border": "hsl(var(--info))",
+          "--warning-bg": "hsl(var(--warning))",
+          "--warning-text": "hsl(var(--warning-foreground))",
+          "--warning-border": "hsl(var(--warning))",
+          "--error-bg": "hsl(var(--destructive))",
+          "--error-text": "hsl(var(--destructive-foreground))",
+          "--error-border": "hsl(var(--destructive))",
           "--border-radius": "var(--radius-control)",
         } as CSSProperties
       }
@@ -41,11 +54,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
         classNames: {
           toast: "group border bg-popover text-popover-foreground shadow-lg",
           title: "text-sm font-semibold",
-          description: "text-xs text-muted-foreground",
-          success: "border-success/30",
-          info: "border-info/30",
-          warning: "border-warning/30",
-          error: "border-destructive/30",
+          description: "text-xs text-current/80",
+          success: "!border-success !bg-success !text-success-foreground",
+          info: "!border-info !bg-info !text-info-foreground",
+          warning: "!border-warning !bg-warning !text-warning-foreground",
+          error: "!border-destructive !bg-destructive !text-destructive-foreground",
         },
       }}
       {...props}

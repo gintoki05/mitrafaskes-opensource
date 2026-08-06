@@ -8,6 +8,11 @@ export type LocationStatus = 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
 
 export type LocationMode = 'INSTANCE' | 'KIND';
 
+export interface SatusehatLinkageSummary {
+  externalResourceId: string;
+  lastSyncedAt?: string;
+}
+
 export interface OrganizationSummary {
   id: string;
   code: string;
@@ -17,6 +22,7 @@ export interface OrganizationSummary {
   addressText?: string;
   phone?: string;
   email?: string;
+  satusehat?: SatusehatLinkageSummary;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -50,6 +56,7 @@ export interface LocationSummary {
   city?: string;
   postalCode?: string;
   countryCode: string;
+  satusehat?: SatusehatLinkageSummary;
   latitude?: number;
   longitude?: number;
   altitude?: number;

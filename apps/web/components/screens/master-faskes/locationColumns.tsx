@@ -4,7 +4,7 @@ import type {
   OrganizationSummary,
   ServiceUnitSummary,
 } from "@mitrafaskes/shared";
-import { Code, Edit3, Link2, Power } from "lucide-react";
+import { Edit3, Link2, Power, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +12,7 @@ import {
   locationStatuses,
   locationTypes,
 } from "./constants";
+import { SatusehatLinkageBadge } from "./SatusehatLinkageBadge";
 
 type LocationColumnOptions = {
   canWrite: boolean;
@@ -120,6 +121,17 @@ export function getLocationColumns({
       ),
     },
     {
+      id: "satusehat",
+      header: "SATUSEHAT",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <SatusehatLinkageBadge
+          linkage={row.original.satusehat}
+          resourceName={row.original.name}
+        />
+      ),
+    },
+    {
       id: "actions",
       header: "Aksi",
       enableSorting: false,
@@ -130,10 +142,11 @@ export function getLocationColumns({
             variant="ghost"
             size="icon-xs"
             onClick={() => onPreview(row.original)}
-            aria-label={`Preview SATUSEHAT ${row.original.name}`}
-            title="Preview SATUSEHAT"
+            aria-label={`Sinkronkan SATUSEHAT ${row.original.name}`}
+            title="Sinkronkan SATUSEHAT"
+            className="text-primary hover:bg-primary/10 hover:text-primary focus-visible:border-primary/40 focus-visible:ring-primary/20"
           >
-            <Code className="h-3.5 w-3.5" aria-hidden="true" />
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
           {canWrite ? (
             <>

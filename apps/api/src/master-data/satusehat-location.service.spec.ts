@@ -153,6 +153,39 @@ describe('SatusehatLocationService', () => {
     );
   });
 
+  it('allows sync without coordinates and omits position', async () => {
+    const prisma = createPrismaMock();
+    prisma.location.findUnique.mockResolvedValue({
+      ...location,
+      latitude: undefined,
+      longitude: undefined,
+    });
+    prisma.externalResourceLink.findUnique.mockImplementation(
+      ({ where }: { where: { localResourceScope: { resourceType: string } } }) =>
+        Promise.resolve(
+          where.localResourceScope.resourceType === 'Organization'
+            ? { externalResourceId: '100000004' }
+            : null,
+        ),
+    );
+    prisma.satusehatSyncLog.create.mockResolvedValue({ id: 'sync-no-position' });
+    const fhir = createFhirMock();
+    fhir.createLocation.mockResolvedValue({
+      resourceType: 'Location',
+      id: 'location-external-no-position',
+    });
+    const service = new SatusehatLocationService(
+      prisma as unknown as PrismaService,
+      fhir as unknown as SatusehatFhirClient,
+    );
+
+    await service.syncLocation('location-1');
+
+    expect(fhir.createLocation).toHaveBeenCalledWith(
+      expect.not.objectContaining({ position: expect.anything() }),
+    );
+  });
+
   it('PUTs a linked Location on subsequent syncs', async () => {
     const prisma = createPrismaMock();
     prisma.location.findUnique.mockResolvedValue(location);

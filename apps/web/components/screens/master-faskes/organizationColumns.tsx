@@ -2,9 +2,10 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type { OrganizationSummary } from "@mitrafaskes/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit3, Eye, Link2, Power } from "lucide-react";
+import { Edit3, Link2, Power, RefreshCw } from "lucide-react";
 import { organizationTypes } from "./constants";
 import { OrganizationHierarchyBadge } from "./OrganizationHierarchyBadge";
+import { SatusehatLinkageBadge } from "./SatusehatLinkageBadge";
 
 type OrganizationColumnOptions = {
   canWrite: boolean;
@@ -97,6 +98,17 @@ export function getOrganizationColumns({
       ),
     },
     {
+      id: "satusehat",
+      header: "SATUSEHAT",
+      enableSorting: false,
+      cell: ({ row }) => (
+        <SatusehatLinkageBadge
+          linkage={row.original.satusehat}
+          resourceName={row.original.name}
+        />
+      ),
+    },
+    {
       id: "actions",
       header: "Aksi",
       enableSorting: false,
@@ -107,10 +119,10 @@ export function getOrganizationColumns({
             variant="outline"
             size="icon-xs"
             onClick={() => onPreview(row.original)}
-            aria-label={`Preview SATUSEHAT untuk ${row.original.name}`}
-            title="Preview SATUSEHAT"
+            aria-label={`Sinkronkan SATUSEHAT untuk ${row.original.name}`}
+            title="Sinkronkan SATUSEHAT"
           >
-            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
           </Button>
           {canWrite ? (
             <>
@@ -141,6 +153,11 @@ export function getOrganizationColumns({
                 onClick={() => onToggleStatus(row.original)}
                 aria-label={`${row.original.active ? "Nonaktifkan" : "Aktifkan"} ${row.original.name}`}
                 title={row.original.active ? "Nonaktifkan" : "Aktifkan"}
+                className={
+                  row.original.active
+                    ? "text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:border-destructive/40 focus-visible:ring-destructive/20"
+                    : "text-success hover:bg-success/10 hover:text-success focus-visible:border-success/40 focus-visible:ring-success/20"
+                }
               >
                 <Power className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
