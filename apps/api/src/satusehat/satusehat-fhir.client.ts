@@ -44,6 +44,28 @@ export class SatusehatFhirClient {
     return this.request('PUT', ['Organization', id], payload);
   }
 
+  createLocation(payload: unknown): Promise<unknown> {
+    return this.request('POST', ['Location'], payload);
+  }
+
+  updateLocation(id: string, payload: unknown): Promise<unknown> {
+    return this.request('PUT', ['Location', id], payload);
+  }
+
+  getLocation(id: string): Promise<unknown> {
+    return this.request('GET', ['Location', id]);
+  }
+
+  async searchLocations(query: FhirQuery): Promise<unknown> {
+    const firstPage = await this.request(
+      'GET',
+      ['Location'],
+      undefined,
+      query,
+    );
+    return this.mergeSearchPages(firstPage);
+  }
+
   private async request(
     method: FhirRequestMethod,
     pathSegments: string[],

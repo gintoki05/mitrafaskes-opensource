@@ -81,5 +81,8 @@ export const emptyLocation: LocationForm = {
   city: "",
   postalCode: "",
   countryCode: "ID",
+  latitude: "",
+  longitude: "",
+  altitude: "",
   active: true,
 };

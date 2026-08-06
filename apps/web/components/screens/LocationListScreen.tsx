@@ -1,6 +1,7 @@
 "use client";
 
 import { type SubmitEvent, useCallback, useMemo, useState } from "react";
+import Image from "next/image";
 import { MapPin, Plus } from "lucide-react";
 import {
   AccessPermission,
@@ -20,6 +21,10 @@ import { MasterFaskesSubnav } from "./master-faskes/MasterFaskesSubnav";
 import { MasterFaskesTable } from "./master-faskes/MasterFaskesTable";
 import { SelectField } from "./master-faskes/FormField";
 import { LocationForm } from "./master-faskes/LocationForm";
+import { LocationImportDialog } from "./master-faskes/LocationImportDialog";
+import { LocationLinkDialog } from "./master-faskes/LocationLinkDialog";
+import { LocationStatusAlert } from "./master-faskes/LocationStatusAlert";
+import { LocationSyncDialog } from "./master-faskes/LocationSyncDialog";
 import { getLocationColumns } from "./master-faskes/locationColumns";
 import { locationToForm } from "./master-faskes/mappers";
 import {
@@ -61,7 +66,13 @@ export default function LocationListScreen() {
   const [serviceUnitFilter, setServiceUnitFilter] = useState("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<LocationSummary | null>(null);
+  const [syncLocation, setSyncLocation] = useState<LocationSummary | null>(null);
+  const [linkLocation, setLinkLocation] = useState<LocationSummary | null>(null);
+  const [statusLocation, setStatusLocation] =
+    useState<LocationSummary | null>(null);
+  const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [submitting, setSubmitting] = useState<SubmittingKind | null>(null);
+  const [statusSubmitting, setStatusSubmitting] = useState(false);
 
   const list = useMasterFaskesList<LocationSummary>("locations", query);
   const {
@@ -141,6 +152,14 @@ export default function LocationListScreen() {
     setDialogOpen(true);
   };
 
+  const openImport = () => {
+    setImportDialogOpen(true);
+  };
+
+  const openLink = useCallback((location: LocationSummary) => {
+    setLinkLocation(location);
+  }, []);
+
   const openEdit = useCallback((location: LocationSummary) => {
     setEditing(location);
     setDialogOpen(true);
@@ -187,8 +206,14 @@ export default function LocationListScreen() {
     }
   };
 
-  const toggleStatus = useCallback(
+  const openStatusConfirmation = useCallback((location: LocationSummary) => {
+    setStatusLocation(location);
+  }, []);
+
+  const confirmToggleStatus = useCallback(
     async (location: LocationSummary) => {
+      setStatusSubmitting(true);
+
       try {
         await updateLocation(location.id, {
           ...locationToForm(location),
@@ -201,6 +226,7 @@ export default function LocationListScreen() {
             ? "Location/ruangan dinonaktifkan."
             : "Location/ruangan diaktifkan.",
         );
+        setStatusLocation(null);
         await refreshList();
         await refreshOptions();
       } catch (toggleError) {
@@ -211,6 +237,8 @@ export default function LocationListScreen() {
               : "Status location tidak dapat diperbarui.",
           duration: 7000,
         });
+      } finally {
+        setStatusSubmitting(false);
       }
     },
     [refreshList, refreshOptions, updateLocation],
@@ -222,10 +250,19 @@ export default function LocationListScreen() {
         canWrite,
         organizations,
         serviceUnits,
+        onPreview: setSyncLocation,
+        onLink: openLink,
         onEdit: openEdit,
-        onToggleStatus: (location) => void toggleStatus(location),
+        onToggleStatus: openStatusConfirmation,
       }),
-    [canWrite, openEdit, organizations, serviceUnits, toggleStatus],
+    [
+      canWrite,
+      openEdit,
+      openLink,
+      openStatusConfirmation,
+      organizations,
+      serviceUnits,
+    ],
   );
 
   return (
@@ -237,10 +274,29 @@ export default function LocationListScreen() {
           description="Kelola struktur lokasi fisik, ruangan, gedung, dan relasinya dengan unit layanan."
           action={
             canWrite ? (
-              <Button type="button" onClick={openCreate}>
-                <Plus className="h-4 w-4" aria-hidden="true" />
-                Tambah location
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={openImport}
+                  title="Ambil Location dari SATUSEHAT"
+                >
+                  <span className="flex h-5 w-5 overflow-hidden rounded bg-white" aria-hidden="true">
+                    <Image
+                      src="/satusehat.png"
+                      alt=""
+                      width={40}
+                      height={40}
+                      className="h-full w-full object-cover"
+                    />
+                  </span>
+                  Ambil dari SATUSEHAT
+                </Button>
+                <Button type="button" onClick={openCreate}>
+                  <Plus className="h-4 w-4" aria-hidden="true" />
+                  Tambah location
+                </Button>
+              </div>
             ) : undefined
           }
         />
@@ -379,6 +435,49 @@ export default function LocationListScreen() {
           onCancel={closeForm}
         />
       </MasterFaskesDialog>
+      <LocationSyncDialog
+        open={syncLocation !== null}
+        location={syncLocation}
+        canSync={canWrite}
+        onClose={() => setSyncLocation(null)}
+        onSynced={() => {
+          void refreshList();
+          void refreshOptions();
+        }}
+      />
+      <LocationLinkDialog
+        open={linkLocation !== null}
+        location={linkLocation}
+        canWrite={canWrite}
+        onClose={() => setLinkLocation(null)}
+        onLinked={async () => {
+          await refreshList();
+          await refreshOptions();
+        }}
+      />
+      <LocationStatusAlert
+        location={statusLocation}
+        open={statusLocation !== null}
+        pending={statusSubmitting}
+        onOpenChange={(open) => {
+          if (!open && !statusSubmitting) setStatusLocation(null);
+        }}
+        onConfirm={() => {
+          if (statusLocation) void confirmToggleStatus(statusLocation);
+        }}
+      />
+      <LocationImportDialog
+        open={importDialogOpen}
+        organizations={organizations}
+        locations={locations}
+        serviceUnits={serviceUnits}
+        canWrite={canWrite}
+        onClose={() => setImportDialogOpen(false)}
+        onImported={async () => {
+          await refreshList();
+          await refreshOptions();
+        }}
+      />
     </RouteGuard>
   );
 }

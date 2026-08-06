@@ -96,7 +96,7 @@ export function LocationForm({
               control={control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="location-organization">
+                  <FieldLabel htmlFor="location-organization" required>
                     Organisasi induk
                   </FieldLabel>
                   <ComboboxField
@@ -120,7 +120,9 @@ export function LocationForm({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field data-invalid={Boolean(errors.code)}>
-                <FieldLabel htmlFor="location-code">Kode lokasi</FieldLabel>
+                <FieldLabel htmlFor="location-code" required>
+                  Kode lokasi
+                </FieldLabel>
                 <Input
                   {...register("code")}
                   id="location-code"
@@ -136,7 +138,9 @@ export function LocationForm({
                 control={control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="location-type">Jenis lokasi</FieldLabel>
+                    <FieldLabel htmlFor="location-type" required>
+                      Jenis lokasi
+                    </FieldLabel>
                     <SelectField
                       id="location-type"
                       value={field.value}
@@ -160,7 +164,9 @@ export function LocationForm({
                 control={control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="location-status">Status location</FieldLabel>
+                    <FieldLabel htmlFor="location-status" required>
+                      Status location
+                    </FieldLabel>
                     <SelectField
                       id="location-status"
                       value={field.value}
@@ -182,7 +188,9 @@ export function LocationForm({
                 control={control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="location-mode">Mode</FieldLabel>
+                    <FieldLabel htmlFor="location-mode" required>
+                      Mode
+                    </FieldLabel>
                     <SelectField
                       id="location-mode"
                       value={field.value}
@@ -201,7 +209,9 @@ export function LocationForm({
             </div>
 
             <Field data-invalid={Boolean(errors.name)}>
-              <FieldLabel htmlFor="location-name">Nama lokasi</FieldLabel>
+              <FieldLabel htmlFor="location-name" required>
+                Nama lokasi
+              </FieldLabel>
               <Input
                 {...register("name")}
                 id="location-name"
@@ -215,7 +225,7 @@ export function LocationForm({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field data-invalid={Boolean(errors.physicalTypeCode)}>
                 <FieldLabel htmlFor="location-physical-type">
-                  Kode physical type
+                  Kode physical type (opsional)
                 </FieldLabel>
                 <Input
                   {...register("physicalTypeCode")}
@@ -232,7 +242,9 @@ export function LocationForm({
                 control={control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="location-country">Kode negara</FieldLabel>
+                    <FieldLabel htmlFor="location-country" required>
+                      Kode negara
+                    </FieldLabel>
                     <Input
                       id="location-country"
                       value={field.value}
@@ -297,7 +309,9 @@ export function LocationForm({
             />
 
             <Field data-invalid={Boolean(errors.description)}>
-              <FieldLabel htmlFor="location-description">Keterangan</FieldLabel>
+              <FieldLabel htmlFor="location-description">
+                Keterangan (opsional)
+              </FieldLabel>
               <textarea
                 {...register("description")}
                 id="location-description"
@@ -312,7 +326,9 @@ export function LocationForm({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field data-invalid={Boolean(errors.addressText)}>
-                <FieldLabel htmlFor="location-address">Alamat lokasi</FieldLabel>
+                <FieldLabel htmlFor="location-address">
+                  Alamat lokasi (opsional)
+                </FieldLabel>
                 <Input
                   {...register("addressText")}
                   id="location-address"
@@ -324,7 +340,7 @@ export function LocationForm({
               </Field>
 
               <Field data-invalid={Boolean(errors.city)}>
-                <FieldLabel htmlFor="location-city">Kota</FieldLabel>
+                <FieldLabel htmlFor="location-city">Kota (opsional)</FieldLabel>
                 <Input
                   {...register("city")}
                   id="location-city"
@@ -337,7 +353,9 @@ export function LocationForm({
             </div>
 
             <Field data-invalid={Boolean(errors.postalCode)}>
-              <FieldLabel htmlFor="location-postal-code">Kode pos</FieldLabel>
+              <FieldLabel htmlFor="location-postal-code">
+                Kode pos (opsional)
+              </FieldLabel>
               <Input
                 {...register("postalCode")}
                 id="location-postal-code"
@@ -348,12 +366,70 @@ export function LocationForm({
               <FieldError id="location-postal-code-error" errors={[errors.postalCode]} />
             </Field>
 
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <Field data-invalid={Boolean(errors.latitude)}>
+                <FieldLabel
+                  htmlFor="location-latitude"
+                  required="Wajib untuk sync SATUSEHAT"
+                >
+                  Latitude
+                </FieldLabel>
+                <Input
+                  {...register("latitude")}
+                  id="location-latitude"
+                  type="number"
+                  step="any"
+                  placeholder="-6.231154"
+                  aria-invalid={Boolean(errors.latitude)}
+                  aria-describedby="location-latitude-error"
+                />
+                <FieldError id="location-latitude-error" errors={[errors.latitude]} />
+              </Field>
+
+              <Field data-invalid={Boolean(errors.longitude)}>
+                <FieldLabel
+                  htmlFor="location-longitude"
+                  required="Wajib untuk sync SATUSEHAT"
+                >
+                  Longitude
+                </FieldLabel>
+                <Input
+                  {...register("longitude")}
+                  id="location-longitude"
+                  type="number"
+                  step="any"
+                  placeholder="106.832398"
+                  aria-invalid={Boolean(errors.longitude)}
+                  aria-describedby="location-longitude-error"
+                />
+                <FieldError id="location-longitude-error" errors={[errors.longitude]} />
+              </Field>
+
+              <Field data-invalid={Boolean(errors.altitude)}>
+                <FieldLabel htmlFor="location-altitude">
+                  Altitude (opsional)
+                </FieldLabel>
+                <Input
+                  {...register("altitude")}
+                  id="location-altitude"
+                  type="number"
+                  step="any"
+                  placeholder="0"
+                  aria-invalid={Boolean(errors.altitude)}
+                  aria-describedby="location-altitude-error"
+                />
+                <FieldError id="location-altitude-error" errors={[errors.altitude]} />
+              </Field>
+            </div>
+
             <Controller
               name="active"
               control={control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="location-active">Status data</FieldLabel>
+                  <FieldLabel htmlFor="location-active" required>
+                    Status data
+                  </FieldLabel>
                   <SelectField
                     id="location-active"
                     value={field.value ? "true" : "false"}

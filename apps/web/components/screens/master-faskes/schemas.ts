@@ -1,5 +1,26 @@
 import { z } from "zod";
 
+const optionalDecimal = (
+  field: string,
+  options: { min?: number; max?: number } = {},
+) =>
+  z.string().trim().refine(
+    (value) => {
+      if (!value) return true;
+      const number = Number(value);
+      return (
+        Number.isFinite(number) &&
+        (options.min === undefined || number >= options.min) &&
+        (options.max === undefined || number <= options.max)
+      );
+    },
+    `${field} harus berupa angka yang valid${
+      options.min !== undefined && options.max !== undefined
+        ? ` antara ${options.min} dan ${options.max}`
+        : ""
+    }.`,
+  );
+
 export const organizationFormSchema = z.object({
   code: z.string().trim().min(1, "Kode master wajib diisi."),
   name: z.string().trim().min(1, "Nama organisasi wajib diisi."),
@@ -43,5 +64,8 @@ export const locationFormSchema = z.object({
     .trim()
     .toUpperCase()
     .length(2, "Kode negara harus terdiri dari 2 karakter."),
+  latitude: optionalDecimal("Latitude", { min: -90, max: 90 }),
+  longitude: optionalDecimal("Longitude", { min: -180, max: 180 }),
+  altitude: optionalDecimal("Altitude"),
   active: z.boolean(),
 });

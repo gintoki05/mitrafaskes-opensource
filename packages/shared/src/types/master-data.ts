@@ -50,6 +50,9 @@ export interface LocationSummary {
   city?: string;
   postalCode?: string;
   countryCode: string;
+  latitude?: number;
+  longitude?: number;
+  altitude?: number;
   active: boolean;
   createdAt: string;
   updatedAt: string;

@@ -30,6 +30,21 @@ import {
 const optional = (value: string | null | undefined): string | undefined =>
   value ?? undefined;
 
+const optionalNumber = (value: unknown): number | undefined => {
+  if (typeof value === 'number') return value;
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    'toNumber' in value
+  ) {
+    const decimal = value as { toNumber?: () => number };
+    return typeof decimal.toNumber === 'function'
+      ? decimal.toNumber()
+      : undefined;
+  }
+  return undefined;
+};
+
 const toOrganization = (
   record: Prisma.HealthcareOrganizationGetPayload<Prisma.HealthcareOrganizationDefaultArgs>,
 ): OrganizationSummary => ({
@@ -78,6 +93,9 @@ const toLocation = (
   city: optional(record.city),
   postalCode: optional(record.postalCode),
   countryCode: record.countryCode,
+  latitude: optionalNumber(record.latitude),
+  longitude: optionalNumber(record.longitude),
+  altitude: optionalNumber(record.altitude),
   active: record.active,
   createdAt: record.createdAt.toISOString(),
   updatedAt: record.updatedAt.toISOString(),
@@ -376,6 +394,9 @@ export class MasterDataService {
           ...validated,
           parentId: validated.parentId ?? null,
           serviceUnitId: validated.serviceUnitId ?? null,
+          latitude: validated.latitude ?? null,
+          longitude: validated.longitude ?? null,
+          altitude: validated.altitude ?? null,
         },
       });
       return toLocation(record);

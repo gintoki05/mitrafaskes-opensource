@@ -55,8 +55,8 @@ const navigationItems: readonly NavigationItem[] = [
     children: [
       { href: '/master-faskes', label: 'Ikhtisar struktur' },
       { href: '/master-faskes/organisasi', label: 'Organisasi / Faskes' },
-      { href: '/master-faskes/unit-layanan', label: 'Unit layanan / Poli' },
       { href: '/master-faskes/lokasi', label: 'Location / Ruangan' },
+      { href: '/master-faskes/unit-layanan', label: 'Unit layanan / Poli' },
     ],
   },
   {

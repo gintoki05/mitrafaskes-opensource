@@ -1,4 +1,4 @@
-import type { OrganizationSummary } from './master-data';
+import type { LocationSummary, OrganizationSummary } from './master-data';
 
 export enum SyncStatus {
   PENDING = 'PENDING',
@@ -81,6 +81,7 @@ export interface SatusehatSyncLog {
   id: string;
   resourceType:
     | 'Organization'
+    | 'Location'
     | 'Encounter'
     | 'Condition'
     | 'Observation'
@@ -126,6 +127,128 @@ export interface SatusehatOrganizationPayload {
     reference: string;
     display?: string;
   };
+}
+
+export interface SatusehatLocationPayload {
+  resourceType: 'Location';
+  id?: string;
+  identifier: {
+    use: 'official';
+    system: string;
+    value: string;
+  }[];
+  status: 'active' | 'suspended' | 'inactive';
+  name: string;
+  description?: string;
+  mode: 'instance' | 'kind';
+  physicalType?: {
+    coding: {
+      system: 'http://terminology.hl7.org/CodeSystem/location-physical-type';
+      code: string;
+      display: string;
+    }[];
+  };
+  address?: {
+    use: 'work';
+    line?: string[];
+    city?: string;
+    postalCode?: string;
+    country?: string;
+  };
+  position: {
+    longitude: number;
+    latitude: number;
+    altitude?: number;
+  };
+  managingOrganization: {
+    reference: string;
+    display?: string;
+  };
+  partOf?: {
+    reference: string;
+    display?: string;
+  };
+}
+
+export type SatusehatLocationOperation = 'CREATE' | 'UPDATE';
+
+export interface SatusehatLocationPreview {
+  localResourceId: string;
+  operation: SatusehatLocationOperation;
+  externalResourceId?: string;
+  payload: SatusehatLocationPayload;
+}
+
+export interface SatusehatLocationSyncResult extends SatusehatLocationPreview {
+  syncedRemotely: boolean;
+  syncLogId?: string;
+  response?: unknown;
+}
+
+export interface SatusehatLocationSearchQuery {
+  id?: string;
+  identifier?: string;
+  name?: string;
+  organization?: string;
+  organizationLocalId?: string;
+}
+
+export interface SatusehatLocationRemoteSummary {
+  externalResourceId: string;
+  identifierSystem?: string;
+  identifierValue?: string;
+  name: string;
+  description?: string;
+  status: 'active' | 'suspended' | 'inactive';
+  mode: 'instance' | 'kind';
+  physicalTypeCode?: string;
+  physicalTypeDisplay?: string;
+  managingOrganizationExternalResourceId?: string;
+  managingOrganizationDisplay?: string;
+  parentExternalResourceId?: string;
+  parentDisplay?: string;
+  addressText?: string;
+  city?: string;
+  postalCode?: string;
+  countryCode?: string;
+  latitude?: number;
+  longitude?: number;
+  altitude?: number;
+  linkedLocalResourceId?: string;
+  parentLinkedLocalResourceId?: string;
+}
+
+export interface SatusehatLocationSearchResponse {
+  items: SatusehatLocationRemoteSummary[];
+  total: number;
+}
+
+export interface SatusehatLocationLinkRequest {
+  externalResourceId: string;
+}
+
+export interface SatusehatLocationImportRequest {
+  externalResourceId: string;
+  organizationId?: string;
+  serviceUnitId?: string;
+  parentId?: string;
+  code?: string;
+}
+
+export interface SatusehatLocationMutationResponse {
+  operation: 'LINK_EXISTING' | 'IMPORT';
+  localResourceId: string;
+  externalResourceId: string;
+  location: LocationSummary;
+}
+
+export interface SatusehatLocationContext {
+  location: LocationSummary;
+  organizationExternalId: string;
+  organizationDisplay: string;
+  parentExternalId?: string;
+  parentDisplay?: string;
+  externalResourceId?: string;
 }
 
 export interface SatusehatEncounterPayload {

@@ -21,9 +21,13 @@ import { MasterDataService } from './master-data.service';
 import { SatusehatOrganizationImportService } from './satusehat-organization-import.service';
 import { SatusehatOrganizationLinkService } from './satusehat-organization-link.service';
 import { SatusehatOrganizationService } from './satusehat-organization.service';
+import { SatusehatLocationImportService } from './satusehat-location-import.service';
+import { SatusehatLocationLinkService } from './satusehat-location-link.service';
+import { SatusehatLocationService } from './satusehat-location.service';
 
 type MasterDataListHttpQuery = Record<string, string | undefined>;
 type SatusehatOrganizationHttpQuery = Record<string, string | undefined>;
+type SatusehatLocationHttpQuery = Record<string, string | undefined>;
 
 const listSorts: MasterDataListSort[] = ['code', 'name', 'active', 'createdAt'];
 
@@ -72,6 +76,9 @@ export class MasterDataController {
     private readonly satusehatOrganizations: SatusehatOrganizationService,
     private readonly satusehatOrganizationImport: SatusehatOrganizationImportService,
     private readonly satusehatOrganizationLink: SatusehatOrganizationLinkService,
+    private readonly satusehatLocationImport: SatusehatLocationImportService,
+    private readonly satusehatLocationLink: SatusehatLocationLinkService,
+    private readonly satusehatLocation: SatusehatLocationService,
   ) {}
 
   @Get('faskes')
@@ -96,6 +103,42 @@ export class MasterDataController {
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
   findLocations(@Query() query: MasterDataListHttpQuery) {
     return this.masterData.findLocations(parseListQuery(query));
+  }
+
+  @Get('locations/satusehat/search')
+  @RequirePermission(AccessPermission.MASTER_DATA_READ)
+  searchSatusehatLocations(@Query() query: SatusehatLocationHttpQuery) {
+    return this.satusehatLocationImport.searchLocations({
+      id: query.id,
+      identifier: query.identifier,
+      name: query.name,
+      organization: query.organization,
+      organizationLocalId: query.organizationLocalId,
+    });
+  }
+
+  @Post('locations/satusehat/import')
+  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
+  importSatusehatLocation(@Body() body: unknown) {
+    return this.satusehatLocationImport.importLocation(body);
+  }
+
+  @Get('locations/:id/satusehat/preview')
+  @RequirePermission(AccessPermission.MASTER_DATA_READ)
+  previewSatusehatLocation(@Param('id') id: string) {
+    return this.satusehatLocation.previewLocation(id);
+  }
+
+  @Post('locations/:id/satusehat/sync')
+  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
+  syncSatusehatLocation(@Param('id') id: string) {
+    return this.satusehatLocation.syncLocation(id);
+  }
+
+  @Post('locations/:id/satusehat/link')
+  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
+  linkSatusehatLocation(@Param('id') id: string, @Body() body: unknown) {
+    return this.satusehatLocationLink.linkExistingLocation(id, body);
   }
 
   @Post('organizations')

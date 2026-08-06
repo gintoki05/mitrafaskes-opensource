@@ -6,13 +6,42 @@ function Field({ className, ...props }: React.ComponentProps<"div">) {
   return <div data-slot="field" className={cn("grid gap-2", className)} {...props} />;
 }
 
-function FieldLabel({ className, ...props }: React.ComponentProps<"label">) {
+type FieldLabelProps = React.ComponentProps<"label"> & {
+  required?: boolean | string;
+};
+
+function FieldLabel({
+  className,
+  required,
+  children,
+  ...props
+}: FieldLabelProps) {
+  const requiredText = typeof required === "string" ? required : null;
+
   return (
     <label
       data-slot="field-label"
       className={cn("text-xs font-semibold text-foreground", className)}
       {...props}
-    />
+    >
+      {children}
+      {required === true ? (
+        <>
+          <span
+            className="ml-1 text-destructive"
+            aria-hidden="true"
+            title="Wajib diisi"
+          >
+            *
+          </span>
+          <span className="sr-only">Wajib diisi</span>
+        </>
+      ) : requiredText ? (
+        <span className="ml-1 text-[10px] font-medium text-muted-foreground">
+          {requiredText}
+        </span>
+      ) : null}
+    </label>
   );
 }
 

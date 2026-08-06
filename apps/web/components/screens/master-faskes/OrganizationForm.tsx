@@ -68,7 +68,9 @@ export function OrganizationForm({
         {canWrite ? (
           <form className="space-y-3" onSubmit={submit} noValidate>
             <Field data-invalid={Boolean(errors.code)}>
-              <FieldLabel htmlFor="organization-code">Kode master</FieldLabel>
+              <FieldLabel htmlFor="organization-code" required>
+                Kode master
+              </FieldLabel>
               <Input
                 {...register("code")}
                 id="organization-code"
@@ -80,7 +82,7 @@ export function OrganizationForm({
             </Field>
 
             <Field data-invalid={Boolean(errors.name)}>
-              <FieldLabel htmlFor="organization-name">
+              <FieldLabel htmlFor="organization-name" required>
                 Nama organisasi / faskes
               </FieldLabel>
               <Input
@@ -98,7 +100,9 @@ export function OrganizationForm({
               control={control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="organization-type">Jenis organisasi</FieldLabel>
+                  <FieldLabel htmlFor="organization-type" required>
+                    Jenis organisasi
+                  </FieldLabel>
                   <SelectField
                     id="organization-type"
                     value={field.value}
@@ -142,7 +146,9 @@ export function OrganizationForm({
             />
 
             <Field data-invalid={Boolean(errors.addressText)}>
-              <FieldLabel htmlFor="organization-address">Alamat</FieldLabel>
+              <FieldLabel htmlFor="organization-address">
+                Alamat (opsional)
+              </FieldLabel>
               <Input
                 {...register("addressText")}
                 id="organization-address"
@@ -155,7 +161,9 @@ export function OrganizationForm({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field data-invalid={Boolean(errors.phone)}>
-                <FieldLabel htmlFor="organization-phone">Telepon</FieldLabel>
+                <FieldLabel htmlFor="organization-phone">
+                  Telepon (opsional)
+                </FieldLabel>
                 <Input
                   {...register("phone")}
                   id="organization-phone"
@@ -166,7 +174,9 @@ export function OrganizationForm({
                 <FieldError id="organization-phone-error" errors={[errors.phone]} />
               </Field>
               <Field data-invalid={Boolean(errors.email)}>
-                <FieldLabel htmlFor="organization-email">Email</FieldLabel>
+                <FieldLabel htmlFor="organization-email">
+                  Email (opsional)
+                </FieldLabel>
                 <Input
                   {...register("email")}
                   id="organization-email"
@@ -184,7 +194,9 @@ export function OrganizationForm({
               control={control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="organization-active">Status</FieldLabel>
+                  <FieldLabel htmlFor="organization-active" required>
+                    Status
+                  </FieldLabel>
                   <SelectField
                     id="organization-active"
                     value={field.value ? "true" : "false"}

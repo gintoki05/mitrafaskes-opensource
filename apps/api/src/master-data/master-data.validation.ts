@@ -54,6 +54,9 @@ export interface ValidatedLocationInput {
   city?: string;
   postalCode?: string;
   countryCode: string;
+  latitude?: number;
+  longitude?: number;
+  altitude?: number;
   active: boolean;
 }
 
@@ -187,6 +190,51 @@ const readOptionalText = (
       field,
       code: 'INVALID_LENGTH',
       message: `${field} maksimal ${maxLength} karakter`,
+    });
+    return undefined;
+  }
+  return value;
+};
+
+const readOptionalDecimal = (
+  body: Record<string, unknown>,
+  field: string,
+  issues: MasterDataValidationIssue[],
+  options: { min?: number; max?: number } = {},
+): number | undefined => {
+  if (body[field] === undefined || body[field] === null || body[field] === '') {
+    return undefined;
+  }
+
+  const rawValue = body[field];
+  const value =
+    typeof rawValue === 'number'
+      ? rawValue
+      : typeof rawValue === 'string'
+        ? Number(rawValue.trim())
+        : Number.NaN;
+
+  if (!Number.isFinite(value)) {
+    issues.push({
+      field,
+      code: 'INVALID_DECIMAL',
+      message: `${field} harus berupa angka desimal yang valid`,
+    });
+    return undefined;
+  }
+  if (options.min !== undefined && value < options.min) {
+    issues.push({
+      field,
+      code: 'OUT_OF_RANGE',
+      message: `${field} minimal ${options.min}`,
+    });
+    return undefined;
+  }
+  if (options.max !== undefined && value > options.max) {
+    issues.push({
+      field,
+      code: 'OUT_OF_RANGE',
+      message: `${field} maksimal ${options.max}`,
     });
     return undefined;
   }
@@ -345,6 +393,15 @@ export const validateLocationInput = (
   const addressText = readOptionalText(body, 'addressText', 500, issues);
   const city = readOptionalText(body, 'city', 100, issues);
   const postalCode = readOptionalText(body, 'postalCode', 16, issues);
+  const latitude = readOptionalDecimal(body, 'latitude', issues, {
+    min: -90,
+    max: 90,
+  });
+  const longitude = readOptionalDecimal(body, 'longitude', issues, {
+    min: -180,
+    max: 180,
+  });
+  const altitude = readOptionalDecimal(body, 'altitude', issues);
   const rawCountryCode =
     body.countryCode === undefined ? 'ID' : body.countryCode;
   const countryCode =
@@ -375,6 +432,9 @@ export const validateLocationInput = (
     city,
     postalCode,
     countryCode,
+    ...(latitude === undefined ? {} : { latitude }),
+    ...(longitude === undefined ? {} : { longitude }),
+    ...(altitude === undefined ? {} : { altitude }),
     active,
   });
 };

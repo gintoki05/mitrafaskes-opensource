@@ -53,7 +53,9 @@ export function locationToForm(location: LocationSummary): LocationForm {
     city: location.city ?? "",
     postalCode: location.postalCode ?? "",
     countryCode: location.countryCode,
+    latitude: location.latitude?.toString() ?? "",
+    longitude: location.longitude?.toString() ?? "",
+    altitude: location.altitude?.toString() ?? "",
     active: location.active,
   };
 }
-

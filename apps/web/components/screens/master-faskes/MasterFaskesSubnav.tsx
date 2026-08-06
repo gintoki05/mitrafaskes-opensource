@@ -16,14 +16,14 @@ const links = [
     icon: Building2,
   },
   {
-    href: '/master-faskes/unit-layanan',
-    label: 'Unit layanan / Poli',
-    icon: Layers3,
-  },
-  {
     href: '/master-faskes/lokasi',
     label: 'Location / Ruangan',
     icon: MapPin,
+  },
+  {
+    href: '/master-faskes/unit-layanan',
+    label: 'Unit layanan / Poli',
+    icon: Layers3,
   },
 ] as const;
 
@@ -59,4 +59,3 @@ export function MasterFaskesSubnav() {
     </nav>
   );
 }
-

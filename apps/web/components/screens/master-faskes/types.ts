@@ -41,6 +41,9 @@ export type LocationForm = {
   city: string;
   postalCode: string;
   countryCode: string;
+  latitude: string;
+  longitude: string;
+  altitude: string;
   active: boolean;
 };
 

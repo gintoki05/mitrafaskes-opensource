@@ -54,7 +54,7 @@ npm run dev:web
 
 Salin `apps/api/.env.example` menjadi `apps/api/.env` dan `apps/web/.env.example` menjadi `apps/web/.env.local`, lalu sesuaikan `DATABASE_URL` dan `NEXT_PUBLIC_API_URL` untuk environment yang digunakan. Frontend tidak lagi menyimpan alamat API di dalam source code.
 
-Konfigurasi OAuth2 SATUSEHAT tersedia di [`docs/satusehat_authentication.md`](docs/satusehat_authentication.md), sedangkan tahap Organization ada di [`docs/satusehat_organization.md`](docs/satusehat_organization.md).
+Konfigurasi OAuth2 SATUSEHAT tersedia di [`docs/satusehat_authentication.md`](docs/satusehat_authentication.md), sedangkan tahap Organization dan Location ada di [`docs/satusehat_organization.md`](docs/satusehat_organization.md) serta [`docs/satusehat_location.md`](docs/satusehat_location.md).
 
 ## Lisensi
 [MIT License](LICENSE)

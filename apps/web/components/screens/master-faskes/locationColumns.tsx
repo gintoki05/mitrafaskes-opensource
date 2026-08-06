@@ -4,7 +4,7 @@ import type {
   OrganizationSummary,
   ServiceUnitSummary,
 } from "@mitrafaskes/shared";
-import { Edit3, Power } from "lucide-react";
+import { Code, Edit3, Link2, Power } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,6 +17,8 @@ type LocationColumnOptions = {
   canWrite: boolean;
   organizations: OrganizationSummary[];
   serviceUnits: ServiceUnitSummary[];
+  onPreview: (location: LocationSummary) => void;
+  onLink: (location: LocationSummary) => void;
   onEdit: (location: LocationSummary) => void;
   onToggleStatus: (location: LocationSummary) => void;
 };
@@ -32,6 +34,8 @@ export function getLocationColumns({
   canWrite,
   organizations,
   serviceUnits,
+  onPreview,
+  onLink,
   onEdit,
   onToggleStatus,
 }: LocationColumnOptions): ColumnDef<LocationSummary>[] {
@@ -121,8 +125,28 @@ export function getLocationColumns({
       enableSorting: false,
       cell: ({ row }) => (
         <div className="flex flex-wrap justify-end gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            onClick={() => onPreview(row.original)}
+            aria-label={`Preview SATUSEHAT ${row.original.name}`}
+            title="Preview SATUSEHAT"
+          >
+            <Code className="h-3.5 w-3.5" aria-hidden="true" />
+          </Button>
           {canWrite ? (
             <>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-xs"
+                onClick={() => onLink(row.original)}
+                aria-label={`Hubungkan SATUSEHAT untuk ${row.original.name}`}
+                title="Hubungkan Location SATUSEHAT"
+              >
+                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -140,6 +164,11 @@ export function getLocationColumns({
                 onClick={() => onToggleStatus(row.original)}
                 aria-label={`${row.original.active ? "Nonaktifkan" : "Aktifkan"} ${row.original.name}`}
                 title={row.original.active ? "Nonaktifkan" : "Aktifkan"}
+                className={
+                  row.original.active
+                    ? "text-destructive hover:bg-destructive/10 hover:text-destructive focus-visible:border-destructive/40 focus-visible:ring-destructive/20"
+                    : "text-success hover:bg-success/10 hover:text-success focus-visible:border-success/40 focus-visible:ring-success/20"
+                }
               >
                 <Power className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
@@ -152,4 +181,3 @@ export function getLocationColumns({
     },
   ];
 }
-

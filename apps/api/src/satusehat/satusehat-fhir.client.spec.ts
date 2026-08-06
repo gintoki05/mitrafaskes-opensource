@@ -65,6 +65,92 @@ describe('SatusehatFhirClient', () => {
     );
   });
 
+  it('sends Location create and update requests to the FHIR endpoints', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({ resourceType: 'Location', id: 'location-1' }),
+        ),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({ resourceType: 'Location', id: 'location-1' }),
+        ),
+      });
+    const auth = {
+      getAccessToken: jest.fn().mockResolvedValue('access-token'),
+    } as unknown as SatusehatAuthService;
+    const client = new SatusehatFhirClient(auth);
+    const payload = { resourceType: 'Location', name: 'Ruang 1' };
+
+    await client.createLocation(payload);
+    await client.updateLocation('location-1', payload);
+
+    const requestCalls = fetchMock.mock.calls as unknown[][];
+    expect(requestCalls[0]?.[0]).toEqual(
+      new URL('https://satusehat.example.test/fhir-r4/v1/Location'),
+    );
+    expect(requestCalls[0]?.[1]).toEqual(
+      expect.objectContaining({ method: 'POST', body: JSON.stringify(payload) }),
+    );
+    expect(requestCalls[1]?.[0]).toEqual(
+      new URL('https://satusehat.example.test/fhir-r4/v1/Location/location-1'),
+    );
+    expect(requestCalls[1]?.[1]).toEqual(
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify(payload) }),
+    );
+  });
+
+  it('gets and searches Location resources with official query parameters', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({ resourceType: 'Location', id: 'location-1' }),
+        ),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({
+            resourceType: 'Bundle',
+            type: 'searchset',
+            total: 1,
+            entry: [{ resource: { resourceType: 'Location', id: 'location-1' } }],
+          }),
+        ),
+      });
+    const auth = {
+      getAccessToken: jest.fn().mockResolvedValue('access-token'),
+    } as unknown as SatusehatAuthService;
+    const client = new SatusehatFhirClient(auth);
+
+    await client.getLocation('location-1');
+    await client.searchLocations({
+      identifier: 'http://sys-ids.kemkes.go.id/location/100000004|POLI-UMUM',
+      organization: '100000004',
+      name: 'Poli Umum',
+    });
+
+    const requestCalls = fetchMock.mock.calls as unknown[][];
+    expect(requestCalls[0]?.[0]).toEqual(
+      new URL('https://satusehat.example.test/fhir-r4/v1/Location/location-1'),
+    );
+    const searchUrl = requestCalls[1]?.[0] as URL;
+    expect(searchUrl.pathname).toBe('/fhir-r4/v1/Location');
+    expect(searchUrl.searchParams.get('identifier')).toBe(
+      'http://sys-ids.kemkes.go.id/location/100000004|POLI-UMUM',
+    );
+    expect(searchUrl.searchParams.get('organization')).toBe('100000004');
+    expect(searchUrl.searchParams.get('name')).toBe('Poli Umum');
+  });
+
   it('fails before requesting a token when the FHIR base URL is missing', async () => {
     delete process.env.SATUSEHAT_FHIR_BASE_URL;
     const getAccessToken = jest.fn();

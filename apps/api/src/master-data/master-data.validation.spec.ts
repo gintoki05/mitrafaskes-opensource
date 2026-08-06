@@ -113,4 +113,35 @@ describe('master faskes validation', () => {
       }),
     ).toThrow(MasterDataValidationError);
   });
+
+  it('accepts valid coordinates and normalizes them to numbers', () => {
+    expect(
+      validateLocationInput({
+        organizationId: 'org-1',
+        code: 'ROOM-01',
+        name: 'Ruang Pemeriksaan 1',
+        latitude: '-6.231154',
+        longitude: '106.832398',
+        altitude: '12',
+      }),
+    ).toEqual(
+      expect.objectContaining({
+        latitude: -6.231154,
+        longitude: 106.832398,
+        altitude: 12,
+      }),
+    );
+  });
+
+  it('rejects coordinates outside valid geographic ranges', () => {
+    expect(() =>
+      validateLocationInput({
+        organizationId: 'org-1',
+        code: 'ROOM-01',
+        name: 'Ruang Pemeriksaan 1',
+        latitude: 91,
+        longitude: -181,
+      }),
+    ).toThrow(MasterDataValidationError);
+  });
 });
