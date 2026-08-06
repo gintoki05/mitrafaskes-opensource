@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Edit3, Eye, Link2, Power } from "lucide-react";
 import { organizationTypes } from "./constants";
+import { OrganizationHierarchyBadge } from "./OrganizationHierarchyBadge";
 
 type OrganizationColumnOptions = {
   canWrite: boolean;
@@ -43,7 +44,9 @@ export function getOrganizationColumns({
       header: "Nama organisasi / faskes",
       cell: ({ row }) => (
         <div className="min-w-48">
-          <div className="font-semibold text-foreground">{row.original.name}</div>
+          <div className="font-semibold text-foreground">
+            {row.original.name}
+          </div>
           <div className="mt-1 text-[11px] text-muted-foreground">
             {row.original.addressText || "Alamat belum diisi"}
           </div>
@@ -55,9 +58,12 @@ export function getOrganizationColumns({
       header: "Jenis",
       enableSorting: false,
       cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">
-          {labelForType(row.original.type)}
-        </span>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <OrganizationHierarchyBadge isRoot={!row.original.parentId} />
+          <span className="text-xs text-muted-foreground">
+            {labelForType(row.original.type)}
+          </span>
+        </div>
       ),
     },
     {
@@ -145,4 +151,3 @@ export function getOrganizationColumns({
     },
   ];
 }
-

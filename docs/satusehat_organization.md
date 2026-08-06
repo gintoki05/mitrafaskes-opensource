@@ -58,6 +58,12 @@ Keduanya menggunakan sesi API lokal. Preview membutuhkan `master-data.read`, sed
 Pencarian membutuhkan `master-data.read`. Link dan import membutuhkan
 `master-data.write`.
 
+Pencarian Organization mengikuti `Bundle.link` dengan `relation: "next"`
+hingga seluruh halaman selesai digabungkan. Batas aman default adalah 100
+halaman dan dapat diubah melalui `SATUSEHAT_MAX_PAGINATION_PAGES`. Link
+lanjutan hanya diikuti jika masih berada pada endpoint FHIR SATUSEHAT yang
+dikonfigurasi.
+
 ## Aturan link dan import
 
 - Jika Organization sudah ada di SATUSEHAT, gunakan link atau import. Sistem

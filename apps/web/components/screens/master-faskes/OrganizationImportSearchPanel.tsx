@@ -31,7 +31,10 @@ export function OrganizationImportSearchPanel({
   onSubmit,
 }: OrganizationImportSearchPanelProps) {
   return (
-    <section className="space-y-3" aria-labelledby="organization-import-search-title">
+    <section
+      className="space-y-3"
+      aria-labelledby="organization-import-search-title"
+    >
       <div>
         <h3
           id="organization-import-search-title"
@@ -87,8 +90,8 @@ export function OrganizationImportSearchPanel({
             ))}
           </SelectField>
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Pilih ini jika Anda sedang mencari suborganisasi dari faskes
-            tertentu.
+            Jika organisasi induk dipilih, daftar suborganisasinya akan dimuat
+            otomatis. Gunakan nama atau ID jika ingin mencari data tertentu.
           </p>
         </div>
         <Button

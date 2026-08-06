@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { SatusehatAuthService } from './satusehat-auth.service';
 
 const DEFAULT_HTTP_TIMEOUT_MS = 10_000;
+const DEFAULT_MAX_PAGINATION_PAGES = 100;
 
 type FhirRequestMethod = 'GET' | 'POST' | 'PUT';
 type FhirQuery = Record<string, string | undefined>;
@@ -25,8 +26,14 @@ export class SatusehatFhirClient {
     return this.request('GET', ['Organization', id]);
   }
 
-  searchOrganizations(query: FhirQuery): Promise<unknown> {
-    return this.request('GET', ['Organization'], undefined, query);
+  async searchOrganizations(query: FhirQuery): Promise<unknown> {
+    const firstPage = await this.request(
+      'GET',
+      ['Organization'],
+      undefined,
+      query,
+    );
+    return this.mergeSearchPages(firstPage);
   }
 
   createOrganization(payload: unknown): Promise<unknown> {
@@ -44,6 +51,14 @@ export class SatusehatFhirClient {
     query?: FhirQuery,
   ): Promise<unknown> {
     const resourceUrl = this.buildResourceUrl(pathSegments, query);
+    return this.requestUrl(resourceUrl, method, body);
+  }
+
+  private async requestUrl(
+    resourceUrl: URL,
+    method: FhirRequestMethod,
+    body?: unknown,
+  ): Promise<unknown> {
     const accessToken = await this.auth.getAccessToken();
     const controller = new AbortController();
     const timeout = setTimeout(
@@ -97,12 +112,124 @@ export class SatusehatFhirClient {
     return responseBody;
   }
 
+  private async mergeSearchPages(firstPage: unknown): Promise<unknown> {
+    if (!this.isBundle(firstPage)) return firstPage;
+
+    const entries: unknown[] = [];
+    const visitedNextUrls = new Set<string>();
+    const maxPages = this.readPositiveInteger(
+      process.env.SATUSEHAT_MAX_PAGINATION_PAGES,
+      DEFAULT_MAX_PAGINATION_PAGES,
+    );
+    let currentPage = firstPage;
+    let pageCount = 0;
+
+    while (true) {
+      pageCount += 1;
+      if (this.isUnknownArray(currentPage.entry)) {
+        entries.push(...currentPage.entry);
+      }
+
+      const nextUrl = this.readNextPageUrl(currentPage);
+      if (!nextUrl) break;
+      if (pageCount >= maxPages) {
+        throw new SatusehatFhirError(
+          'SATUSEHAT_FHIR_PAGINATION_LIMIT',
+          `Pencarian FHIR SATUSEHAT melebihi batas ${maxPages} halaman`,
+          502,
+        );
+      }
+
+      const nextUrlKey = nextUrl.toString();
+      if (visitedNextUrls.has(nextUrlKey)) {
+        throw new SatusehatFhirError(
+          'SATUSEHAT_FHIR_PAGINATION_LOOP',
+          'SATUSEHAT mengembalikan link pagination yang berulang',
+          502,
+        );
+      }
+      visitedNextUrls.add(nextUrlKey);
+
+      const nextPage = await this.requestUrl(nextUrl, 'GET');
+      if (!this.isBundle(nextPage)) {
+        throw new SatusehatFhirError(
+          'SATUSEHAT_FHIR_PAGINATION_RESPONSE_INVALID',
+          'Halaman lanjutan FHIR SATUSEHAT bukan Bundle yang valid',
+          502,
+        );
+      }
+      currentPage = nextPage;
+    }
+
+    const mergedPage: Record<string, unknown> = {
+      ...firstPage,
+      entry: entries,
+    };
+    delete mergedPage.link;
+    if (mergedPage.total === undefined) mergedPage.total = entries.length;
+    return mergedPage;
+  }
+
+  private readNextPageUrl(response: Record<string, unknown>): URL | undefined {
+    if (!this.isUnknownArray(response.link)) return undefined;
+    const nextLink = response.link.find(
+      (link) => this.isRecord(link) && link.relation === 'next',
+    );
+    if (!this.isRecord(nextLink)) return undefined;
+
+    const rawUrl = nextLink.url;
+    if (typeof rawUrl !== 'string' || !rawUrl.trim()) {
+      throw new SatusehatFhirError(
+        'SATUSEHAT_FHIR_PAGINATION_URL_INVALID',
+        'Link pagination FHIR SATUSEHAT tidak memiliki URL yang valid',
+        502,
+      );
+    }
+
+    const baseUrl = this.getFhirBaseUrl();
+    let nextUrl: URL;
+    try {
+      nextUrl = new URL(rawUrl, baseUrl);
+    } catch {
+      throw new SatusehatFhirError(
+        'SATUSEHAT_FHIR_PAGINATION_URL_INVALID',
+        'Link pagination FHIR SATUSEHAT bukan URL yang valid',
+        502,
+      );
+    }
+
+    if (
+      nextUrl.origin !== baseUrl.origin ||
+      !nextUrl.pathname.startsWith(baseUrl.pathname)
+    ) {
+      throw new SatusehatFhirError(
+        'SATUSEHAT_FHIR_PAGINATION_URL_INVALID',
+        'Link pagination FHIR SATUSEHAT berada di luar endpoint yang dikonfigurasi',
+        502,
+      );
+    }
+
+    return nextUrl;
+  }
+
   private buildResourceUrl(pathSegments: string[], query?: FhirQuery): URL {
-    const baseUrl = process.env.SATUSEHAT_FHIR_BASE_URL?.trim().replace(
+    const baseUrl = this.getFhirBaseUrl();
+    const resourceUrl = new URL(
+      pathSegments.map((segment) => encodeURIComponent(segment)).join('/'),
+      baseUrl,
+    );
+    for (const [key, value] of Object.entries(query ?? {})) {
+      if (value) resourceUrl.searchParams.set(key, value);
+    }
+    return resourceUrl;
+  }
+
+  private getFhirBaseUrl(): URL {
+    const rawBaseUrl = process.env.SATUSEHAT_FHIR_BASE_URL?.trim().replace(
       /\/+$/,
       '',
     );
-    if (!baseUrl) {
+    if (!rawBaseUrl) {
       throw new SatusehatFhirError(
         'SATUSEHAT_FHIR_BASE_URL_MISSING',
         'SATUSEHAT_FHIR_BASE_URL wajib diisi di environment API',
@@ -111,13 +238,7 @@ export class SatusehatFhirClient {
     }
 
     try {
-      const resourceUrl = new URL(
-        `${baseUrl}/${pathSegments.map((segment) => encodeURIComponent(segment)).join('/')}`,
-      );
-      for (const [key, value] of Object.entries(query ?? {})) {
-        if (value) resourceUrl.searchParams.set(key, value);
-      }
-      return resourceUrl;
+      return new URL(`${rawBaseUrl}/`);
     } catch {
       throw new SatusehatFhirError(
         'SATUSEHAT_FHIR_URL_INVALID',
@@ -158,6 +279,10 @@ export class SatusehatFhirClient {
 
   private isRecord(value: unknown): value is Record<string, unknown> {
     return typeof value === 'object' && value !== null;
+  }
+
+  private isBundle(value: unknown): value is Record<string, unknown> {
+    return this.isRecord(value) && value.resourceType === 'Bundle';
   }
 
   private isUnknownArray(value: unknown): value is readonly unknown[] {

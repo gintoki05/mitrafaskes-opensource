@@ -4,9 +4,11 @@ import { SatusehatFhirClient } from './satusehat-fhir.client';
 describe('SatusehatFhirClient', () => {
   let fetchMock: jest.Mock;
   let originalBaseUrl: string | undefined;
+  let originalMaxPaginationPages: string | undefined;
 
   beforeEach(() => {
     originalBaseUrl = process.env.SATUSEHAT_FHIR_BASE_URL;
+    originalMaxPaginationPages = process.env.SATUSEHAT_MAX_PAGINATION_PAGES;
     process.env.SATUSEHAT_FHIR_BASE_URL =
       'https://satusehat.example.test/fhir-r4/v1';
     fetchMock = jest.fn();
@@ -18,6 +20,11 @@ describe('SatusehatFhirClient', () => {
       delete process.env.SATUSEHAT_FHIR_BASE_URL;
     } else {
       process.env.SATUSEHAT_FHIR_BASE_URL = originalBaseUrl;
+    }
+    if (originalMaxPaginationPages === undefined) {
+      delete process.env.SATUSEHAT_MAX_PAGINATION_PAGES;
+    } else {
+      process.env.SATUSEHAT_MAX_PAGINATION_PAGES = originalMaxPaginationPages;
     }
   });
 
@@ -109,5 +116,91 @@ describe('SatusehatFhirClient', () => {
         },
       }),
     );
+  });
+
+  it('follows Bundle next links and merges all Organization pages', async () => {
+    const nextUrl =
+      'https://satusehat.example.test/fhir-r4/v1/Organization?partof=100000004&_page=2';
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({
+            resourceType: 'Bundle',
+            type: 'searchset',
+            total: 2,
+            entry: [
+              { resource: { resourceType: 'Organization', id: 'org-1' } },
+            ],
+            link: [{ relation: 'next', url: nextUrl }],
+          }),
+        ),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({
+            resourceType: 'Bundle',
+            type: 'searchset',
+            total: 2,
+            entry: [
+              { resource: { resourceType: 'Organization', id: 'org-2' } },
+            ],
+          }),
+        ),
+      });
+    const auth = {
+      getAccessToken: jest.fn().mockResolvedValue('access-token'),
+    } as unknown as SatusehatAuthService;
+    const client = new SatusehatFhirClient(auth);
+
+    await expect(
+      client.searchOrganizations({ partof: '100000004' }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        resourceType: 'Bundle',
+        total: 2,
+        entry: [
+          { resource: { resourceType: 'Organization', id: 'org-1' } },
+          { resource: { resourceType: 'Organization', id: 'org-2' } },
+        ],
+      }),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    const requestCalls = fetchMock.mock.calls as unknown[][];
+    expect(requestCalls[1]?.[0]).toEqual(new URL(nextUrl));
+  });
+
+  it('rejects pagination links outside the configured FHIR endpoint', async () => {
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+      text: jest.fn().mockResolvedValue(
+        JSON.stringify({
+          resourceType: 'Bundle',
+          type: 'searchset',
+          entry: [],
+          link: [
+            {
+              relation: 'next',
+              url: 'https://unexpected.example.test/fhir/Organization?page=2',
+            },
+          ],
+        }),
+      ),
+    });
+    const auth = {
+      getAccessToken: jest.fn().mockResolvedValue('access-token'),
+    } as unknown as SatusehatAuthService;
+    const client = new SatusehatFhirClient(auth);
+
+    await expect(
+      client.searchOrganizations({ partof: '100000004' }),
+    ).rejects.toMatchObject({
+      code: 'SATUSEHAT_FHIR_PAGINATION_URL_INVALID',
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

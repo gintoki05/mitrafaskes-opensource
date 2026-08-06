@@ -8,6 +8,7 @@ import { Download, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldLabel, SelectField } from "./FormField";
+import { OrganizationHierarchyBadge } from "./OrganizationHierarchyBadge";
 
 type OrganizationImportLocalPanelProps = {
   selected: SatusehatOrganizationRemoteSummary;
@@ -62,11 +63,18 @@ export function OrganizationImportLocalPanel({
       </div>
 
       <div className="rounded-[var(--radius-control)] border border-border bg-background p-3">
-        <p className="text-xs font-semibold text-foreground">{selected.name}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs font-semibold text-foreground">
+            {selected.name}
+          </p>
+          <OrganizationHierarchyBadge
+            isRoot={!selected.parentExternalResourceId}
+          />
+        </div>
         <p className="mt-1 text-[11px] text-muted-foreground">
           {requiresLocalParent
             ? `Induk di SATUSEHAT: ${selected.parentDisplay || "Tidak diketahui"}`
-            : "Organisasi/faskes induk di SATUSEHAT"}
+            : "Tidak memiliki induk di SATUSEHAT; data ini adalah root."}
         </p>
       </div>
 
@@ -79,9 +87,7 @@ export function OrganizationImportLocalPanel({
           maxLength={64}
           placeholder={codePlaceholder}
         />
-        <p className="mt-1 text-[11px] text-muted-foreground">
-          {codeHelp}
-        </p>
+        <p className="mt-1 text-[11px] text-muted-foreground">{codeHelp}</p>
       </div>
 
       {requiresLocalParent ? (
@@ -112,9 +118,7 @@ export function OrganizationImportLocalPanel({
         type="button"
         onClick={onImport}
         disabled={
-          !canWrite ||
-          importing ||
-          Boolean(selected.linkedLocalResourceId)
+          !canWrite || importing || Boolean(selected.linkedLocalResourceId)
         }
         aria-busy={importing}
         className="w-full sm:w-auto"

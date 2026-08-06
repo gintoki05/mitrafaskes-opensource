@@ -1,4 +1,10 @@
-import { Building2, CircleDot, Layers3, MapPin, type LucideIcon } from "lucide-react";
+import {
+  Building2,
+  CircleDot,
+  Layers3,
+  MapPin,
+  type LucideIcon,
+} from "lucide-react";
 import type {
   LocationSummary,
   OrganizationSummary,
@@ -7,6 +13,7 @@ import type {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScreenState } from "@/components/ScreenState";
+import { OrganizationHierarchyBadge } from "./OrganizationHierarchyBadge";
 
 type MasterFaskesStructureProps = {
   loading: boolean;
@@ -108,14 +115,13 @@ function OrganizationStructureItem({
               <Badge variant="outline" className="font-mono text-[10px]">
                 {organization.code}
               </Badge>
+              <OrganizationHierarchyBadge isRoot={!organization.parentId} />
             </div>
             <div className="mt-1 text-xs text-muted-foreground">
               {organization.type === "HEALTHCARE_FACILITY"
                 ? "Faskes / organisasi induk"
                 : "Sub-organisasi"}
-              {organization.addressText
-                ? ` · ${organization.addressText}`
-                : ""}
+              {organization.addressText ? ` · ${organization.addressText}` : ""}
             </div>
           </div>
         </div>
