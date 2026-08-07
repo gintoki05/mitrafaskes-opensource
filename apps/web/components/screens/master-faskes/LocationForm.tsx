@@ -99,6 +99,8 @@ export function LocationForm({
   const organizationId = useWatch({ control, name: "organizationId" });
 
   const submit = handleSubmit(async (values) => {
+    if (currentStep !== locationSteps.length - 1) return;
+
     if (await onSubmit(values)) {
       reset({ ...emptyLocation, organizationId: values.organizationId });
       setCurrentStep(0);

@@ -78,6 +78,8 @@ export function OrganizationForm({
   const organizationType = useWatch({ control, name: "type" });
 
   const submit = handleSubmit(async (values) => {
+    if (currentStep !== organizationSteps.length - 1) return;
+
     if (await onSubmit(values)) {
       reset(emptyOrganization);
       setCurrentStep(0);

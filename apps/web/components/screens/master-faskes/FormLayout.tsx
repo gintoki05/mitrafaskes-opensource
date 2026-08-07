@@ -1,5 +1,5 @@
 import { Check, type LucideIcon } from "lucide-react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import {
   Card,
   CardContent,
@@ -215,7 +215,14 @@ export function FormActions({
         ) : null}
         <Button
           type={isLastStep ? "submit" : "button"}
-          onClick={isLastStep ? undefined : onNext}
+          onClick={
+            isLastStep
+              ? undefined
+              : (event: MouseEvent<HTMLButtonElement>) => {
+                  event.preventDefault();
+                  onNext();
+                }
+          }
           disabled={disabled || isSubmitting}
           aria-busy={isSubmitting}
           className="min-w-0 flex-1 text-xs font-bold sm:min-w-36 sm:flex-none"
