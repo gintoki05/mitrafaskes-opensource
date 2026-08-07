@@ -319,6 +319,7 @@ export default function LocationListScreen() {
               <SelectField
                 id="location-filter-active"
                 aria-label="Filter status data location"
+                size="sm"
                 value={activeFilter}
                 onChange={handleActiveFilter}
                 className="w-auto min-w-32 text-xs"
@@ -330,6 +331,7 @@ export default function LocationListScreen() {
               <SelectField
                 id="location-filter-type"
                 aria-label="Filter jenis location"
+                size="sm"
                 value={typeFilter}
                 onChange={handleTypeFilter}
                 className="w-auto min-w-36 text-xs"
@@ -344,6 +346,7 @@ export default function LocationListScreen() {
               <SelectField
                 id="location-filter-status"
                 aria-label="Filter status location"
+                size="sm"
                 value={locationStatusFilter}
                 onChange={handleLocationStatusFilter}
                 className="w-auto min-w-44 text-xs"

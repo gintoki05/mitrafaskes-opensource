@@ -13,6 +13,12 @@ export interface SatusehatLinkageSummary {
   lastSyncedAt?: string;
 }
 
+export interface SatusehatSyncSummary {
+  status: 'PENDING' | 'SUCCESS' | 'FAILED';
+  errorMessage?: string;
+  updatedAt: string;
+}
+
 export interface OrganizationSummary {
   id: string;
   code: string;
@@ -63,6 +69,53 @@ export interface LocationSummary {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface PractitionerOrganizationReference {
+  id: string;
+  code: string;
+  name: string;
+}
+
+export interface PractitionerLocationReference {
+  id: string;
+  organizationId: string;
+  code: string;
+  name: string;
+}
+
+export interface PractitionerSummary {
+  id: string;
+  username: string;
+  fullName: string;
+  role: 'DOKTER' | 'PERAWAT';
+  nik?: string;
+  birthDate?: string;
+  gender?: 'MALE' | 'FEMALE';
+  sipNumber?: string;
+  strNumber?: string;
+  organization?: PractitionerOrganizationReference;
+  location?: PractitionerLocationReference;
+  active: boolean;
+  satusehat?: SatusehatLinkageSummary;
+  satusehatSync?: SatusehatSyncSummary;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PractitionerCreateRequest {
+  username: string;
+  password: string;
+  fullName: string;
+  role: 'DOKTER' | 'PERAWAT';
+  nik?: string | null;
+  birthDate?: string | null;
+  gender?: 'MALE' | 'FEMALE' | null;
+  sipNumber?: string | null;
+  strNumber?: string | null;
+  organizationId?: string | null;
+  locationId?: string | null;
+  active?: boolean;
 }
 
 export interface MasterFaskesData {

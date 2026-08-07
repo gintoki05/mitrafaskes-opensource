@@ -56,6 +56,7 @@ const navigationItems: readonly NavigationItem[] = [
       { href: '/master-faskes', label: 'Ikhtisar struktur' },
       { href: '/master-faskes/organisasi', label: 'Organisasi / Faskes' },
       { href: '/master-faskes/lokasi', label: 'Location / Ruangan' },
+      { href: '/master-faskes/practitioner', label: 'Practitioner / Nakes' },
       { href: '/master-faskes/unit-layanan', label: 'Unit layanan / Poli' },
     ],
   },

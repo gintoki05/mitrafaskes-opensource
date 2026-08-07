@@ -232,6 +232,7 @@ export default function ServiceUnitListScreen() {
               <SelectField
                 id="unit-filter-status"
                 aria-label="Filter status unit layanan"
+                size="sm"
                 value={statusFilter}
                 onChange={handleStatusFilter}
                 className="w-auto min-w-32 text-xs"
@@ -243,6 +244,7 @@ export default function ServiceUnitListScreen() {
               <SelectField
                 id="unit-filter-type"
                 aria-label="Filter jenis unit layanan"
+                size="sm"
                 value={typeFilter}
                 onChange={handleTypeFilter}
                 className="w-auto min-w-40 text-xs"

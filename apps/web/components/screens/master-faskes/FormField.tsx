@@ -42,6 +42,7 @@ export function SelectField({
   onChange,
   children,
   disabled,
+  size = "default",
   className,
   "aria-label": ariaLabel,
   "aria-describedby": ariaDescribedBy,
@@ -52,6 +53,7 @@ export function SelectField({
   onChange: (value: string) => void;
   children: ReactNode;
   disabled?: boolean;
+  size?: "sm" | "default";
   className?: string;
   "aria-label"?: string;
   "aria-describedby"?: string;
@@ -89,11 +91,12 @@ export function SelectField({
     >
       <SelectTrigger
         id={id}
+        size={size}
         aria-label={ariaLabel}
         aria-describedby={ariaDescribedBy}
         aria-invalid={ariaInvalid}
         className={cn(
-          "clinical-field min-h-9 w-full px-2.5 py-1 text-sm",
+          "min-w-0 w-full px-2.5 py-1 text-sm",
           className,
         )}
       >

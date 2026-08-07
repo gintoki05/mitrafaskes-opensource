@@ -44,6 +44,20 @@ export class SatusehatFhirClient {
     return this.request('PUT', ['Organization', id], payload);
   }
 
+  getPractitioner(id: string): Promise<unknown> {
+    return this.request('GET', ['Practitioner', id]);
+  }
+
+  async searchPractitioners(query: FhirQuery): Promise<unknown> {
+    const firstPage = await this.request(
+      'GET',
+      ['Practitioner'],
+      undefined,
+      query,
+    );
+    return this.mergeSearchPages(firstPage);
+  }
+
   createLocation(payload: unknown): Promise<unknown> {
     return this.request('POST', ['Location'], payload);
   }

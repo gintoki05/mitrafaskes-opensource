@@ -137,7 +137,7 @@ export function PatientRegistrationDialog({
                     >
                       <SelectTrigger
                         id="registration-gender"
-                        className="clinical-field min-h-9 w-full px-3 py-2 text-sm"
+                        className="min-w-0 w-full px-3 text-sm"
                         aria-invalid={fieldState.invalid}
                         aria-describedby="registration-gender-error"
                       >

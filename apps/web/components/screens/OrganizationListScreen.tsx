@@ -282,6 +282,7 @@ export default function OrganizationListScreen() {
               <SelectField
                 id="organization-filter-status"
                 aria-label="Filter status organisasi"
+                size="sm"
                 value={statusFilter}
                 onChange={handleStatusFilter}
                 className="w-auto min-w-32 text-xs"
@@ -293,6 +294,7 @@ export default function OrganizationListScreen() {
               <SelectField
                 id="organization-filter-type"
                 aria-label="Filter jenis organisasi"
+                size="sm"
                 value={typeFilter}
                 onChange={handleTypeFilter}
                 className="w-auto min-w-40 text-xs"

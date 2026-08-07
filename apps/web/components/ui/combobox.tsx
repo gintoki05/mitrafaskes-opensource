@@ -96,7 +96,7 @@ export function ComboboxField({
           align="start"
           className="isolate z-50"
         >
-          <ComboboxPrimitive.Popup className="relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-56 origin-(--transform-origin) overflow-hidden rounded-lg bg-popover text-popover-foreground shadow-md ring-1 ring-foreground/10 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
+          <ComboboxPrimitive.Popup className="relative max-h-(--available-height) w-(--anchor-width) max-w-(--available-width) min-w-56 origin-(--transform-origin) overflow-hidden rounded-[var(--radius-control)] border border-border bg-popover text-popover-foreground shadow-lg ring-1 ring-foreground/5 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95">
             <ComboboxPrimitive.Empty className="px-3 py-2 text-sm text-muted-foreground">
               {emptyMessage}
             </ComboboxPrimitive.Empty>
@@ -106,7 +106,7 @@ export function ComboboxField({
                   key={option.value}
                   value={option}
                   disabled={option.disabled}
-                  className="relative flex w-full cursor-default items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-disabled:pointer-events-none data-disabled:opacity-50"
+                  className="relative flex w-full cursor-default items-center gap-2 rounded-md py-1.5 pr-8 pl-2 text-sm outline-none select-none data-highlighted:bg-muted data-highlighted:text-foreground data-disabled:pointer-events-none data-disabled:opacity-50"
                 >
                   <span className="min-w-0 flex-1 truncate">{option.label}</span>
                   <ComboboxPrimitive.ItemIndicator className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">

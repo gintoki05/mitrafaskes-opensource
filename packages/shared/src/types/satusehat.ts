@@ -1,4 +1,8 @@
-import type { LocationSummary, OrganizationSummary } from './master-data';
+import type {
+  LocationSummary,
+  OrganizationSummary,
+  PractitionerSummary,
+} from './master-data';
 
 export enum SyncStatus {
   PENDING = 'PENDING',
@@ -82,6 +86,7 @@ export interface SatusehatSyncLog {
   resourceType:
     | 'Organization'
     | 'Location'
+    | 'Practitioner'
     | 'Encounter'
     | 'Condition'
     | 'Observation'
@@ -92,6 +97,47 @@ export interface SatusehatSyncLog {
   satusehatId?: string;
   errorMessage?: string;
   updatedAt: string;
+}
+
+export interface SatusehatPractitionerIdentifier {
+  system: string;
+  value: string;
+}
+
+export type SatusehatPractitionerGender = 'male' | 'female' | 'other' | 'unknown';
+
+export interface SatusehatPractitionerRemoteSummary {
+  externalResourceId: string;
+  name: string;
+  active: boolean;
+  gender?: SatusehatPractitionerGender;
+  birthDate?: string;
+  identifiers: SatusehatPractitionerIdentifier[];
+  linkedLocalResourceId?: string;
+}
+
+export interface SatusehatPractitionerSearchResponse {
+  items: SatusehatPractitionerRemoteSummary[];
+  total: number;
+}
+
+export type SatusehatPractitionerLookupIdentifier = 'NIK' | 'IHS';
+
+export interface SatusehatPractitionerLookupQuery {
+  identifierType: SatusehatPractitionerLookupIdentifier;
+  identifier: string;
+}
+
+export interface SatusehatPractitionerLinkRequest {
+  externalResourceId: string;
+}
+
+export interface SatusehatPractitionerMutationResponse {
+  operation: 'LINK_EXISTING';
+  localResourceId: string;
+  externalResourceId: string;
+  practitioner: PractitionerSummary;
+  remote: SatusehatPractitionerRemoteSummary;
 }
 
 export interface SatusehatOrganizationPayload {

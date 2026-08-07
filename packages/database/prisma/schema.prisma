@@ -137,6 +137,7 @@ model HealthcareOrganization {
   children    HealthcareOrganization[] @relation("OrganizationHierarchy")
   serviceUnits ServiceUnit[]
   locations   Location[]           @relation("OrganizationLocations")
+  practitioners User[]             @relation("OrganizationPractitioners")
 
   @@index([parentId, active])
   @@index([active, name])
@@ -188,6 +189,7 @@ model Location {
   serviceUnit    ServiceUnit?          @relation("ServiceUnitLocations", fields: [serviceUnitId], references: [id], onDelete: SetNull)
   parent         Location?             @relation("LocationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
   children       Location[]            @relation("LocationHierarchy")
+  practitioners  User[]                @relation("LocationPractitioners")
 
   @@unique([organizationId, code])
   @@index([organizationId, active, name])
@@ -220,11 +222,23 @@ model User {
   passwordHash String
   fullName     String
   role         Role
+  nik          String?     @unique @db.VarChar(16)
+  birthDate    DateTime?   @db.Date
+  gender       Gender?
+  active       Boolean     @default(true)
   sipNumber    String?
   strNumber    String?
+  organizationId String?
+  locationId     String?
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
+  organization HealthcareOrganization? @relation("OrganizationPractitioners", fields: [organizationId], references: [id], onDelete: SetNull)
+  location     Location?              @relation("LocationPractitioners", fields: [locationId], references: [id], onDelete: SetNull)
   encounters   Encounter[] @relation("DoctorEncounters")
+
+  @@index([role, active, fullName])
+  @@index([organizationId, active, fullName])
+  @@index([locationId, active, fullName])
 }
 
 model Patient {
@@ -447,4 +461,6 @@ model SatusehatSyncLog {
   errorMessage String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
+
+  @@index([resourceType, resourceId, updatedAt])
 }

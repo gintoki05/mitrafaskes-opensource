@@ -151,6 +151,52 @@ describe('SatusehatFhirClient', () => {
     expect(searchUrl.searchParams.get('name')).toBe('Poli Umum');
   });
 
+  it('gets and searches Practitioner resources by NIK identifier', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({ resourceType: 'Practitioner', id: '10009880728' }),
+        ),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({
+            resourceType: 'Bundle',
+            type: 'searchset',
+            total: 1,
+            entry: [
+              { resource: { resourceType: 'Practitioner', id: '10009880728' } },
+            ],
+          }),
+        ),
+      });
+    const auth = {
+      getAccessToken: jest.fn().mockResolvedValue('access-token'),
+    } as unknown as SatusehatAuthService;
+    const client = new SatusehatFhirClient(auth);
+
+    await client.getPractitioner('10009880728');
+    await client.searchPractitioners({
+      identifier: 'https://fhir.kemkes.go.id/id/nik|7209061211900001',
+    });
+
+    const requestCalls = fetchMock.mock.calls as unknown[][];
+    expect(requestCalls[0]?.[0]).toEqual(
+      new URL(
+        'https://satusehat.example.test/fhir-r4/v1/Practitioner/10009880728',
+      ),
+    );
+    const searchUrl = requestCalls[1]?.[0] as URL;
+    expect(searchUrl.pathname).toBe('/fhir-r4/v1/Practitioner');
+    expect(searchUrl.searchParams.get('identifier')).toBe(
+      'https://fhir.kemkes.go.id/id/nik|7209061211900001',
+    );
+  });
+
   it('fails before requesting a token when the FHIR base URL is missing', async () => {
     delete process.env.SATUSEHAT_FHIR_BASE_URL;
     const getAccessToken = jest.fn();
