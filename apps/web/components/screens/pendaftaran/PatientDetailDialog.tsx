@@ -2,12 +2,13 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import type { MaritalStatusSummary, Patient } from '@mitrafaskes/shared';
-import { Edit3, Eye, Link2, RefreshCw, UserRound } from 'lucide-react';
+import { Edit3, Eye, Link2, UserRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScreenState } from '@/components/ScreenState';
-import { SatusehatLinkageBadge } from '../master-faskes/SatusehatLinkageBadge';
+import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
+import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
 import { maritalStatusDisplay } from './marital-status-display';
 
@@ -220,10 +221,11 @@ export function PatientDetailDialog({
                 <Button type="button" variant="outline" onClick={onClose}>Tutup</Button>
                 {canWrite ? (
                   <>
-                    <Button type="button" variant="outline" onClick={() => onSync(patient)}>
-                      <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                      Sinkronkan SATUSEHAT
-                    </Button>
+                    <SatusehatActionGroup
+                      resourceName={patient.fullName}
+                      onSync={() => onSync(patient)}
+                      showLabels
+                    />
                     <Button type="button" onClick={() => onEdit(patient)}>
                       <Edit3 className="h-4 w-4" aria-hidden="true" />
                       Edit lokal

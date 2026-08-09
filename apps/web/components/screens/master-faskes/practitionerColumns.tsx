@@ -1,9 +1,10 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import type { PractitionerSummary } from '@mitrafaskes/shared';
-import { Edit3, Link2 } from 'lucide-react';
+import { Edit3 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { SatusehatLinkageBadge } from './SatusehatLinkageBadge';
+import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
+import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 
 type PractitionerColumnOptions = {
   canWrite: boolean;
@@ -127,17 +128,12 @@ export function getPractitionerColumns({
         <div className="flex flex-wrap justify-end gap-1">
           {canWrite ? (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-xs"
-                onClick={() => onLink(row.original)}
-                aria-label={`Sinkronkan SATUSEHAT untuk ${row.original.fullName}`}
-                title="Sinkronkan SATUSEHAT"
-                disabled={!row.original.nik}
-              >
-                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
+              <SatusehatActionGroup
+                resourceName={row.original.fullName}
+                onLink={() => onLink(row.original)}
+                linkDisabled={!row.original.nik}
+                linkDisabledReason="NIK wajib diisi untuk lookup Practitioner SATUSEHAT"
+              />
               <Button
                 type="button"
                 variant="outline"

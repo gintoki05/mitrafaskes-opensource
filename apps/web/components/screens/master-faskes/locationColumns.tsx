@@ -3,15 +3,16 @@ import type {
   LocationSummary,
   OrganizationSummary,
 } from "@mitrafaskes/shared";
-import { Edit3, Link2, Power, RefreshCw } from "lucide-react";
+import { Edit3, Power } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SatusehatActionGroup } from "@/components/satusehat/SatusehatActionGroup";
 import {
   locationModes,
   locationStatuses,
   locationTypes,
 } from "./constants";
-import { SatusehatLinkageBadge } from "./SatusehatLinkageBadge";
+import { SatusehatLinkageBadge } from "@/components/satusehat/SatusehatLinkageBadge";
 
 type LocationColumnOptions = {
   canWrite: boolean;
@@ -123,29 +124,17 @@ export function getLocationColumns({
       enableSorting: false,
       cell: ({ row }) => (
         <div className="flex flex-wrap justify-end gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => onPreview(row.original)}
-            aria-label={`Sinkronkan SATUSEHAT ${row.original.name}`}
-            title="Sinkronkan SATUSEHAT"
-            className="text-primary hover:bg-primary/10 hover:text-primary focus-visible:border-primary/40 focus-visible:ring-primary/20"
-          >
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-          </Button>
+          <SatusehatActionGroup
+            resourceName={row.original.name}
+            onSync={() => onPreview(row.original)}
+            onLink={
+              canWrite && !row.original.satusehat
+                ? () => onLink(row.original)
+                : undefined
+            }
+          />
           {canWrite ? (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-xs"
-                onClick={() => onLink(row.original)}
-                aria-label={`Hubungkan SATUSEHAT untuk ${row.original.name}`}
-                title="Hubungkan Location SATUSEHAT"
-              >
-                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
               <Button
                 type="button"
                 variant="outline"

@@ -2,11 +2,12 @@
 
 import type { SubmitEventHandler } from 'react';
 import type { MaritalStatusSummary, Patient } from '@mitrafaskes/shared';
-import { Edit3, Eye, Filter, ListPlus, RefreshCw, Search } from 'lucide-react';
+import { Edit3, Eye, Filter, ListPlus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScreenState } from '@/components/ScreenState';
-import { SatusehatLinkageBadge } from '../master-faskes/SatusehatLinkageBadge';
+import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
+import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import { maritalStatusDisplay } from './marital-status-display';
 
 type PatientDirectoryProps = {
@@ -75,7 +76,7 @@ export function PatientDirectory({
               <th scope="col" className="border-b border-border px-4 py-3">No. Rekam Medis</th>
               <th scope="col" className="border-b border-border px-4 py-3">Identitas</th>
               <th scope="col" className="border-b border-border px-4 py-3">SATUSEHAT</th>
-              <th scope="col" className="w-64 border-b border-border px-4 py-3 text-right">Aksi</th>
+              <th scope="col" className="w-48 border-b border-border px-4 py-3 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -123,67 +124,54 @@ export function PatientDirectory({
                     ) : null}
                   </div>
                 </td>
-                <td className="w-64 px-4 py-4 align-middle text-right">
+                <td className="w-48 px-4 py-4 align-middle text-right">
                   <div
-                    className="flex flex-col items-end gap-2"
+                    className="flex flex-wrap items-center justify-end gap-1"
                     role="group"
                     aria-label={`Aksi untuk ${patient.fullName}`}
                   >
-                    <div className="flex items-center justify-end gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      onClick={() => onViewPatient(patient)}
+                      aria-label={`Lihat detail ${patient.fullName}`}
+                      title={`Lihat detail ${patient.fullName}`}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
+                    {canWritePatient ? (
                       <Button
                         type="button"
                         variant="ghost"
-                        size="sm"
-                        onClick={() => onViewPatient(patient)}
-                        title={`Lihat detail ${patient.fullName}`}
-                        className="px-2 text-muted-foreground hover:text-foreground"
+                        size="icon-xs"
+                        onClick={() => onEditPatient(patient)}
+                        aria-label={`Edit lokal ${patient.fullName}`}
+                        title={`Edit lokal ${patient.fullName}`}
+                        className="text-muted-foreground hover:text-foreground"
                       >
-                        <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-                        Detail
+                        <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
                       </Button>
-                      {canWritePatient ? (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onEditPatient(patient)}
-                          title={`Edit lokal ${patient.fullName}`}
-                          className="px-2 text-muted-foreground hover:text-foreground"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
-                          Edit
-                        </Button>
-                      ) : null}
-                    </div>
-                    {canWritePatient || canCreateQueue ? (
-                      <div className="flex flex-wrap justify-end gap-2">
-                        {canWritePatient ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onSyncPatient(patient)}
-                            title={`Sinkronkan ${patient.fullName} ke SATUSEHAT`}
-                            className="justify-center border-primary/35 bg-card text-primary hover:bg-primary/5"
-                          >
-                            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-                            Sync
-                          </Button>
-                        ) : null}
-                        {canCreateQueue ? (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() => onQueuePatient(patient.id)}
-                            title={`Masukkan ${patient.fullName} ke antrean`}
-                            className="justify-center border-primary/35 bg-card text-primary hover:bg-primary/5"
-                          >
-                            <ListPlus className="h-3.5 w-3.5" aria-hidden="true" />
-                            Masuk antrean
-                          </Button>
-                        ) : null}
-                      </div>
+                    ) : null}
+                    {canWritePatient ? (
+                      <SatusehatActionGroup
+                        resourceName={patient.fullName}
+                        onSync={() => onSyncPatient(patient)}
+                      />
+                    ) : null}
+                    {canCreateQueue ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-xs"
+                        onClick={() => onQueuePatient(patient.id)}
+                        aria-label={`Masukkan ${patient.fullName} ke antrean`}
+                        title={`Masukkan ${patient.fullName} ke antrean`}
+                        className="border-primary/35 bg-card text-primary hover:bg-primary/5"
+                      >
+                        <ListPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                      </Button>
                     ) : null}
                   </div>
                 </td>

@@ -79,6 +79,17 @@ Before adding substantial code to an existing file, the AI should:
   narrowest component level; do not change global tokens to solve one state.
 - Keep domain/API contracts in `packages/shared`; keep form draft state and
   display-only options feature-local.
+- For SATUSEHAT UI actions, reuse `apps/web/components/satusehat/SatusehatActionGroup.tsx`
+  for `Sinkronkan SATUSEHAT` and `Hubungkan SATUSEHAT`. Prefer its focused
+  callbacks, disabled reasons, and `showLabels` option over duplicating button
+  markup in feature columns or screens.
+- For SATUSEHAT linkage status, reuse
+  `apps/web/components/satusehat/SatusehatLinkageBadge.tsx`. List/table
+  surfaces must show the logo, connection status, and a copy button for the
+  external ID; do not render the full external ID as ordinary column text.
+- Dense table action columns should use icon-only buttons with an informative
+  `aria-label` and hover `title` tooltip. Use visible labels only for
+  standalone dialog CTAs or other contexts where the action needs explanation.
 
 ## Server boundary and delivery gates
 
