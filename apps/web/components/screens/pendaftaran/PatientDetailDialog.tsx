@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, type ReactNode } from 'react';
-import type { Patient } from '@mitrafaskes/shared';
+import type { MaritalStatusSummary, Patient } from '@mitrafaskes/shared';
 import { Edit3, Eye, Link2, RefreshCw, UserRound } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScreenState } from '@/components/ScreenState';
 import { SatusehatLinkageBadge } from '../master-faskes/SatusehatLinkageBadge';
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
+import { maritalStatusDisplay } from './marital-status-display';
 
 type PatientDetailDialogProps = {
   open: boolean;
@@ -18,6 +19,7 @@ type PatientDetailDialogProps = {
   onClose: () => void;
   onEdit: (patient: Patient) => void;
   onSync: (patient: Patient) => void;
+  maritalStatuses: readonly MaritalStatusSummary[];
 };
 
 export function PatientDetailDialog({
@@ -28,6 +30,7 @@ export function PatientDetailDialog({
   onClose,
   onEdit,
   onSync,
+  maritalStatuses,
 }: PatientDetailDialogProps) {
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(false);
@@ -130,6 +133,10 @@ export function PatientDetailDialog({
                 <DetailField label="Tanggal lahir" value={patient.birthDate} />
                 <DetailField label="Jenis kelamin" value={patient.gender === 'MALE' ? 'Laki-laki' : 'Perempuan'} />
                 <DetailField label="Tempat lahir" value={patient.birthPlaceText ?? 'Belum diisi'} />
+                <DetailField
+                  label="Status perkawinan"
+                  value={maritalStatusDisplay(patient.maritalStatusCode, maritalStatuses)}
+                />
                 <DetailField label="Telepon legacy" value={patient.phone ?? 'Belum diisi'} />
                 <DetailField label="Alamat legacy" value={patient.address ?? 'Belum diisi'} wide />
                 <DetailField label="Versi lokal" value={String(patient.version ?? 1)} mono />

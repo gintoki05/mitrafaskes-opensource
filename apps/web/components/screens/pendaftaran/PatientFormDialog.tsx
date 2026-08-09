@@ -21,6 +21,7 @@ import {
   patientFormValuesFromPatient,
   patientFormValuesToPayload,
 } from './patient-form-mappers';
+import type { MaritalStatusLookupState } from './useMaritalStatuses';
 
 type PatientFormDialogProps = {
   open: boolean;
@@ -29,6 +30,7 @@ type PatientFormDialogProps = {
   onClose: () => void;
   onSubmit: (input: CreatePatientDto, patient: Patient | null) => Promise<Patient>;
   onSaved: () => void | Promise<void>;
+  maritalStatusLookup: MaritalStatusLookupState;
 };
 
 export function PatientFormDialog({
@@ -38,6 +40,7 @@ export function PatientFormDialog({
   onClose,
   onSubmit,
   onSaved,
+  maritalStatusLookup,
 }: PatientFormDialogProps) {
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientFormSchema),
@@ -102,6 +105,7 @@ export function PatientFormDialog({
               errors={errors}
               register={register}
               disabled={!canWrite || isSubmitting}
+              maritalStatusLookup={maritalStatusLookup}
             />
             <PatientContactFields
               errors={errors}

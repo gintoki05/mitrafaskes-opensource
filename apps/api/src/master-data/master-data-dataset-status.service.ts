@@ -42,7 +42,9 @@ export class MasterDataDatasetStatusService {
       await Promise.all([
         domain === 'WILAYAH'
           ? this.prisma.masterRegion.count({ where: { active: true } })
-          : Promise.resolve(0),
+          : domain === 'MARITAL_STATUS'
+            ? this.prisma.masterMaritalStatus.count({ where: { active: true } })
+            : Promise.resolve(0),
         this.prisma.masterDataImportRun.findFirst({
           where: { domain },
           orderBy: [{ attemptedAt: 'desc' }, { createdAt: 'desc' }],

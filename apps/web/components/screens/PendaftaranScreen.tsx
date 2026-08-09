@@ -18,6 +18,7 @@ import { PatientFormDialog } from './pendaftaran/PatientFormDialog';
 import { PatientSyncDialog } from './pendaftaran/PatientSyncDialog';
 import { QueuePanel } from './pendaftaran/QueuePanel';
 import { usePatientActions } from './pendaftaran/usePatientActions';
+import { useMaritalStatuses } from './pendaftaran/useMaritalStatuses';
 
 export default function PendaftaranPage() {
   const [search, setSearch] = useState('');
@@ -27,6 +28,7 @@ export default function PendaftaranPage() {
   const [syncingPatient, setSyncingPatient] = useState<Patient | null>(null);
   const session = useSession();
   const currentUser = session?.user ?? null;
+  const maritalStatusLookup = useMaritalStatuses();
   const canWritePatient = can(currentUser, AccessPermission.PATIENT_WRITE);
   const canCreateQueue = can(currentUser, AccessPermission.QUEUE_CREATE);
   const {
@@ -155,6 +157,7 @@ export default function PendaftaranPage() {
           onViewPatient={(patient) => setDetailPatientId(patient.id)}
           onEditPatient={handleEditPatient}
           onSyncPatient={handleSyncPatient}
+          maritalStatuses={maritalStatusLookup.statuses}
         />
         <QueuePanel encounters={encounters} encountersLoading={encountersLoading} encountersError={encountersError} />
         <PatientFormDialog
@@ -164,6 +167,7 @@ export default function PendaftaranPage() {
           onClose={() => setShowPatientForm(false)}
           onSubmit={handleSavePatient}
           onSaved={handlePatientSaved}
+          maritalStatusLookup={maritalStatusLookup}
         />
         <PatientDetailDialog
           key={detailPatientId ?? 'patient-detail-closed'}
@@ -174,6 +178,7 @@ export default function PendaftaranPage() {
           onClose={() => setDetailPatientId(null)}
           onEdit={handleEditPatient}
           onSync={handleSyncPatient}
+          maritalStatuses={maritalStatusLookup.statuses}
         />
         <PatientSyncDialog
           key={syncingPatient?.id ?? 'patient-sync-closed'}

@@ -6,13 +6,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
 import { SelectField } from '../master-faskes/FormField';
+import { PatientMaritalStatusField } from './PatientMaritalStatusField';
 import type { PatientFormValues } from './patient-form-schema';
+import type { MaritalStatusLookupState } from './useMaritalStatuses';
 
 type PatientIdentityFieldsProps = {
   control: Control<PatientFormValues>;
   errors: FieldErrors<PatientFormValues>;
   register: UseFormRegister<PatientFormValues>;
   disabled: boolean;
+  maritalStatusLookup: MaritalStatusLookupState;
 };
 
 export function PatientIdentityFields({
@@ -20,6 +23,7 @@ export function PatientIdentityFields({
   errors,
   register,
   disabled,
+  maritalStatusLookup,
 }: PatientIdentityFieldsProps) {
   return (
     <Card>
@@ -141,15 +145,12 @@ export function PatientIdentityFields({
           />
         </Field>
 
-        <Field>
-          <FieldLabel htmlFor="patient-marital-status">Status perkawinan</FieldLabel>
-          <Input
-            id="patient-marital-status"
-            {...register('maritalStatusCode')}
-            disabled={disabled}
-            placeholder="Kode status (opsional)"
-          />
-        </Field>
+        <PatientMaritalStatusField
+          control={control}
+          errors={errors}
+          disabled={disabled}
+          lookup={maritalStatusLookup}
+        />
 
         <Field data-invalid={Boolean(errors.citizenshipCode)}>
           <FieldLabel htmlFor="patient-citizenship">Kewarganegaraan</FieldLabel>

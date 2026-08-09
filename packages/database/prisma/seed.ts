@@ -18,6 +18,10 @@ import {
   MASTER_WILAYAH_SNAPSHOT,
   MASTER_WILAYAH_SNAPSHOT_VERSION,
 } from "./seed-data/master-wilayah.snapshot";
+import {
+  MASTER_MARITAL_STATUS_SNAPSHOT,
+  MASTER_MARITAL_STATUS_SNAPSHOT_VERSION,
+} from "./seed-data/master-marital-status.snapshot";
 
 const prisma = new PrismaClient();
 
@@ -181,6 +185,61 @@ async function main() {
     });
   });
 
+  console.log("Seeding local Master Status Perkawinan snapshot...");
+  await prisma.$transaction(async (tx) => {
+    for (const status of MASTER_MARITAL_STATUS_SNAPSHOT) {
+      await tx.masterMaritalStatus.upsert({
+        where: { code: status.code },
+        update: {
+          display: status.display,
+          active: true,
+          displayOrder: status.displayOrder,
+          source: "LOCAL_SNAPSHOT",
+          sourceVersion: MASTER_MARITAL_STATUS_SNAPSHOT_VERSION,
+        },
+        create: {
+          code: status.code,
+          display: status.display,
+          active: true,
+          displayOrder: status.displayOrder,
+          source: "LOCAL_SNAPSHOT",
+          sourceVersion: MASTER_MARITAL_STATUS_SNAPSHOT_VERSION,
+        },
+      });
+    }
+
+    await tx.masterDataImportRun.upsert({
+      where: { id: "master-import-run-marital-status-baseline-2026-08" },
+      update: {
+        domain: "MARITAL_STATUS",
+        source: "LOCAL_SNAPSHOT",
+        sourceVersion: MASTER_MARITAL_STATUS_SNAPSHOT_VERSION,
+        status: MasterDataImportStatus.SUCCESS,
+        recordsSeen: MASTER_MARITAL_STATUS_SNAPSHOT.length,
+        recordsUpserted: MASTER_MARITAL_STATUS_SNAPSHOT.length,
+        recordsDeactivated: 0,
+        attemptedAt: new Date(),
+        completedAt: new Date(),
+        succeededAt: new Date(),
+        errorCode: null,
+        errorMessage: null,
+      },
+      create: {
+        id: "master-import-run-marital-status-baseline-2026-08",
+        domain: "MARITAL_STATUS",
+        source: "LOCAL_SNAPSHOT",
+        sourceVersion: MASTER_MARITAL_STATUS_SNAPSHOT_VERSION,
+        status: MasterDataImportStatus.SUCCESS,
+        recordsSeen: MASTER_MARITAL_STATUS_SNAPSHOT.length,
+        recordsUpserted: MASTER_MARITAL_STATUS_SNAPSHOT.length,
+        recordsDeactivated: 0,
+        attemptedAt: new Date(),
+        completedAt: new Date(),
+        succeededAt: new Date(),
+      },
+    });
+  });
+
   console.log("Seeding Initial Demo Users...");
   await prisma.user.upsert({
     where: { username: "admin" },
@@ -325,6 +384,7 @@ async function main() {
       phone: "081298765432",
       medicalRecNo: "RM-2026-000001",
       satusehatId: "P01928374-ID",
+      maritalStatusCode: "M",
       ...ahmadStructuredData,
     },
     create: {
@@ -337,6 +397,7 @@ async function main() {
       phone: "081298765432",
       medicalRecNo: "RM-2026-000001",
       satusehatId: "P01928374-ID",
+      maritalStatusCode: "M",
       identifiers: {
         create: ahmadStructuredData.identifiers.create,
       },
@@ -417,6 +478,7 @@ async function main() {
       phone: "081311223344",
       medicalRecNo: "RM-2026-000002",
       satusehatId: "P09876543-ID",
+      maritalStatusCode: "M",
       ...sitiStructuredData,
     },
     create: {
@@ -429,6 +491,7 @@ async function main() {
       phone: "081311223344",
       medicalRecNo: "RM-2026-000002",
       satusehatId: "P09876543-ID",
+      maritalStatusCode: "M",
       identifiers: { create: sitiStructuredData.identifiers.create },
       names: { create: sitiStructuredData.names.create },
       telecoms: { create: sitiStructuredData.telecoms.create },
@@ -446,6 +509,7 @@ async function main() {
       address: "Tempat tinggal sementara, Jakarta",
       phone: null,
       medicalRecNo: "RM-2026-000003",
+      maritalStatusCode: "S",
       identifiers: {
         deleteMany: {},
         create: [
@@ -497,6 +561,7 @@ async function main() {
       gender: Gender.FEMALE,
       address: "Tempat tinggal sementara, Jakarta",
       medicalRecNo: "RM-2026-000003",
+      maritalStatusCode: "S",
       identifiers: {
         create: [
           {

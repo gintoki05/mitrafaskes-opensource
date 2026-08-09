@@ -33,6 +33,7 @@ export function MasterDataDatasetCard({
   onRefresh?: () => void;
 }) {
   const isWilayah = dataset.domain === 'WILAYAH';
+  const isMaritalStatus = dataset.domain === 'MARITAL_STATUS';
 
   return (
     <Card className="h-full">
@@ -86,6 +87,8 @@ export function MasterDataDatasetCard({
             >
               Buka browser <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
             </Link>
+          ) : isMaritalStatus ? (
+            <span className="text-xs text-success">Lookup Patient lokal</span>
           ) : (
             <span className="text-xs text-muted-foreground">
               Fase berikutnya

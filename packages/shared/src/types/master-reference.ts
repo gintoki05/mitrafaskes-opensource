@@ -11,6 +11,24 @@ export type MasterDataImportStatus = "PENDING" | "SUCCESS" | "FAILED";
 
 export type MasterDataSource = "LOCAL_SNAPSHOT" | "SATUSEHAT" | "MANUAL_IMPORT";
 
+/**
+ * Provider-neutral codes for the local marital-status terminology. The values
+ * follow the HL7 v3 marital-status vocabulary without making the local lookup
+ * depend on a remote terminology service.
+ */
+export enum MaritalStatusCode {
+  ANNULLED = "A",
+  DIVORCED = "D",
+  INTERLOCUTORY = "I",
+  LEGALLY_SEPARATED = "L",
+  MARRIED = "M",
+  POLYGAMOUS = "P",
+  NEVER_MARRIED = "S",
+  DOMESTIC_PARTNER = "T",
+  UNMARRIED = "U",
+  WIDOWED = "W",
+}
+
 export type RegionLevel = "PROVINCE" | "REGENCY" | "DISTRICT" | "VILLAGE";
 
 export interface RegionSummary {
@@ -23,6 +41,17 @@ export interface RegionSummary {
   source: MasterDataSource | string;
   sourceVersion?: string;
   updatedAt?: string;
+}
+
+export interface MaritalStatusSummary {
+  code: MaritalStatusCode | string;
+  display: string;
+  active: boolean;
+  displayOrder: number;
+  source: MasterDataSource | string;
+  sourceVersion?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface RegionDetail {

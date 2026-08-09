@@ -20,6 +20,7 @@ import {
   SessionPermissionGuard,
 } from '../auth/session-permission.guard';
 import { MasterWilayahService } from './master-wilayah.service';
+import { MasterMaritalStatusService } from './master-marital-status.service';
 import { parseRegionLevel } from './master-wilayah.validation';
 
 type MasterDataRequest = Request & { user: AuthenticatedUser };
@@ -42,7 +43,10 @@ const parsePositiveInteger = (
 @UseGuards(SessionPermissionGuard)
 @ApiTags('Master Data')
 export class MasterDataReferenceController {
-  constructor(private readonly masterWilayah: MasterWilayahService) {}
+  constructor(
+    private readonly masterWilayah: MasterWilayahService,
+    private readonly maritalStatuses: MasterMaritalStatusService,
+  ) {}
 
   @Get('datasets')
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
@@ -50,6 +54,12 @@ export class MasterDataReferenceController {
     return this.masterWilayah.listDatasets(
       request.user.role === UserRole.ADMIN,
     );
+  }
+
+  @Get('marital-status')
+  @RequirePermission(AccessPermission.MASTER_DATA_READ)
+  listMaritalStatuses() {
+    return this.maritalStatuses.list();
   }
 
   @Get('regions')

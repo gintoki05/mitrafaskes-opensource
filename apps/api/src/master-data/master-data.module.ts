@@ -14,6 +14,7 @@ import { MasterWilayahService } from './master-wilayah.service';
 import { MASTER_WILAYAH_PROVIDER } from './master-wilayah.provider';
 import { SatusehatMasterWilayahAdapter } from './satusehat-master-wilayah.adapter';
 import { MasterDataDatasetStatusService } from './master-data-dataset-status.service';
+import { MasterMaritalStatusService } from './master-marital-status.service';
 
 @Module({
   imports: [SatusehatModule],
@@ -28,6 +29,7 @@ import { MasterDataDatasetStatusService } from './master-data-dataset-status.ser
     SatusehatLocationLinkService,
     SatusehatLocationService,
     MasterWilayahService,
+    MasterMaritalStatusService,
     MasterDataDatasetStatusService,
     SatusehatMasterWilayahAdapter,
     {

@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const {
   AddressType,
   AddressUse,
+  MaritalStatusCode,
   PatientIdentifierType,
   PatientNameUse,
   PatientRelationshipCode,
@@ -32,6 +33,18 @@ test("exports platform-neutral structured patient vocabularies", () => {
   assert.equal(AddressUse.HOME, "HOME");
   assert.equal(AddressType.BOTH, "BOTH");
   assert.equal(PatientRelationshipCode.GUARDIAN, "GUARDIAN");
+  assert.deepEqual(Object.values(MaritalStatusCode), [
+    "A",
+    "D",
+    "I",
+    "L",
+    "M",
+    "P",
+    "S",
+    "T",
+    "U",
+    "W",
+  ]);
 });
 
 test("core patient vocabulary does not introduce an external platform name", () => {
@@ -44,6 +57,7 @@ test("core patient vocabulary does not introduce an external platform name", () 
     AddressUse,
     AddressType,
     PatientRelationshipCode,
+    MaritalStatusCode,
   ].flatMap((entry) => Object.values(entry));
 
   assert.equal(

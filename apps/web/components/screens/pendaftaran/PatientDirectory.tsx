@@ -1,12 +1,13 @@
 'use client';
 
 import type { SubmitEventHandler } from 'react';
+import type { MaritalStatusSummary, Patient } from '@mitrafaskes/shared';
 import { Edit3, Eye, Filter, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScreenState } from '@/components/ScreenState';
-import type { Patient } from '@/lib/clinical-types';
 import { SatusehatLinkageBadge } from '../master-faskes/SatusehatLinkageBadge';
+import { maritalStatusDisplay } from './marital-status-display';
 
 type PatientDirectoryProps = {
   patients: Patient[];
@@ -21,6 +22,7 @@ type PatientDirectoryProps = {
   onViewPatient: (patient: Patient) => void;
   onEditPatient: (patient: Patient) => void;
   onSyncPatient: (patient: Patient) => void;
+  maritalStatuses: readonly MaritalStatusSummary[];
 };
 
 export function PatientDirectory({
@@ -36,6 +38,7 @@ export function PatientDirectory({
   onViewPatient,
   onEditPatient,
   onSyncPatient,
+  maritalStatuses,
 }: PatientDirectoryProps) {
   return (
     <section className="data-surface" aria-labelledby="patient-list-title">
@@ -98,6 +101,9 @@ export function PatientDirectory({
                 <td className="max-w-[18rem] px-4 py-4">
                   <div className="truncate text-sm font-bold text-foreground">{patient.fullName}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{patient.gender === 'MALE' ? 'Laki-laki' : 'Perempuan'}</div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    Perkawinan: {maritalStatusDisplay(patient.maritalStatusCode, maritalStatuses)}
+                  </div>
                 </td>
                 <td className="px-4 py-4 font-mono text-xs font-semibold text-foreground">{patient.medicalRecNo}</td>
                 <td className="px-4 py-4">

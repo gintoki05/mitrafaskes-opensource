@@ -252,6 +252,19 @@ model MasterRegion {
   @@index([code])
 }
 
+model MasterMaritalStatus {
+  code          String   @id @db.VarChar(32)
+  display       String   @db.VarChar(160)
+  active        Boolean  @default(true)
+  displayOrder  Int
+  source        String   @db.VarChar(64)
+  sourceVersion String?  @db.VarChar(128)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([active, displayOrder, display])
+}
+
 // Generic linkage keeps external provider identifiers out of domain models.
 // SATUSEHAT is the first adapter, but the shape remains provider-agnostic.
 model ExternalResourceLink {
