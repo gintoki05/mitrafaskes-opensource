@@ -35,7 +35,7 @@ type NavigationItem = {
 const navigationItems: readonly NavigationItem[] = [
   {
     href: '/pendaftaran',
-    label: 'Pendaftaran & Antrean',
+    label: 'Pendaftaran',
     shortLabel: 'Pendaftaran',
     permission: AccessPermission.QUEUE_READ,
     icon: UserCheck,

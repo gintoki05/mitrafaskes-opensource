@@ -20,7 +20,7 @@ export function QueuePanel({ encounters, encountersLoading, encountersError }: Q
             <Clock3 className="h-4 w-4 text-primary" aria-hidden="true" />
             Antrean rawat jalan hari ini
           </h2>
-          <p className="mt-1 text-xs text-muted-foreground">Status pasien yang sudah didaftarkan ke poli.</p>
+          <p className="mt-1 text-xs text-muted-foreground">Kunjungan pasien yang sedang diproses hari ini; data identitas tetap berada di Data Pasien.</p>
         </div>
         <Badge variant="outline" className="border-primary/25 bg-primary/5 font-mono text-primary">
           {encounters.length} antrean
@@ -51,4 +51,3 @@ export function QueuePanel({ encounters, encountersLoading, encountersError }: Q
     </section>
   );
 }
-

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type SubmitEvent } from 'react';
-import { Clock3, UserCheck, UserPlus } from 'lucide-react';
+import { UserCheck, UserPlus } from 'lucide-react';
 import type { CreatePatientDto, Patient } from '@mitrafaskes/shared';
 import { AccessPermission } from '@mitrafaskes/shared';
 import { RouteGuard } from '@/components/RouteGuard';
@@ -17,11 +17,13 @@ import { PatientDetailDialog } from './pendaftaran/PatientDetailDialog';
 import { PatientFormDialog } from './pendaftaran/PatientFormDialog';
 import { PatientSyncDialog } from './pendaftaran/PatientSyncDialog';
 import { QueuePanel } from './pendaftaran/QueuePanel';
+import { RegistrationViewTabs, type RegistrationView } from './pendaftaran/RegistrationViewTabs';
 import { usePatientActions } from './pendaftaran/usePatientActions';
 import { useMaritalStatuses } from './pendaftaran/useMaritalStatuses';
 
 export default function PendaftaranPage() {
   const [search, setSearch] = useState('');
+  const [activeView, setActiveView] = useState<RegistrationView>('patients');
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [detailPatientId, setDetailPatientId] = useState<string | null>(null);
@@ -102,64 +104,64 @@ export default function PendaftaranPage() {
     }
   };
 
-  const scrollToQueue = () => {
-    document.getElementById('antrean-aktif')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  const activeError = activeView === 'patients' ? patientsError : encountersError;
 
   return (
     <RouteGuard permission={AccessPermission.QUEUE_READ}>
       <div className="min-w-0 space-y-6 sm:space-y-7">
         <PageHeader
           icon={<UserCheck className="h-6 w-6" />}
-          title="Pendaftaran & Antrean"
-          description="Daftarkan pasien baru dan kelola antrean poli dari satu ruang kerja."
+          title="Pendaftaran"
+          description="Cari data pasien, buat data baru, lalu masukkan kunjungan hari ini ke antrean."
           action={
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={scrollToQueue}
-                className="border-primary/30 bg-card text-primary hover:bg-primary/5"
-              >
-                <Clock3 className="h-4 w-4" />
-                Antrean
-                <span className="font-mono text-xs">{encounters.length}</span>
+            canWritePatient ? (
+              <Button type="button" onClick={openNewPatient}>
+                <UserPlus className="h-4 w-4" />
+                Pasien Baru
               </Button>
-              {canWritePatient ? (
-                <Button type="button" onClick={openNewPatient}>
-                  <UserPlus className="h-4 w-4" />
-                  Pasien Baru
-                </Button>
-              ) : null}
-            </>
+            ) : null
           }
         />
 
-        {patientsError || encountersError ? (
+        <RegistrationViewTabs
+          activeView={activeView}
+          patientCount={patients.length}
+          queueCount={encounters.length}
+          onChange={setActiveView}
+        />
+
+        {activeError ? (
           <ScreenState
             kind="error"
-            title="Sebagian data tidak dapat dimuat"
-            description={[patientsError, encountersError].filter(Boolean).join(' ')}
+            title={activeView === 'patients' ? 'Data pasien tidak dapat dimuat' : 'Antrean tidak dapat dimuat'}
+            description={activeError}
             compact
           />
         ) : null}
 
-        <PatientDirectory
-          patients={patients}
-          patientsLoading={patientsLoading}
-          patientsError={patientsError}
-          search={search}
-          canCreateQueue={canCreateQueue}
-          canWritePatient={canWritePatient}
-          onSearchChange={setSearch}
-          onSearchSubmit={handleSearchSubmit}
-          onQueuePatient={handleDaftarAntrean}
-          onViewPatient={(patient) => setDetailPatientId(patient.id)}
-          onEditPatient={handleEditPatient}
-          onSyncPatient={handleSyncPatient}
-          maritalStatuses={maritalStatusLookup.statuses}
-        />
-        <QueuePanel encounters={encounters} encountersLoading={encountersLoading} encountersError={encountersError} />
+        {activeView === 'patients' ? (
+          <div id="registration-panel-patients" role="tabpanel" aria-labelledby="registration-tab-patients" tabIndex={0}>
+            <PatientDirectory
+              patients={patients}
+              patientsLoading={patientsLoading}
+              patientsError={patientsError}
+              search={search}
+              canCreateQueue={canCreateQueue}
+              canWritePatient={canWritePatient}
+              onSearchChange={setSearch}
+              onSearchSubmit={handleSearchSubmit}
+              onQueuePatient={handleDaftarAntrean}
+              onViewPatient={(patient) => setDetailPatientId(patient.id)}
+              onEditPatient={handleEditPatient}
+              onSyncPatient={handleSyncPatient}
+              maritalStatuses={maritalStatusLookup.statuses}
+            />
+          </div>
+        ) : (
+          <div id="registration-panel-queue" role="tabpanel" aria-labelledby="registration-tab-queue" tabIndex={0}>
+            <QueuePanel encounters={encounters} encountersLoading={encountersLoading} encountersError={encountersError} />
+          </div>
+        )}
         <PatientFormDialog
           open={showPatientForm}
           patient={editingPatient}

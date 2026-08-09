@@ -42,7 +42,18 @@ export function PatientDirectory({
   maritalStatuses,
 }: PatientDirectoryProps) {
   return (
-    <section className="data-surface" aria-labelledby="patient-list-title">
+    <section className="data-surface" aria-labelledby="patient-directory-title">
+      <div className="flex flex-col gap-1 border-b border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0">
+          <h2 id="patient-directory-title" className="text-base font-bold text-foreground">Data pasien terdaftar</h2>
+          <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+            Database identitas pasien yang dapat dipakai untuk pendaftaran kunjungan.
+          </p>
+        </div>
+        <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+          <strong className="font-mono text-foreground">{patients.length}</strong> pasien tampil
+        </span>
+      </div>
       <div className="data-toolbar">
         <form onSubmit={onSearchSubmit} className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center">
           <div className="relative min-w-0 flex-1 sm:max-w-xl">
@@ -68,7 +79,7 @@ export function PatientDirectory({
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[1120px] border-collapse text-left">
-          <caption id="patient-list-title" className="sr-only">Daftar pasien terdaftar</caption>
+          <caption className="sr-only">Daftar pasien terdaftar</caption>
           <thead className="bg-muted/60 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
             <tr>
               <th scope="col" className="w-16 border-b border-border px-4 py-3 text-center">No.</th>
