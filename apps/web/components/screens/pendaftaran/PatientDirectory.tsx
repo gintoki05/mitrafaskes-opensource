@@ -1,11 +1,12 @@
 'use client';
 
 import type { SubmitEventHandler } from 'react';
-import { Filter, Search, ShieldCheck } from 'lucide-react';
+import { Edit3, Eye, Filter, RefreshCw, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScreenState } from '@/components/ScreenState';
 import type { Patient } from '@/lib/clinical-types';
+import { SatusehatLinkageBadge } from '../master-faskes/SatusehatLinkageBadge';
 
 type PatientDirectoryProps = {
   patients: Patient[];
@@ -13,9 +14,13 @@ type PatientDirectoryProps = {
   patientsError: string;
   search: string;
   canCreateQueue: boolean;
+  canWritePatient: boolean;
   onSearchChange: (value: string) => void;
   onSearchSubmit: SubmitEventHandler<HTMLFormElement>;
   onQueuePatient: (patientId: string) => void;
+  onViewPatient: (patient: Patient) => void;
+  onEditPatient: (patient: Patient) => void;
+  onSyncPatient: (patient: Patient) => void;
 };
 
 export function PatientDirectory({
@@ -24,9 +29,13 @@ export function PatientDirectory({
   patientsError,
   search,
   canCreateQueue,
+  canWritePatient,
   onSearchChange,
   onSearchSubmit,
   onQueuePatient,
+  onViewPatient,
+  onEditPatient,
+  onSyncPatient,
 }: PatientDirectoryProps) {
   return (
     <section className="data-surface" aria-labelledby="patient-list-title">
@@ -54,7 +63,7 @@ export function PatientDirectory({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[850px] border-collapse text-left">
+        <table className="w-full min-w-[1120px] border-collapse text-left">
           <caption id="patient-list-title" className="sr-only">Daftar pasien terdaftar</caption>
           <thead className="bg-muted/60 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
             <tr>
@@ -92,23 +101,65 @@ export function PatientDirectory({
                 </td>
                 <td className="px-4 py-4 font-mono text-xs font-semibold text-foreground">{patient.medicalRecNo}</td>
                 <td className="px-4 py-4">
-                  <div className="font-mono text-xs text-foreground">{patient.nik}</div>
+                  <div className="font-mono text-xs text-foreground">{patient.nik ?? 'Belum diisi'}</div>
                   <div className="mt-1 text-[11px] text-muted-foreground">NIK terdaftar</div>
                 </td>
                 <td className="px-4 py-4">
-                  {patient.satusehatId ? (
-                    <span className="inline-flex max-w-[12rem] items-center gap-1.5 text-xs font-semibold text-success">
-                      <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
-                      <span className="truncate">Terhubung</span>
-                    </span>
-                  ) : <span className="text-xs text-muted-foreground">Belum terhubung</span>}
+                  <div className="space-y-1">
+                    <SatusehatLinkageBadge
+                      linkage={patient.satusehat}
+                      resourceName={patient.fullName}
+                    />
+                    {patient.satusehatSync?.status === 'FAILED' ? (
+                      <p className="max-w-[14rem] text-[11px] text-destructive" title={patient.satusehatSync.errorMessage}>
+                        Sync terakhir gagal{patient.satusehatSync.errorMessage ? `: ${patient.satusehatSync.errorMessage}` : ''}
+                      </p>
+                    ) : null}
+                  </div>
                 </td>
                 <td className="px-4 py-4 text-right">
-                  {canCreateQueue ? (
-                    <Button type="button" variant="outline" size="sm" onClick={() => onQueuePatient(patient.id)} className="border-primary/35 bg-card text-primary hover:bg-primary/5">
-                      Masuk antrean
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onViewPatient(patient)}
+                      title={`Lihat detail ${patient.fullName}`}
+                    >
+                      <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                      Detail
                     </Button>
-                  ) : <span className="text-xs text-muted-foreground">Hanya baca</span>}
+                    {canWritePatient ? (
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEditPatient(patient)}
+                          title={`Edit lokal ${patient.fullName}`}
+                        >
+                          <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
+                          Edit
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onSyncPatient(patient)}
+                          title={`Sinkronkan ${patient.fullName} ke SATUSEHAT`}
+                          className="border-primary/35 bg-card text-primary hover:bg-primary/5"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                          Sync
+                        </Button>
+                      </>
+                    ) : null}
+                    {canCreateQueue ? (
+                      <Button type="button" variant="outline" size="sm" onClick={() => onQueuePatient(patient.id)} className="border-primary/35 bg-card text-primary hover:bg-primary/5">
+                        Masuk antrean
+                      </Button>
+                    ) : null}
+                  </div>
                 </td>
               </tr>
             ))}

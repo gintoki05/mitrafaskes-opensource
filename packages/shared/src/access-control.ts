@@ -57,6 +57,7 @@ export const ROLE_PERMISSIONS: Readonly<
     AccessPermission.QUEUE_CANCEL,
     AccessPermission.SYNC_STATUS_READ,
     AccessPermission.SYNC_RETRY,
+    AccessPermission.MASTER_DATA_READ,
   ]),
   [UserRole.DOKTER]: new Set([
     AccessPermission.PATIENT_READ,
@@ -65,6 +66,7 @@ export const ROLE_PERMISSIONS: Readonly<
     AccessPermission.RME_READ,
     AccessPermission.RME_WRITE_DRAFT,
     AccessPermission.RME_FINALIZE,
+    AccessPermission.MASTER_DATA_READ,
   ]),
   [UserRole.ADMIN]: new Set([
     AccessPermission.PATIENT_READ,

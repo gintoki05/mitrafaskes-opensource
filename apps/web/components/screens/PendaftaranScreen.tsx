@@ -2,6 +2,7 @@
 
 import { useState, type SubmitEvent } from 'react';
 import { Clock3, UserCheck, UserPlus } from 'lucide-react';
+import type { CreatePatientDto, Patient } from '@mitrafaskes/shared';
 import { AccessPermission } from '@mitrafaskes/shared';
 import { RouteGuard } from '@/components/RouteGuard';
 import { Button } from '@/components/ui/button';
@@ -12,13 +13,18 @@ import { useRegistrationData } from '@/hooks/useRegistrationData';
 import { useSession } from '@/hooks/useSession';
 import { toast } from 'sonner';
 import { PatientDirectory } from './pendaftaran/PatientDirectory';
-import { PatientRegistrationDialog } from './pendaftaran/PatientRegistrationDialog';
-import type { PatientRegistrationFormValues } from './pendaftaran/patient-registration-schema';
+import { PatientDetailDialog } from './pendaftaran/PatientDetailDialog';
+import { PatientFormDialog } from './pendaftaran/PatientFormDialog';
+import { PatientSyncDialog } from './pendaftaran/PatientSyncDialog';
 import { QueuePanel } from './pendaftaran/QueuePanel';
+import { usePatientActions } from './pendaftaran/usePatientActions';
 
 export default function PendaftaranPage() {
   const [search, setSearch] = useState('');
-  const [showModal, setShowModal] = useState(false);
+  const [showPatientForm, setShowPatientForm] = useState(false);
+  const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
+  const [detailPatientId, setDetailPatientId] = useState<string | null>(null);
+  const [syncingPatient, setSyncingPatient] = useState<Patient | null>(null);
   const session = useSession();
   const currentUser = session?.user ?? null;
   const canWritePatient = can(currentUser, AccessPermission.PATIENT_WRITE);
@@ -33,38 +39,40 @@ export default function PendaftaranPage() {
     refreshPatients,
     refreshEncounters,
   } = useRegistrationData();
+  const patientActions = usePatientActions();
 
   const handleSearchSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     void refreshPatients(search);
   };
 
-  const handleCreatePatient = async (values: PatientRegistrationFormValues) => {
-    try {
-      const response = await apiFetch('/api/patients', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...values, phone: '' }),
-      });
-      if (response.ok) {
-        setShowModal(false);
-        toast.success('Data pasien berhasil disimpan.');
-        void refreshPatients();
-        return true;
-      } else {
-        throw new Error('Data pasien tidak dapat disimpan.');
-      }
-    } catch (error) {
-      console.error(error);
-      toast.error('Data pasien belum tersimpan', {
-        description:
-          error instanceof Error
-            ? error.message
-            : 'Data pasien tidak dapat disimpan.',
-        duration: 7000,
-      });
-      return false;
-    }
+  const openNewPatient = () => {
+    setEditingPatient(null);
+    setShowPatientForm(true);
+  };
+
+  const handleSavePatient = async (
+    input: CreatePatientDto,
+    patient: Patient | null,
+  ): Promise<Patient> => {
+    return patient
+      ? patientActions.update(patient.id, input)
+      : patientActions.create(input);
+  };
+
+  const handlePatientSaved = async () => {
+    await refreshPatients(search);
+  };
+
+  const handleEditPatient = (patient: Patient) => {
+    setDetailPatientId(null);
+    setEditingPatient(patient);
+    setShowPatientForm(true);
+  };
+
+  const handleSyncPatient = (patient: Patient) => {
+    setDetailPatientId(null);
+    setSyncingPatient(patient);
   };
 
   const handleDaftarAntrean = async (patientId: string) => {
@@ -116,7 +124,7 @@ export default function PendaftaranPage() {
                 <span className="font-mono text-xs">{encounters.length}</span>
               </Button>
               {canWritePatient ? (
-                <Button type="button" onClick={() => setShowModal(true)}>
+                <Button type="button" onClick={openNewPatient}>
                   <UserPlus className="h-4 w-4" />
                   Pasien Baru
                 </Button>
@@ -140,15 +148,44 @@ export default function PendaftaranPage() {
           patientsError={patientsError}
           search={search}
           canCreateQueue={canCreateQueue}
+          canWritePatient={canWritePatient}
           onSearchChange={setSearch}
           onSearchSubmit={handleSearchSubmit}
           onQueuePatient={handleDaftarAntrean}
+          onViewPatient={(patient) => setDetailPatientId(patient.id)}
+          onEditPatient={handleEditPatient}
+          onSyncPatient={handleSyncPatient}
         />
         <QueuePanel encounters={encounters} encountersLoading={encountersLoading} encountersError={encountersError} />
-        <PatientRegistrationDialog
-          open={showModal}
-          onClose={() => setShowModal(false)}
-          onSubmit={handleCreatePatient}
+        <PatientFormDialog
+          open={showPatientForm}
+          patient={editingPatient}
+          canWrite={canWritePatient}
+          onClose={() => setShowPatientForm(false)}
+          onSubmit={handleSavePatient}
+          onSaved={handlePatientSaved}
+        />
+        <PatientDetailDialog
+          key={detailPatientId ?? 'patient-detail-closed'}
+          open={Boolean(detailPatientId)}
+          patientId={detailPatientId}
+          canWrite={canWritePatient}
+          getPatient={patientActions.get}
+          onClose={() => setDetailPatientId(null)}
+          onEdit={handleEditPatient}
+          onSync={handleSyncPatient}
+        />
+        <PatientSyncDialog
+          key={syncingPatient?.id ?? 'patient-sync-closed'}
+          open={Boolean(syncingPatient)}
+          patient={syncingPatient}
+          canSync={canWritePatient}
+          previewSatusehat={patientActions.previewSatusehat}
+          syncSatusehat={patientActions.syncSatusehat}
+          lookupSatusehat={patientActions.lookupSatusehat}
+          linkSatusehat={patientActions.linkSatusehat}
+          onClose={() => setSyncingPatient(null)}
+          onSynced={handlePatientSaved}
         />
       </div>
     </RouteGuard>

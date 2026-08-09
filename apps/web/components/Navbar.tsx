@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import {
   Activity,
   Building2,
+  Database,
   ChevronDown,
   HelpCircle,
   LogOut,
@@ -45,6 +46,17 @@ const navigationItems: readonly NavigationItem[] = [
     shortLabel: 'Dokter',
     permission: AccessPermission.RME_READ,
     icon: Stethoscope,
+  },
+  {
+    href: '/master-data',
+    label: 'Master Data',
+    shortLabel: 'Master Data',
+    permission: AccessPermission.MASTER_DATA_READ,
+    icon: Database,
+    children: [
+      { href: '/master-data', label: 'Ikhtisar dataset' },
+      { href: '/master-data/wilayah', label: 'Master Wilayah' },
+    ],
   },
   {
     href: '/master-faskes',

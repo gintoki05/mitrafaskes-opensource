@@ -76,22 +76,7 @@ export class AppController {
     throw new UnauthorizedException('Username atau password salah');
   }
 
-  // 2. Patient Registry Endpoints
-  @Get('patients')
-  @ApiTags('Patients')
-  @RequirePermission(AccessPermission.PATIENT_READ)
-  getPatients(@Query('search') search?: string) {
-    return this.patients.findMany(search);
-  }
-
-  @Post('patients')
-  @ApiTags('Patients')
-  @RequirePermission(AccessPermission.PATIENT_WRITE)
-  createPatient(@Body() body: any) {
-    return this.patients.create(body);
-  }
-
-  // 3. Encounter & Antrean Endpoints
+  // 2. Encounter & Antrean Endpoints
   @Get('encounters')
   @ApiTags('Encounters')
   @RequirePermission(AccessPermission.QUEUE_READ)
@@ -130,7 +115,10 @@ export class AppController {
     MemoryStore.encounters.push(newEncounter);
 
     const fhirEncounter = SatusehatFhirTransformer.transformEncounter({
-      satusehatPatientId: patient.satusehatId || 'SATUSEHAT-PAT-TEMP',
+      satusehatPatientId:
+        patient.satusehat?.externalResourceId ||
+        patient.satusehatId ||
+        'SATUSEHAT-PAT-TEMP',
       patientName: patient.fullName,
       practitionerSip: 'SIP-449/123/2023',
       doctorName: 'dr. Budi Santoso, Sp.PD',
@@ -271,7 +259,10 @@ export class AppController {
     if (patient) {
       formattedDiagnoses.forEach((diag: any) => {
         const conditionPayload = SatusehatFhirTransformer.transformCondition({
-          satusehatPatientId: patient.satusehatId || 'SATUSEHAT-PAT-TEMP',
+          satusehatPatientId:
+            patient.satusehat?.externalResourceId ||
+            patient.satusehatId ||
+            'SATUSEHAT-PAT-TEMP',
           patientName: patient.fullName,
           satusehatEncounterId: encounter.satusehatEncounterId || encounter.id,
           icd10Code: diag.icd10Code,
@@ -290,7 +281,10 @@ export class AppController {
       });
 
       const observations = SatusehatFhirTransformer.transformObservation({
-        satusehatPatientId: patient.satusehatId || 'SATUSEHAT-PAT-TEMP',
+        satusehatPatientId:
+          patient.satusehat?.externalResourceId ||
+          patient.satusehatId ||
+          'SATUSEHAT-PAT-TEMP',
         satusehatEncounterId: encounter.satusehatEncounterId || encounter.id,
         systolic: medicalRecord.systolic,
         diastolic: medicalRecord.diastolic,

@@ -4,7 +4,7 @@ import { SatusehatAuthService } from './satusehat-auth.service';
 const DEFAULT_HTTP_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_PAGINATION_PAGES = 100;
 
-type FhirRequestMethod = 'GET' | 'POST' | 'PUT';
+type FhirRequestMethod = 'GET' | 'POST' | 'PUT' | 'PATCH';
 type FhirQuery = Record<string, string | undefined>;
 
 export class SatusehatFhirError extends Error {
@@ -56,6 +56,28 @@ export class SatusehatFhirClient {
       query,
     );
     return this.mergeSearchPages(firstPage);
+  }
+
+  getPatient(id: string): Promise<unknown> {
+    return this.request('GET', ['Patient', id]);
+  }
+
+  async searchPatients(query: FhirQuery): Promise<unknown> {
+    const firstPage = await this.request(
+      'GET',
+      ['Patient'],
+      undefined,
+      query,
+    );
+    return this.mergeSearchPages(firstPage);
+  }
+
+  createPatient(payload: unknown): Promise<unknown> {
+    return this.request('POST', ['Patient'], payload);
+  }
+
+  patchPatient(id: string, payload: unknown): Promise<unknown> {
+    return this.request('PATCH', ['Patient', id], payload);
   }
 
   createLocation(payload: unknown): Promise<unknown> {

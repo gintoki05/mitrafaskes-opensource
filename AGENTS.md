@@ -136,8 +136,10 @@ resources.
 ## Local runtime cleanup
 
 - Assume the frontend and backend are already running when manual verification
-  is needed. Access the existing project ports directly instead of starting
-  another frontend or backend process.
-- Do not stop, restart, or otherwise take ownership of the user's frontend or
-  backend processes after verification. If a required port is unavailable,
-  report it to the user rather than starting a replacement server.
+  is needed and use the existing project ports first.
+- When a required project port is unavailable, the agent may automatically
+  start the relevant temporary frontend or backend process for verification.
+  Record the exact process identity and port before starting it.
+- Never stop, restart, or take ownership of a frontend or backend process that
+  was already running before this task. After verification, stop only the
+  temporary processes started by the agent and confirm their ports are closed.

@@ -81,7 +81,9 @@ export function ServiceUnitForm({
               control={control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="unit-organization">Organisasi induk</FieldLabel>
+                  <FieldLabel htmlFor="unit-organization" required>
+                    Organisasi induk
+                  </FieldLabel>
                   <ComboboxField
                     id="unit-organization"
                     value={field.value}
@@ -102,7 +104,9 @@ export function ServiceUnitForm({
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <Field data-invalid={Boolean(errors.code)}>
-                <FieldLabel htmlFor="unit-code">Kode unit</FieldLabel>
+                <FieldLabel htmlFor="unit-code" required>
+                  Kode unit
+                </FieldLabel>
                 <Input
                   {...register("code")}
                   id="unit-code"
@@ -118,7 +122,9 @@ export function ServiceUnitForm({
                 control={control}
                 render={({ field, fieldState }) => (
                   <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="unit-type">Jenis unit</FieldLabel>
+                    <FieldLabel htmlFor="unit-type" required>
+                      Jenis unit
+                    </FieldLabel>
                     <SelectField
                       id="unit-type"
                       value={field.value}
@@ -137,7 +143,9 @@ export function ServiceUnitForm({
             </div>
 
             <Field data-invalid={Boolean(errors.name)}>
-              <FieldLabel htmlFor="unit-name">Nama unit layanan</FieldLabel>
+              <FieldLabel htmlFor="unit-name" required>
+                Nama unit layanan
+              </FieldLabel>
               <Input
                 {...register("name")}
                 id="unit-name"
@@ -175,7 +183,9 @@ export function ServiceUnitForm({
               control={control}
               render={({ field, fieldState }) => (
                 <Field data-invalid={fieldState.invalid}>
-                  <FieldLabel htmlFor="unit-active">Status</FieldLabel>
+                  <FieldLabel htmlFor="unit-active" required>
+                    Status
+                  </FieldLabel>
                   <SelectField
                     id="unit-active"
                     value={field.value ? "true" : "false"}

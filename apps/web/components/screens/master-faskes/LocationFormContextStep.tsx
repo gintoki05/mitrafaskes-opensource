@@ -52,7 +52,7 @@ export function LocationFormContextStep({
           control={control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid} className="sm:col-span-2">
-              <FieldLabel htmlFor="location-organization" required="Wajib">
+              <FieldLabel htmlFor="location-organization" required>
                 Organisasi induk
               </FieldLabel>
               <ComboboxField

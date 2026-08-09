@@ -2,10 +2,12 @@ import {
   Building2,
   CircleDot,
   ContactRound,
+  CalendarDays,
   Info,
   Link2,
   MapPin,
   MapPinned,
+  UserRound,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
@@ -62,6 +64,9 @@ export function buildSatusehatPreviewSections(
   }
 
   const resourceType = readPreviewText(record.resourceType);
+  if (resourceType === "Patient") {
+    return buildPatientSections(record, externalResourceId);
+  }
   if (resourceType !== "Organization" && resourceType !== "Location") {
     return buildGenericSections(record, externalResourceId);
   }
@@ -217,6 +222,67 @@ export function buildSatusehatPreviewSections(
     ],
   });
   return sections;
+}
+
+function buildPatientSections(
+  record: RecordValue,
+  externalResourceId?: string,
+): PreviewSection[] {
+  const identifier = firstPreviewRecord(record.identifier);
+  const name = firstPreviewRecord(record.name);
+  return [
+    {
+      title: "Identitas pasien",
+      icon: UserRound,
+      fields: [
+        {
+          label: "ID SATUSEHAT",
+          value:
+            externalResourceId ??
+            readPreviewText(record.id) ??
+            "Akan dibuat saat sinkronisasi pertama",
+          mono: true,
+        },
+        {
+          label: "NIK / identifier utama",
+          value: readPreviewText(identifier?.value) ?? EMPTY_PREVIEW_VALUE,
+          mono: true,
+        },
+        {
+          label: "Nama",
+          value: readPreviewText(name?.text) ?? EMPTY_PREVIEW_VALUE,
+        },
+      ],
+    },
+    {
+      title: "Demografi",
+      icon: CalendarDays,
+      fields: [
+        { label: "Status", value: formatPreviewStatus(record) },
+        {
+          label: "Gender",
+          value: readPreviewText(record.gender) ?? EMPTY_PREVIEW_VALUE,
+        },
+        {
+          label: "Tanggal lahir",
+          value: readPreviewText(record.birthDate) ?? EMPTY_PREVIEW_VALUE,
+        },
+        {
+          label: "Telepon",
+          value: formatPreviewTelecom(record.telecom, "phone"),
+        },
+        {
+          label: "Email",
+          value: formatPreviewTelecom(record.telecom, "email"),
+        },
+        {
+          label: "Alamat",
+          value: formatPreviewAddress(record.address),
+          wide: true,
+        },
+      ],
+    },
+  ];
 }
 
 export function readSatusehatPreviewResourceType(payload: unknown): string {

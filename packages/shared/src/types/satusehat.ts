@@ -87,6 +87,7 @@ export interface SatusehatSyncLog {
     | 'Organization'
     | 'Location'
     | 'Practitioner'
+    | 'Patient'
     | 'Encounter'
     | 'Condition'
     | 'Observation'
@@ -97,6 +98,126 @@ export interface SatusehatSyncLog {
   satusehatId?: string;
   errorMessage?: string;
   updatedAt: string;
+}
+
+export interface SatusehatPatientIdentifier {
+  system: string;
+  value: string;
+}
+
+export type SatusehatPatientGender = 'male' | 'female';
+
+export interface SatusehatPatientRemoteSummary {
+  externalResourceId: string;
+  name: string;
+  active: boolean;
+  gender?: SatusehatPatientGender;
+  birthDate?: string;
+  identifiers: SatusehatPatientIdentifier[];
+  linkedLocalResourceId?: string;
+}
+
+export interface SatusehatPatientSearchResponse {
+  items: SatusehatPatientRemoteSummary[];
+  total: number;
+}
+
+export interface SatusehatPatientLookupQuery {
+  nik: string;
+}
+
+export interface SatusehatPatientLinkRequest {
+  externalResourceId: string;
+}
+
+export interface SatusehatPatientIdentifierPayload {
+  use: 'official';
+  system: string;
+  value: string;
+}
+
+export interface SatusehatPatientNamePayload {
+  use: 'official' | 'usual' | 'nickname' | 'old';
+  text: string;
+  family?: string;
+  given?: string[];
+  prefix?: string[];
+  suffix?: string[];
+}
+
+export interface SatusehatPatientTelecomPayload {
+  system: 'phone' | 'email' | 'fax' | 'other';
+  value: string;
+  use?: 'home' | 'work' | 'temp' | 'mobile' | 'old';
+}
+
+export interface SatusehatPatientAddressPayload {
+  use?: 'home' | 'work' | 'temp' | 'old';
+  type?: 'postal' | 'physical' | 'both';
+  text?: string;
+  line?: string[];
+  city?: string;
+  district?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+}
+
+export interface SatusehatPatientPayload {
+  resourceType: 'Patient';
+  id?: string;
+  identifier: SatusehatPatientIdentifierPayload[];
+  active: boolean;
+  name: SatusehatPatientNamePayload[];
+  telecom?: SatusehatPatientTelecomPayload[];
+  gender: SatusehatPatientGender;
+  birthDate: string;
+  multipleBirthBoolean?: boolean;
+  multipleBirthInteger?: number;
+  deceasedBoolean?: boolean;
+  deceasedDateTime?: string;
+  maritalStatus?: {
+    coding: { system?: string; code: string }[];
+  };
+  address?: SatusehatPatientAddressPayload[];
+  extension?: {
+    url: string;
+    valueAddress?: { text?: string };
+    valueCode?: string;
+  }[];
+}
+
+export interface SatusehatPatientPatchOperation {
+  op: 'replace';
+  path: string;
+  value: unknown;
+}
+
+export type SatusehatPatientPreviewPayload =
+  | SatusehatPatientPayload
+  | SatusehatPatientPatchOperation[];
+
+export type SatusehatPatientOperation = 'CREATE' | 'UPDATE';
+
+export interface SatusehatPatientPreview {
+  localResourceId: string;
+  operation: SatusehatPatientOperation;
+  externalResourceId?: string;
+  payload: SatusehatPatientPreviewPayload;
+}
+
+export interface SatusehatPatientSyncResult extends SatusehatPatientPreview {
+  syncedRemotely: boolean;
+  syncLogId?: string;
+  response?: unknown;
+}
+
+export interface SatusehatPatientMutationResponse {
+  operation: 'LINK_EXISTING';
+  localResourceId: string;
+  externalResourceId: string;
+  patient: import('./patient').Patient;
+  remote: SatusehatPatientRemoteSummary;
 }
 
 export interface SatusehatPractitionerIdentifier {

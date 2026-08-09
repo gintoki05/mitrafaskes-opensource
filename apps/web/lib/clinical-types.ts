@@ -1,11 +1,6 @@
-export interface Patient {
-  id: string;
-  fullName: string;
-  medicalRecNo: string;
-  nik: string;
-  gender: 'MALE' | 'FEMALE';
-  satusehatId?: string;
-}
+import type { Patient as SharedPatient } from '@mitrafaskes/shared';
+
+export type Patient = SharedPatient;
 
 export interface Encounter {
   id: string;

@@ -30,7 +30,7 @@ export function LocationFormIdentityStep({
       <div className="space-y-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field data-invalid={Boolean(errors.code)}>
-            <FieldLabel htmlFor="location-code" required="Wajib">
+            <FieldLabel htmlFor="location-code" required>
               Kode lokasi
             </FieldLabel>
             <Input
@@ -45,7 +45,7 @@ export function LocationFormIdentityStep({
           </Field>
 
           <Field data-invalid={Boolean(errors.name)}>
-            <FieldLabel htmlFor="location-name" required="Wajib">
+            <FieldLabel htmlFor="location-name" required>
               Nama lokasi
             </FieldLabel>
             <Input
@@ -65,7 +65,7 @@ export function LocationFormIdentityStep({
             control={control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="location-type" required="Wajib">
+                <FieldLabel htmlFor="location-type" required>
                   Jenis lokasi
                 </FieldLabel>
                 <SelectField
@@ -91,7 +91,7 @@ export function LocationFormIdentityStep({
             control={control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="location-mode" required="Wajib">
+                <FieldLabel htmlFor="location-mode" required>
                   Mode lokasi
                 </FieldLabel>
                 <SelectField
@@ -117,7 +117,7 @@ export function LocationFormIdentityStep({
             control={control}
             render={({ field, fieldState }) => (
               <Field data-invalid={fieldState.invalid}>
-                <FieldLabel htmlFor="location-status" required="Wajib">
+                <FieldLabel htmlFor="location-status" required>
                   Status location
                 </FieldLabel>
                 <SelectField
@@ -144,7 +144,7 @@ export function LocationFormIdentityStep({
           control={control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="location-active" required="Wajib">
+              <FieldLabel htmlFor="location-active" required>
                 Status data lokal
               </FieldLabel>
               <SelectField

@@ -9,10 +9,15 @@ import { SatusehatOrganizationService } from './satusehat-organization.service';
 import { SatusehatLocationImportService } from './satusehat-location-import.service';
 import { SatusehatLocationLinkService } from './satusehat-location-link.service';
 import { SatusehatLocationService } from './satusehat-location.service';
+import { MasterDataReferenceController } from './master-data-reference.controller';
+import { MasterWilayahService } from './master-wilayah.service';
+import { MASTER_WILAYAH_PROVIDER } from './master-wilayah.provider';
+import { SatusehatMasterWilayahAdapter } from './satusehat-master-wilayah.adapter';
+import { MasterDataDatasetStatusService } from './master-data-dataset-status.service';
 
 @Module({
   imports: [SatusehatModule],
-  controllers: [MasterDataController],
+  controllers: [MasterDataController, MasterDataReferenceController],
   providers: [
     PrismaService,
     MasterDataService,
@@ -22,6 +27,13 @@ import { SatusehatLocationService } from './satusehat-location.service';
     SatusehatLocationImportService,
     SatusehatLocationLinkService,
     SatusehatLocationService,
+    MasterWilayahService,
+    MasterDataDatasetStatusService,
+    SatusehatMasterWilayahAdapter,
+    {
+      provide: MASTER_WILAYAH_PROVIDER,
+      useExisting: SatusehatMasterWilayahAdapter,
+    },
   ],
 })
 export class MasterDataModule {}

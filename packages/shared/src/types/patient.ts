@@ -1,3 +1,5 @@
+import type { SatusehatLinkageSummary, SatusehatSyncSummary } from './master-data';
+
 export enum Gender {
   MALE = "MALE",
   FEMALE = "FEMALE",
@@ -156,6 +158,8 @@ export interface Patient {
   phone?: string;
   medicalRecNo: string;
   satusehatId?: string;
+  satusehat?: SatusehatLinkageSummary;
+  satusehatSync?: SatusehatSyncSummary;
   active?: boolean;
   birthPlaceText?: string;
   multipleBirthOrder?: number;

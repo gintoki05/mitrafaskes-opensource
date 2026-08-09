@@ -79,3 +79,22 @@ test('authenticated access outside the role matrix is forbidden', () => {
     },
   );
 });
+
+test('all operational roles can read local master data while write stays admin-only', () => {
+  assert.equal(
+    hasPermission(UserRole.PERAWAT, AccessPermission.MASTER_DATA_READ),
+    true,
+  );
+  assert.equal(
+    hasPermission(UserRole.DOKTER, AccessPermission.MASTER_DATA_READ),
+    true,
+  );
+  assert.equal(
+    hasPermission(UserRole.ADMIN, AccessPermission.MASTER_DATA_WRITE),
+    true,
+  );
+  assert.equal(
+    hasPermission(UserRole.PERAWAT, AccessPermission.MASTER_DATA_WRITE),
+    false,
+  );
+});

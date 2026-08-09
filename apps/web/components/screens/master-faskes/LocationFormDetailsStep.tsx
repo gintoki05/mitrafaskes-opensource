@@ -71,7 +71,7 @@ export function LocationFormDetailsStep({
             </Field>
 
             <Field data-invalid={Boolean(errors.countryCode)}>
-              <FieldLabel htmlFor="location-country" required="Wajib">
+              <FieldLabel htmlFor="location-country" required>
                 Kode negara
               </FieldLabel>
               <Input

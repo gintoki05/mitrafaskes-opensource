@@ -197,6 +197,66 @@ describe('SatusehatFhirClient', () => {
     );
   });
 
+  it('creates, searches, and patches Patient resources using the FHIR API', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({ resourceType: 'Patient', id: 'P10000001' }),
+        ),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({
+            resourceType: 'Bundle',
+            type: 'searchset',
+            total: 1,
+            entry: [{ resource: { resourceType: 'Patient', id: 'P10000001' } }],
+          }),
+        ),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({ resourceType: 'Patient', id: 'P10000001' }),
+        ),
+      });
+    const auth = {
+      getAccessToken: jest.fn().mockResolvedValue('access-token'),
+    } as unknown as SatusehatAuthService;
+    const client = new SatusehatFhirClient(auth);
+    const payload = { resourceType: 'Patient', active: true };
+    const patch = [{ op: 'replace', path: '/active', value: false }];
+
+    await client.createPatient(payload);
+    await client.searchPatients({
+      identifier: 'https://fhir.kemkes.go.id/id/nik|7209061211900001',
+    });
+    await client.patchPatient('P10000001', patch);
+
+    const requestCalls = fetchMock.mock.calls as unknown[][];
+    expect(requestCalls[0]?.[0]).toEqual(
+      new URL('https://satusehat.example.test/fhir-r4/v1/Patient'),
+    );
+    expect(requestCalls[0]?.[1]).toEqual(
+      expect.objectContaining({ method: 'POST', body: JSON.stringify(payload) }),
+    );
+    const searchUrl = requestCalls[1]?.[0] as URL;
+    expect(searchUrl.searchParams.get('identifier')).toBe(
+      'https://fhir.kemkes.go.id/id/nik|7209061211900001',
+    );
+    expect(requestCalls[2]?.[0]).toEqual(
+      new URL('https://satusehat.example.test/fhir-r4/v1/Patient/P10000001'),
+    );
+    expect(requestCalls[2]?.[1]).toEqual(
+      expect.objectContaining({ method: 'PATCH', body: JSON.stringify(patch) }),
+    );
+  });
+
   it('fails before requesting a token when the FHIR base URL is missing', async () => {
     delete process.env.SATUSEHAT_FHIR_BASE_URL;
     const getAccessToken = jest.fn();

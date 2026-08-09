@@ -39,7 +39,7 @@ export function OrganizationFormIdentityStep({
     >
       <div className="grid gap-4 sm:grid-cols-2">
         <Field data-invalid={Boolean(errors.code)}>
-          <FieldLabel htmlFor="organization-code" required="Wajib">
+          <FieldLabel htmlFor="organization-code" required>
             Kode master
           </FieldLabel>
           <Input
@@ -58,7 +58,7 @@ export function OrganizationFormIdentityStep({
           control={control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="organization-type" required="Wajib">
+              <FieldLabel htmlFor="organization-type" required>
                 Jenis organisasi
               </FieldLabel>
               <SelectField
@@ -80,7 +80,7 @@ export function OrganizationFormIdentityStep({
         />
 
         <Field data-invalid={Boolean(errors.name)}>
-          <FieldLabel htmlFor="organization-name" required="Wajib">
+          <FieldLabel htmlFor="organization-name" required>
             Nama organisasi / faskes
           </FieldLabel>
           <Input
@@ -100,7 +100,7 @@ export function OrganizationFormIdentityStep({
             <Field data-invalid={fieldState.invalid}>
               <FieldLabel
                 htmlFor="organization-parent"
-                required={organizationType === "SUB_ORGANIZATION" ? "Wajib" : "Opsional"}
+                required={organizationType === "SUB_ORGANIZATION" ? true : "Opsional"}
               >
                 Organisasi induk
               </FieldLabel>

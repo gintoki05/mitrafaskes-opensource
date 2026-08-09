@@ -91,6 +91,19 @@ enum SyncStatus {
   FAILED
 }
 
+enum MasterDataImportStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
+enum MasterRegionLevel {
+  PROVINCE
+  REGENCY
+  DISTRICT
+  VILLAGE
+}
+
 enum OrganizationType {
   HEALTHCARE_FACILITY
   SUB_ORGANIZATION
@@ -195,6 +208,48 @@ model Location {
   @@index([organizationId, active, name])
   @@index([serviceUnitId])
   @@index([parentId])
+}
+
+// Generic import metadata keeps refresh history separate from any provider
+// payload. The domain remains a string so new master data datasets can be
+// introduced without changing this table's shape.
+model MasterDataImportRun {
+  id                   String                @id @default(uuid())
+  domain               String                @db.VarChar(64)
+  source               String                @db.VarChar(64)
+  sourceVersion        String?               @db.VarChar(128)
+  status               MasterDataImportStatus @default(PENDING)
+  recordsSeen          Int                   @default(0)
+  recordsUpserted      Int                   @default(0)
+  recordsDeactivated   Int                   @default(0)
+  attemptedAt          DateTime              @default(now())
+  completedAt          DateTime?
+  succeededAt          DateTime?
+  errorCode            String?               @db.VarChar(128)
+  errorMessage         String?               @db.VarChar(1000)
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  @@index([domain, attemptedAt])
+  @@index([domain, status, attemptedAt])
+}
+
+model MasterRegion {
+  id            String           @id @default(uuid())
+  level         MasterRegionLevel
+  code          String           @db.VarChar(32)
+  parentCode    String?          @db.VarChar(32)
+  bpsCode       String?          @db.VarChar(32)
+  name          String           @db.VarChar(160)
+  active        Boolean          @default(true)
+  source        String           @db.VarChar(64)
+  sourceVersion String?          @db.VarChar(128)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([level, code])
+  @@index([level, parentCode, active, name])
+  @@index([code])
 }
 
 // Generic linkage keeps external provider identifiers out of domain models.

@@ -2,6 +2,9 @@ import {
   AddressType,
   AddressUse,
   Gender,
+  MasterDataImportStatus,
+  MasterRegionLevel,
+  Prisma,
   PatientIdentifierType,
   PatientNameUse,
   PatientRelationshipCode,
@@ -11,8 +14,33 @@ import {
   TelecomUse,
   VerificationStatus,
 } from "@prisma/client";
+import {
+  MASTER_WILAYAH_SNAPSHOT,
+  MASTER_WILAYAH_SNAPSHOT_VERSION,
+} from "./seed-data/master-wilayah.snapshot";
 
 const prisma = new PrismaClient();
+
+async function seedPatient(
+  medicalRecNo: string,
+  operation: () => Promise<unknown>,
+): Promise<void> {
+  try {
+    await operation();
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002' &&
+      String(error.meta?.target).includes('medicalRecNo')
+    ) {
+      console.warn(
+        `Skipping demo patient ${medicalRecNo}; an existing local record already uses this medical record number.`,
+      );
+      return;
+    }
+    throw error;
+  }
+}
 
 const COMMON_ICD10 = [
   {
@@ -89,6 +117,69 @@ async function main() {
       create: icd,
     });
   }
+
+  console.log("Seeding local Master Wilayah snapshot...");
+  await prisma.$transaction(async (tx) => {
+    for (const region of MASTER_WILAYAH_SNAPSHOT) {
+      await tx.masterRegion.upsert({
+        where: {
+          level_code: {
+            level: region.level as MasterRegionLevel,
+            code: region.code,
+          },
+        },
+        update: {
+          parentCode: region.parentCode,
+          bpsCode: region.bpsCode,
+          name: region.name,
+          active: true,
+          source: "LOCAL_SNAPSHOT",
+          sourceVersion: MASTER_WILAYAH_SNAPSHOT_VERSION,
+        },
+        create: {
+          level: region.level as MasterRegionLevel,
+          code: region.code,
+          parentCode: region.parentCode,
+          bpsCode: region.bpsCode,
+          name: region.name,
+          active: true,
+          source: "LOCAL_SNAPSHOT",
+          sourceVersion: MASTER_WILAYAH_SNAPSHOT_VERSION,
+        },
+      });
+    }
+
+    await tx.masterDataImportRun.upsert({
+      where: { id: "master-import-run-wilayah-baseline-2026-08" },
+      update: {
+        domain: "WILAYAH",
+        source: "LOCAL_SNAPSHOT",
+        sourceVersion: MASTER_WILAYAH_SNAPSHOT_VERSION,
+        status: MasterDataImportStatus.SUCCESS,
+        recordsSeen: MASTER_WILAYAH_SNAPSHOT.length,
+        recordsUpserted: MASTER_WILAYAH_SNAPSHOT.length,
+        recordsDeactivated: 0,
+        attemptedAt: new Date(),
+        completedAt: new Date(),
+        succeededAt: new Date(),
+        errorCode: null,
+        errorMessage: null,
+      },
+      create: {
+        id: "master-import-run-wilayah-baseline-2026-08",
+        domain: "WILAYAH",
+        source: "LOCAL_SNAPSHOT",
+        sourceVersion: MASTER_WILAYAH_SNAPSHOT_VERSION,
+        status: MasterDataImportStatus.SUCCESS,
+        recordsSeen: MASTER_WILAYAH_SNAPSHOT.length,
+        recordsUpserted: MASTER_WILAYAH_SNAPSHOT.length,
+        recordsDeactivated: 0,
+        attemptedAt: new Date(),
+        completedAt: new Date(),
+        succeededAt: new Date(),
+      },
+    });
+  });
 
   console.log("Seeding Initial Demo Users...");
   await prisma.user.upsert({
@@ -223,7 +314,7 @@ async function main() {
     },
   };
 
-  await prisma.patient.upsert({
+  await seedPatient("RM-2026-000001", () => prisma.patient.upsert({
     where: { id: "pat-001" },
     update: {
       nik: "3171012304900001",
@@ -253,7 +344,7 @@ async function main() {
       telecoms: { create: ahmadStructuredData.telecoms.create },
       addresses: { create: ahmadStructuredData.addresses.create },
     },
-  });
+  }));
 
   const sitiStructuredData = {
     identifiers: {
@@ -315,7 +406,7 @@ async function main() {
     },
   };
 
-  await prisma.patient.upsert({
+  await seedPatient("RM-2026-000002", () => prisma.patient.upsert({
     where: { id: "pat-002" },
     update: {
       nik: "3171025508950002",
@@ -343,9 +434,9 @@ async function main() {
       telecoms: { create: sitiStructuredData.telecoms.create },
       addresses: { create: sitiStructuredData.addresses.create },
     },
-  });
+  }));
 
-  await prisma.patient.upsert({
+  await seedPatient("RM-2026-000003", () => prisma.patient.upsert({
     where: { id: "pat-003" },
     update: {
       nik: null,
@@ -446,7 +537,7 @@ async function main() {
         ],
       },
     },
-  });
+  }));
 
   await prisma.patientRelatedPerson.upsert({
     where: { id: "related-person-guardian-001" },
@@ -467,7 +558,7 @@ async function main() {
     },
   });
 
-  await prisma.patient.upsert({
+  await seedPatient("RM-2026-000004", () => prisma.patient.upsert({
     where: { id: "pat-004" },
     update: {
       nik: null,
@@ -603,7 +694,7 @@ async function main() {
         ],
       },
     },
-  });
+  }));
 
   console.log("Seeding complete.");
 }

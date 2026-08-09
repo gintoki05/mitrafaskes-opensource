@@ -77,7 +77,7 @@ export function OrganizationFormContactStep({
           control={control}
           render={({ field, fieldState }) => (
             <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="organization-active" required="Wajib">
+              <FieldLabel htmlFor="organization-active" required>
                 Status data
               </FieldLabel>
               <SelectField
