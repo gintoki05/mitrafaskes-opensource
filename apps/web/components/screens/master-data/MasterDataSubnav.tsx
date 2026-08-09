@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { Database, MapPinned } from "lucide-react";
+import { BookOpen, Database, MapPinned } from "lucide-react";
 import { usePathname } from "next/navigation";
 
 const links = [
   { href: "/master-data", label: "Ikhtisar dataset", icon: Database },
   { href: "/master-data/wilayah", label: "Master Wilayah", icon: MapPinned },
+  { href: "/master-data/icd10", label: "Katalog ICD-10", icon: BookOpen },
 ] as const;
 
 export function MasterDataSubnav() {

@@ -67,6 +67,11 @@ export interface Icd10Summary {
   updatedAt: string;
 }
 
+export interface MasterDataIcd10Response {
+  items: Icd10Summary[];
+  meta: MasterDataListMeta;
+}
+
 export interface RegionDetail {
   item: RegionSummary;
   children: RegionSummary[];

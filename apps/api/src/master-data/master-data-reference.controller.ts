@@ -66,8 +66,12 @@ export class MasterDataReferenceController {
 
   @Get('icd10')
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
-  listIcd10(@Query('q') query?: string) {
-    return this.icd10.list(query);
+  listIcd10(@Query() query: RegionQuery) {
+    return this.icd10.list({
+      search: query.q?.trim() || undefined,
+      page: parsePositiveInteger(query.page, 1),
+      pageSize: parsePositiveInteger(query.pageSize, 50, 200),
+    });
   }
 
   @Get('regions')

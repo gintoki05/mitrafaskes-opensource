@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useReducer } from 'react';
+import type { MasterDataIcd10Response } from '@mitrafaskes/shared';
 import { apiFetch } from '@/lib/auth';
 import { Encounter, Icd10Entry } from '@/lib/clinical-types';
 
@@ -60,10 +61,16 @@ async function requestEncounters(): Promise<Encounter[]> {
 
 async function requestIcd10(query: string): Promise<Icd10Entry[]> {
   const response = await apiFetch(
-    `/api/master-data/icd10?q=${encodeURIComponent(query)}`,
+    `/api/master-data/icd10?q=${encodeURIComponent(query)}&page=1&pageSize=50`,
   );
   if (!response.ok) throw new Error('Referensi ICD-10 tidak dapat dimuat.');
-  return response.json() as Promise<Icd10Entry[]>;
+  const payload = (await response.json()) as MasterDataIcd10Response;
+  return payload.items.map(({ code, display, nameIndo, nameEng }) => ({
+    code,
+    display,
+    nameIndo,
+    nameEng,
+  }));
 }
 
 function messageFrom(error: unknown, fallback: string): string {
@@ -109,6 +116,10 @@ export function useRmeResources() {
   }, []);
 
   const searchIcd10 = useCallback(async (query: string) => {
+    if (!query.trim()) {
+      dispatch({ type: 'icd-loaded', results: [] });
+      return;
+    }
     try {
       dispatch({ type: 'icd-loaded', results: await requestIcd10(query) });
     } catch {

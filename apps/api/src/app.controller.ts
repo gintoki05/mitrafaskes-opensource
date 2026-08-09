@@ -171,8 +171,12 @@ export class AppController {
   @ApiTags('Master Data')
   @RequirePermission(AccessPermission.RME_READ)
   async getIcd10(@Query('q') q?: string) {
-    const results = await this.icd10.list(q);
-    return results.map(({ code, display, nameIndo, nameEng }) => ({
+    const results = await this.icd10.list({
+      search: q,
+      page: 1,
+      pageSize: 50,
+    });
+    return results.items.map(({ code, display, nameIndo, nameEng }) => ({
       code,
       display,
       nameIndo: nameIndo ?? display,
@@ -209,11 +213,17 @@ export class AppController {
       throw new NotFoundException('Kunjungan / Encounter tidak ditemukan');
     }
 
-    const icd10Entries = await this.icd10.list();
+    const diagnosisInputs = Array.isArray(diagnoses) ? diagnoses : [];
+    const icd10Entries = await this.icd10.findByCodes(
+      diagnosisInputs.map((diagnosis: any) => diagnosis.icd10Code),
+    );
+    const icd10ByCode = new Map(
+      icd10Entries.map((entry) => [entry.code, entry]),
+    );
 
-    const formattedDiagnoses = (diagnoses || []).map(
+    const formattedDiagnoses = diagnosisInputs.map(
       (d: any, index: number) => {
-        const icdMeta = icd10Entries.find((i) => i.code === d.icd10Code) || {
+        const icdMeta = icd10ByCode.get(d.icd10Code) || {
           code: d.icd10Code,
           display: d.icd10Code,
           nameIndo: undefined,

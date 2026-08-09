@@ -81,16 +81,17 @@ export function MasterDataDatasetCard({
         ) : null}
 
         <div className="mt-auto flex flex-wrap gap-2">
-          {isWilayah ? (
+          {isWilayah || isIcd10 ? (
             <Link
-              href="/master-data/wilayah"
+              href={isIcd10 ? '/master-data/icd10' : '/master-data/wilayah'}
               className={buttonVariants({ variant: 'outline', size: 'sm' })}
             >
-              Buka browser <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
+              {isIcd10 ? 'Buka katalog' : 'Buka browser'}{' '}
+              <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
             </Link>
-          ) : isMaritalStatus || isIcd10 ? (
+          ) : isMaritalStatus ? (
             <span className="text-xs text-success">
-              {isIcd10 ? 'Lookup RME lokal' : 'Lookup Patient lokal'}
+              Lookup Patient lokal
             </span>
           ) : (
             <span className="text-xs text-muted-foreground">

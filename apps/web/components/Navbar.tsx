@@ -56,6 +56,7 @@ const navigationItems: readonly NavigationItem[] = [
     children: [
       { href: '/master-data', label: 'Ikhtisar dataset' },
       { href: '/master-data/wilayah', label: 'Master Wilayah' },
+      { href: '/master-data/icd10', label: 'Katalog ICD-10' },
     ],
   },
   {
