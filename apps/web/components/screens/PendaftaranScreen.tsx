@@ -168,6 +168,7 @@ export default function PendaftaranPage() {
           onSubmit={handleSavePatient}
           onSaved={handlePatientSaved}
           maritalStatusLookup={maritalStatusLookup}
+          lookupSatusehat={patientActions.lookupSatusehat}
         />
         <PatientDetailDialog
           key={detailPatientId ?? 'patient-detail-closed'}

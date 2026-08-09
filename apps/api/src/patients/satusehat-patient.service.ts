@@ -51,10 +51,13 @@ export class SatusehatPatientService {
     query: unknown,
   ): Promise<SatusehatPatientSearchResponse> {
     try {
-      const { nik } = this.readLookupQuery(query);
-      const response = await this.fhir.searchPatients({
-        identifier: `${PATIENT_NIK_SYSTEM}|${nik}`,
-      });
+      const { identifierType, identifier } = this.readLookupQuery(query);
+      const response =
+        identifierType === 'NIK'
+          ? await this.fhir.searchPatients({
+              identifier: `${PATIENT_NIK_SYSTEM}|${identifier}`,
+            })
+          : await this.fhir.getPatient(identifier);
       return this.toSearchResponse(response);
     } catch (error) {
       throw this.toHttpError(error, 'SATUSEHAT_PATIENT_LOOKUP_FAILED');
@@ -333,14 +336,34 @@ export class SatusehatPatientService {
 
   private readLookupQuery(input: unknown): SatusehatPatientLookupQuery {
     const query = isRecord(input) ? input : {};
-    const rawNik = typeof query.nik === 'string' ? query.nik.trim() : '';
-    if (!/^\d{16}$/.test(rawNik)) {
+    const identifierType = query.identifierType;
+    const identifier = optionalText(query.identifier);
+
+    if (identifierType !== 'NIK' && identifierType !== 'IHS') {
+      throw new BadRequestException({
+        code: 'SATUSEHAT_PATIENT_LOOKUP_TYPE_INVALID',
+        message: 'Jenis identitas pencarian harus NIK atau Nomor IHS.',
+      });
+    }
+    if (!identifier) {
+      throw new BadRequestException({
+        code: 'SATUSEHAT_PATIENT_LOOKUP_IDENTIFIER_REQUIRED',
+        message: `${identifierType === 'NIK' ? 'NIK' : 'Nomor IHS'} wajib diisi.`,
+      });
+    }
+    if (identifierType === 'NIK' && !/^\d{16}$/.test(identifier)) {
       throw new BadRequestException({
         code: 'SATUSEHAT_PATIENT_LOOKUP_NIK_INVALID',
         message: 'NIK pencarian SATUSEHAT harus terdiri dari 16 digit.',
       });
     }
-    return { nik: rawNik };
+    if (identifierType === 'IHS' && !/^[A-Za-z0-9.-]{1,64}$/.test(identifier)) {
+      throw new BadRequestException({
+        code: 'SATUSEHAT_PATIENT_LOOKUP_IHS_INVALID',
+        message: 'Nomor IHS harus berupa ID Patient SATUSEHAT yang valid.',
+      });
+    }
+    return { identifierType, identifier };
   }
 
   private readExternalResourceId(input: unknown): string {

@@ -100,7 +100,10 @@ export function PatientSyncDialog({
     setLookup({ items: [], loading: true, message: '' });
     setSelectedRemoteId(null);
     try {
-      const result = await lookupSatusehat({ nik: patient.nik });
+      const result = await lookupSatusehat({
+        identifierType: 'NIK',
+        identifier: patient.nik,
+      });
       setLookup({
         items: result.items,
         loading: false,

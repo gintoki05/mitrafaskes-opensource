@@ -29,6 +29,9 @@ const identifierSystems: Partial<Record<PatientIdentifierType, string>> = {
   FAMILY_CARD: 'https://fhir.kemkes.go.id/id/kk',
 };
 
+const PATIENT_ADMINISTRATIVE_CODE_URL =
+  'https://fhir.kemkes.go.id/r4/StructureDefinition/administrativeCode';
+
 export function toSatusehatPatientPayload(
   patient: Patient,
   externalResourceId?: string,
@@ -214,6 +217,8 @@ function toTelecom(
 }
 
 function toAddress(address: PatientAddress): SatusehatPatientAddressPayload {
+  const extension = toAdministrativeCodeExtension(address);
+
   return {
     use: addressUse(address.use),
     type: addressType(address.type),
@@ -224,7 +229,37 @@ function toAddress(address: PatientAddress): SatusehatPatientAddressPayload {
     ...(address.provinceName ? { state: address.provinceName } : {}),
     ...(address.postalCode ? { postalCode: address.postalCode } : {}),
     ...(address.countryCode ? { country: address.countryCode } : {}),
+    ...(extension ? { extension } : {}),
   };
+}
+
+function toAdministrativeCodeExtension(
+  address: PatientAddress,
+): SatusehatPatientAddressPayload['extension'] {
+  type AdministrativeCodeName =
+    | 'province'
+    | 'city'
+    | 'district'
+    | 'village'
+    | 'rt'
+    | 'rw';
+
+  const source: Array<{
+    url: AdministrativeCodeName;
+    valueCode?: string;
+  }> = [
+    { url: 'province', valueCode: address.provinceCode },
+    { url: 'city', valueCode: address.regencyCode },
+    { url: 'district', valueCode: address.districtCode },
+    { url: 'village', valueCode: address.villageCode },
+  ];
+  const entries = source.flatMap(({ url, valueCode }) =>
+    valueCode ? [{ url, valueCode }] : [],
+  );
+
+  return entries.length > 0
+    ? [{ url: PATIENT_ADMINISTRATIVE_CODE_URL, extension: entries }]
+    : undefined;
 }
 
 function nameUse(use: PatientNameUse): SatusehatPatientNamePayload['use'] {

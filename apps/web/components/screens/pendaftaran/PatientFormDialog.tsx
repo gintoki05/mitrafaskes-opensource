@@ -2,8 +2,14 @@
 
 import { useEffect } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import type { CreatePatientDto, Patient } from '@mitrafaskes/shared';
+import { useForm, useWatch } from 'react-hook-form';
+import type {
+  CreatePatientDto,
+  Patient,
+  SatusehatPatientLookupQuery,
+  SatusehatPatientRemoteSummary,
+  SatusehatPatientSearchResponse,
+} from '@mitrafaskes/shared';
 import { CheckCircle2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -12,6 +18,8 @@ import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
 import { PatientContactFields } from './PatientContactFields';
 import { PatientIdentityFields } from './PatientIdentityFields';
 import { PatientRelationshipFields } from './PatientRelationshipFields';
+import { PatientSatusehatLookupPanel } from './PatientSatusehatLookupPanel';
+import { toPatientDraftPrefill } from './patientSatusehatPrefill';
 import {
   patientFormDefaults,
   patientFormSchema,
@@ -31,6 +39,9 @@ type PatientFormDialogProps = {
   onSubmit: (input: CreatePatientDto, patient: Patient | null) => Promise<Patient>;
   onSaved: () => void | Promise<void>;
   maritalStatusLookup: MaritalStatusLookupState;
+  lookupSatusehat: (
+    query: SatusehatPatientLookupQuery,
+  ) => Promise<SatusehatPatientSearchResponse>;
 };
 
 export function PatientFormDialog({
@@ -41,6 +52,7 @@ export function PatientFormDialog({
   onSubmit,
   onSaved,
   maritalStatusLookup,
+  lookupSatusehat,
 }: PatientFormDialogProps) {
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientFormSchema),
@@ -53,7 +65,9 @@ export function PatientFormDialog({
     handleSubmit,
     register,
     reset,
+    setValue,
   } = form;
+  const currentNik = useWatch({ control, name: 'nik' });
 
   useEffect(() => {
     if (!open) return;
@@ -63,6 +77,43 @@ export function PatientFormDialog({
   if (!open) return null;
 
   const isEditing = Boolean(patient);
+  const applySatusehatData = (remote: SatusehatPatientRemoteSummary) => {
+    const prefill = toPatientDraftPrefill(remote);
+    if (prefill.fullName !== undefined) {
+      setValue('fullName', prefill.fullName, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (prefill.nik !== undefined) {
+      setValue('nik', prefill.nik, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (prefill.birthDate !== undefined) {
+      setValue('birthDate', prefill.birthDate, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (prefill.gender !== undefined) {
+      setValue('gender', prefill.gender, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    if (prefill.active !== undefined) {
+      setValue('active', prefill.active, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+    toast.success('Data SATUSEHAT sudah dimasukkan ke form.', {
+      description: `${remote.name} · Nomor IHS ${remote.externalResourceId}`,
+    });
+  };
+
   const submit = handleSubmit(async (values) => {
     if (!canWrite) return;
     try {
@@ -100,6 +151,20 @@ export function PatientFormDialog({
         </CardHeader>
         <CardContent className="pt-5">
           <form onSubmit={submit} className="space-y-4" noValidate>
+            {!isEditing ? (
+              <PatientSatusehatLookupPanel
+                nik={currentNik}
+                disabled={!canWrite || isSubmitting}
+                lookupSatusehat={lookupSatusehat}
+                onNikChange={(value) =>
+                  setValue('nik', value, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
+                onApply={applySatusehatData}
+              />
+            ) : null}
             <PatientIdentityFields
               control={control}
               errors={errors}

@@ -14,6 +14,7 @@ import {
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { z } from 'zod';
 import { apiFetch, defaultRoute, saveSession } from '@/lib/auth';
+import { getLastRoute } from '@/lib/route-state';
 import { useSession } from '@/hooks/useSession';
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
@@ -25,6 +26,10 @@ const loginSchema = z.object({
 });
 
 type LoginFormValues = z.infer<typeof loginSchema>;
+
+function getSessionEntryRoute(user: Parameters<typeof defaultRoute>[0]): string {
+  return getLastRoute(user) ?? defaultRoute(user);
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,7 +49,7 @@ export default function LoginPage() {
   });
 
   useEffect(() => {
-    if (session) router.replace(defaultRoute(session.user));
+    if (session) router.replace(getSessionEntryRoute(session.user));
   }, [router, session]);
 
   const handleLogin: SubmitHandler<LoginFormValues> = async ({ username, password }) => {
@@ -64,7 +69,7 @@ export default function LoginPage() {
 
       const data = await res.json();
       saveSession(data.accessToken, data.user);
-      router.replace(defaultRoute(data.user));
+      router.replace(getSessionEntryRoute(data.user));
     } catch (err: unknown) {
       toast.error('Tidak dapat masuk', {
         description:

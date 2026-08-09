@@ -1,6 +1,7 @@
 import React from 'react';
 import './globals.css';
 import { Navbar } from '../components/Navbar';
+import { RoutePersistence } from '../components/RoutePersistence';
 import { SidebarProvider } from '../components/ui/sidebar';
 import { Toaster } from '../components/ui/sonner';
 
@@ -31,6 +32,7 @@ export default function RootLayout({
           Lewati ke konten utama
         </a>
         <SidebarProvider>
+          <RoutePersistence />
           <Navbar />
           <main
             id="konten-utama"

@@ -122,8 +122,11 @@ export interface SatusehatPatientSearchResponse {
   total: number;
 }
 
+export type SatusehatPatientLookupIdentifier = 'NIK' | 'IHS';
+
 export interface SatusehatPatientLookupQuery {
-  nik: string;
+  identifierType: SatusehatPatientLookupIdentifier;
+  identifier: string;
 }
 
 export interface SatusehatPatientLinkRequest {
@@ -161,6 +164,15 @@ export interface SatusehatPatientAddressPayload {
   state?: string;
   postalCode?: string;
   country?: string;
+  extension?: SatusehatPatientAdministrativeCodeExtension[];
+}
+
+export interface SatusehatPatientAdministrativeCodeExtension {
+  url: 'https://fhir.kemkes.go.id/r4/StructureDefinition/administrativeCode';
+  extension: {
+    url: 'province' | 'city' | 'district' | 'village' | 'rt' | 'rw';
+    valueCode: string;
+  }[];
 }
 
 export interface SatusehatPatientPayload {

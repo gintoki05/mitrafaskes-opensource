@@ -119,14 +119,17 @@ export function usePatientActions() {
     async (
       query: SatusehatPatientLookupQuery,
     ): Promise<SatusehatPatientSearchResponse> => {
-      const params = new URLSearchParams({ nik: query.nik });
+      const params = new URLSearchParams({
+        identifierType: query.identifierType,
+        identifier: query.identifier,
+      });
       const response = await apiFetch(
         `/api/patients/satusehat/lookup?${params.toString()}`,
       );
       if (!response.ok) {
         throw await readPatientApiError(
           response,
-          'Patient SATUSEHAT tidak dapat dicari berdasarkan NIK.',
+          'Patient SATUSEHAT tidak dapat dicari berdasarkan NIK atau Nomor IHS.',
         );
       }
       return response.json() as Promise<SatusehatPatientSearchResponse>;

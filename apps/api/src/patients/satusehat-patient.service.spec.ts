@@ -82,7 +82,10 @@ describe('SatusehatPatientService', () => {
     const service = createService(prisma, fhir);
 
     await expect(
-      service.lookupForDraft({ nik: localPatient.nik }),
+      service.lookupForDraft({
+        identifierType: 'NIK',
+        identifier: localPatient.nik,
+      }),
     ).resolves.toEqual({
       items: [
         expect.objectContaining({
@@ -94,6 +97,123 @@ describe('SatusehatPatientService', () => {
     });
     expect(fhir.searchPatients).toHaveBeenCalledWith({
       identifier: 'https://fhir.kemkes.go.id/id/nik|7209061211900001',
+    });
+    expect(prisma.externalResourceLink.upsert).not.toHaveBeenCalled();
+    expect(prisma.satusehatSyncLog.create).not.toHaveBeenCalled();
+  });
+
+  it('looks up an existing remote Patient by Nomor IHS without changing local linkage', async () => {
+    const prisma = createPrismaMock();
+    const fhir = createFhirMock();
+    fhir.getPatient.mockResolvedValue({
+      resourceType: 'Patient',
+      id: 'P02478375538',
+      name: [{ text: 'Ardianto Putra' }],
+      gender: 'male',
+      birthDate: '1992-01-09',
+      identifier: [
+        {
+          system: 'https://fhir.kemkes.go.id/id/ihs-number',
+          value: 'P02478375538',
+        },
+      ],
+    });
+
+    const service = createService(prisma, fhir);
+
+    await expect(
+      service.lookupForDraft({
+        identifierType: 'IHS',
+        identifier: 'P02478375538',
+      }),
+    ).resolves.toEqual({
+      items: [
+        expect.objectContaining({
+          externalResourceId: 'P02478375538',
+          name: 'Ardianto Putra',
+          gender: 'male',
+          birthDate: '1992-01-09',
+        }),
+      ],
+      total: 1,
+    });
+    expect(fhir.getPatient).toHaveBeenCalledWith('P02478375538');
+    expect(fhir.searchPatients).not.toHaveBeenCalled();
+    expect(prisma.externalResourceLink.upsert).not.toHaveBeenCalled();
+    expect(prisma.satusehatSyncLog.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects invalid Patient lookup identifiers before calling FHIR', async () => {
+    const prisma = createPrismaMock();
+    const fhir = createFhirMock();
+    const service = createService(prisma, fhir);
+
+    await expect(
+      service.lookupForDraft({
+        identifierType: 'NIK',
+        identifier: '123',
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'SATUSEHAT_PATIENT_LOOKUP_NIK_INVALID',
+      }),
+    });
+    await expect(
+      service.lookupForDraft({
+        identifierType: 'IHS',
+        identifier: 'P/invalid',
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'SATUSEHAT_PATIENT_LOOKUP_IHS_INVALID',
+      }),
+    });
+    expect(fhir.searchPatients).not.toHaveBeenCalled();
+    expect(fhir.getPatient).not.toHaveBeenCalled();
+  });
+
+  it('returns an empty result when SATUSEHAT has no Patient match', async () => {
+    const prisma = createPrismaMock();
+    const fhir = createFhirMock();
+    fhir.searchPatients.mockResolvedValue({
+      resourceType: 'Bundle',
+      type: 'searchset',
+      total: 0,
+      entry: [],
+    });
+    const service = createService(prisma, fhir);
+
+    await expect(
+      service.lookupForDraft({
+        identifierType: 'NIK',
+        identifier: localPatient.nik,
+      }),
+    ).resolves.toEqual({ items: [], total: 0 });
+    expect(prisma.externalResourceLink.upsert).not.toHaveBeenCalled();
+    expect(prisma.satusehatSyncLog.create).not.toHaveBeenCalled();
+  });
+
+  it('returns the remote lookup failure without creating a sync log', async () => {
+    const prisma = createPrismaMock();
+    const fhir = createFhirMock();
+    fhir.getPatient.mockRejectedValue(
+      new SatusehatFhirError(
+        'SATUSEHAT_FHIR_REQUEST_FAILED',
+        'Patient SATUSEHAT tidak ditemukan',
+        404,
+      ),
+    );
+    const service = createService(prisma, fhir);
+
+    await expect(
+      service.lookupForDraft({
+        identifierType: 'IHS',
+        identifier: 'P02478375538',
+      }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        code: 'SATUSEHAT_FHIR_REQUEST_FAILED',
+      }),
     });
     expect(prisma.externalResourceLink.upsert).not.toHaveBeenCalled();
     expect(prisma.satusehatSyncLog.create).not.toHaveBeenCalled();

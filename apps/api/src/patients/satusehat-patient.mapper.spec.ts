@@ -58,4 +58,40 @@ describe('SATUSEHAT Patient mapper', () => {
       value: 2,
     });
   });
+
+  it('maps administrative address codes to the SATUSEHAT address extension', () => {
+    const patientWithAddress = {
+      ...patient,
+      addresses: [
+        {
+          id: 'patient-address-1',
+          use: 'HOME' as const,
+          type: 'PHYSICAL' as const,
+          lines: ['Jl. Melati No. 12'],
+          countryCode: 'ID',
+          provinceCode: '31',
+          regencyCode: '3171',
+          districtCode: '317101',
+          villageCode: '3171011001',
+          active: true,
+        },
+      ],
+    };
+
+    expect(toSatusehatPatientPayload(patientWithAddress).address).toEqual([
+      expect.objectContaining({
+        extension: [
+          {
+            url: 'https://fhir.kemkes.go.id/r4/StructureDefinition/administrativeCode',
+            extension: [
+              { url: 'province', valueCode: '31' },
+              { url: 'city', valueCode: '3171' },
+              { url: 'district', valueCode: '317101' },
+              { url: 'village', valueCode: '3171011001' },
+            ],
+          },
+        ],
+      }),
+    ]);
+  });
 });
