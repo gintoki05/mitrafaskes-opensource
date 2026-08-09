@@ -1,11 +1,12 @@
 'use client';
 
 import type { SubmitEventHandler } from 'react';
-import type { MaritalStatusSummary, Patient } from '@mitrafaskes/shared';
+import type { ListMeta, MaritalStatusSummary, Patient } from '@mitrafaskes/shared';
 import { Edit3, Eye, Filter, ListPlus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScreenState } from '@/components/ScreenState';
+import { PaginationControl } from '@/components/ui/pagination';
 import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import { maritalStatusDisplay } from './marital-status-display';
@@ -14,11 +15,13 @@ type PatientDirectoryProps = {
   patients: Patient[];
   patientsLoading: boolean;
   patientsError: string;
+  meta: ListMeta;
   search: string;
   canCreateQueue: boolean;
   canWritePatient: boolean;
   onSearchChange: (value: string) => void;
   onSearchSubmit: SubmitEventHandler<HTMLFormElement>;
+  onPageChange: (page: number) => void;
   onQueuePatient: (patientId: string) => void;
   onViewPatient: (patient: Patient) => void;
   onEditPatient: (patient: Patient) => void;
@@ -30,17 +33,23 @@ export function PatientDirectory({
   patients,
   patientsLoading,
   patientsError,
+  meta,
   search,
   canCreateQueue,
   canWritePatient,
   onSearchChange,
   onSearchSubmit,
+  onPageChange,
   onQueuePatient,
   onViewPatient,
   onEditPatient,
   onSyncPatient,
   maritalStatuses,
 }: PatientDirectoryProps) {
+  const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
+  const firstItem = meta.total === 0 ? 0 : (meta.page - 1) * meta.pageSize + 1;
+  const lastItem = Math.min(meta.total, meta.page * meta.pageSize);
+
   return (
     <section className="data-surface" aria-labelledby="patient-directory-title">
       <div className="flex flex-col gap-1 border-b border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -51,7 +60,7 @@ export function PatientDirectory({
           </p>
         </div>
         <span className="shrink-0 text-xs font-semibold text-muted-foreground">
-          <strong className="font-mono text-foreground">{patients.length}</strong> pasien tampil
+          <strong className="font-mono text-foreground">{meta.total}</strong> pasien tampil
         </span>
       </div>
       <div className="data-toolbar">
@@ -73,7 +82,7 @@ export function PatientDirectory({
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <Filter className="h-4 w-4" aria-hidden="true" />
           <span className="hidden sm:inline">Filter aktif:</span>
-          <strong className="font-mono text-foreground">{patients.length}</strong>
+          <strong className="font-mono text-foreground">{meta.total}</strong>
         </div>
       </div>
 
@@ -109,7 +118,7 @@ export function PatientDirectory({
               </tr>
             ) : patients.map((patient, index) => (
               <tr key={patient.id} className="group transition-colors hover:bg-primary/[0.035]">
-                <td className="px-4 py-4 text-center font-mono text-xs text-muted-foreground">{index + 1}</td>
+                <td className="px-4 py-4 text-center font-mono text-xs text-muted-foreground">{firstItem + index}</td>
                 <td className="max-w-[18rem] px-4 py-4">
                   <div className="truncate text-sm font-bold text-foreground">{patient.fullName}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{patient.gender === 'MALE' ? 'Laki-laki' : 'Perempuan'}</div>
@@ -191,9 +200,24 @@ export function PatientDirectory({
           </tbody>
         </table>
       </div>
-      <div className="flex flex-col gap-1 border-t border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-        <span>Menampilkan <strong className="text-foreground">{patients.length}</strong> pasien</span>
-        <span>Gunakan kolom pencarian untuk menemukan data lebih cepat.</span>
+      <div className="flex flex-col gap-3 border-t border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <span>
+          Menampilkan <strong className="text-foreground">{firstItem}-{lastItem}</strong>{' '}
+          dari <strong className="text-foreground">{meta.total}</strong> pasien
+        </span>
+        {totalPages > 1 ? (
+          <PaginationControl
+            page={meta.page}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            disabled={patientsLoading}
+            showLabels={false}
+            aria-label="Navigasi halaman daftar pasien"
+            className="mx-0 w-auto"
+          />
+        ) : (
+          <span>Gunakan kolom pencarian untuk menemukan data lebih cepat.</span>
+        )}
       </div>
     </section>
   );

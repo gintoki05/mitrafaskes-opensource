@@ -5,4 +5,5 @@ export * from './types/rme';
 export * from './types/satusehat';
 export * from './types/master-data';
 export * from './types/master-reference';
+export * from './types/pagination';
 export * from './access-control';

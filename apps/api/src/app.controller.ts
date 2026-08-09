@@ -16,7 +16,11 @@ import {
 import { ApiTags } from '@nestjs/swagger';
 import { MemoryStore } from './store/memory-store';
 import { SatusehatFhirTransformer } from './satusehat/fhir-transformer';
-import { AccessPermission, evaluateAccess } from '@mitrafaskes/shared';
+import {
+  AccessPermission,
+  PaginatedListResponse,
+  evaluateAccess,
+} from '@mitrafaskes/shared';
 import { Public, RequirePermission } from './auth/access-control.decorator';
 import {
   AuthenticatedUser,
@@ -25,6 +29,33 @@ import {
 import { PatientsService } from './patients/patients.service';
 import { SatusehatAuthService } from './satusehat/satusehat-auth.service';
 import { MasterIcd10Service } from './master-data/master-icd10.service';
+
+const DEFAULT_LIST_PAGE = 1;
+const DEFAULT_LIST_PAGE_SIZE = 25;
+const MAX_LIST_PAGE_SIZE = 100;
+
+const normalizePositiveInteger = (value: string | undefined, fallback: number) => {
+  const parsed = value ? Number(value) : NaN;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const paginate = <T>(
+  items: readonly T[],
+  pageInput?: string,
+  pageSizeInput?: string,
+): PaginatedListResponse<T> => {
+  const page = normalizePositiveInteger(pageInput, DEFAULT_LIST_PAGE);
+  const pageSize = Math.min(
+    normalizePositiveInteger(pageSizeInput, DEFAULT_LIST_PAGE_SIZE),
+    MAX_LIST_PAGE_SIZE,
+  );
+  const total = items.length;
+
+  return {
+    items: items.slice((page - 1) * pageSize, page * pageSize),
+    meta: { page, pageSize, total },
+  };
+};
 
 @Controller('api')
 @UseGuards(SessionPermissionGuard)
@@ -82,8 +113,11 @@ export class AppController {
   @Get('encounters')
   @ApiTags('Encounters')
   @RequirePermission(AccessPermission.QUEUE_READ)
-  getEncounters() {
-    return MemoryStore.encounters;
+  getEncounters(
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    return paginate(MemoryStore.encounters, page, pageSize);
   }
 
   @Post('encounters')
@@ -325,11 +359,15 @@ export class AppController {
   @Get('satusehat/logs')
   @ApiTags('SATUSEHAT')
   @RequirePermission(AccessPermission.SYNC_STATUS_READ)
-  getSatusehatLogs(@Req() request: { user: AuthenticatedUser }) {
-    if (this.can(request.user, AccessPermission.SYNC_PAYLOAD_READ)) {
-      return MemoryStore.syncLogs;
-    }
-    return MemoryStore.syncLogs.map(({ payload, ...log }) => log);
+  getSatusehatLogs(
+    @Req() request: { user: AuthenticatedUser },
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+  ) {
+    const logs = this.can(request.user, AccessPermission.SYNC_PAYLOAD_READ)
+      ? MemoryStore.syncLogs
+      : MemoryStore.syncLogs.map(({ payload, ...log }) => log);
+    return paginate(logs, page, pageSize);
   }
 
   @Get('satusehat/auth/status')

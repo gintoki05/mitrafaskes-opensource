@@ -5,7 +5,11 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { Patient } from '@mitrafaskes/shared';
+import {
+  Patient,
+  PatientListQuery,
+  PatientListResponse,
+} from '@mitrafaskes/shared';
 import {
   PatientIdentityConflictError,
   PatientRepository,
@@ -29,9 +33,12 @@ export class PatientsService {
     @Optional() private readonly syncStatus?: PatientSyncStatusRepository,
   ) {}
 
-  async findMany(search?: string): Promise<Patient[]> {
-    const patients = await this.repository.findMany(search);
-    return this.attachSyncStatus(patients);
+  async findMany(input: PatientListQuery = {}): Promise<PatientListResponse> {
+    const result = await this.repository.findMany(input);
+    return {
+      ...result,
+      items: await this.attachSyncStatus(result.items),
+    };
   }
 
   async findById(id: string): Promise<Patient | null> {

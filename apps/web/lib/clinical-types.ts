@@ -1,13 +1,12 @@
-import type { Patient as SharedPatient } from '@mitrafaskes/shared';
+import type {
+  Encounter as SharedEncounter,
+  PaginatedListResponse,
+  Patient as SharedPatient,
+} from '@mitrafaskes/shared';
 
 export type Patient = SharedPatient;
 
-export interface Encounter {
-  id: string;
-  queueNumber: number;
-  status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | string;
-  patient?: Patient;
-}
+export type Encounter = SharedEncounter;
 
 export interface SyncLog {
   id: string;
@@ -18,6 +17,9 @@ export interface SyncLog {
   satusehatId?: string;
   payload: unknown;
 }
+
+export type EncounterListResponse = PaginatedListResponse<Encounter>;
+export type SyncLogListResponse = PaginatedListResponse<SyncLog>;
 
 export interface Icd10Entry {
   code: string;

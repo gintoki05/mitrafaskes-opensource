@@ -9,8 +9,6 @@ import {
 } from '@tanstack/react-table';
 import {
   ArrowDownUp,
-  ChevronLeft,
-  ChevronRight,
   FilterX,
   RefreshCw,
   Search,
@@ -24,6 +22,7 @@ import { ScreenState } from '@/components/ScreenState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PaginationControl } from '@/components/ui/pagination';
 import {
   Table,
   TableBody,
@@ -274,28 +273,15 @@ export function MasterFaskesTable<TData>({
             Halaman {meta.page}/{totalPages}
           </Badge>
         </div>
-        <div className="flex items-center gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            onClick={() => onPageChange(meta.page - 1)}
-            disabled={loading || meta.page <= 1}
-            aria-label="Halaman sebelumnya"
-          >
-            <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-sm"
-            onClick={() => onPageChange(meta.page + 1)}
-            disabled={loading || meta.page >= totalPages}
-            aria-label="Halaman berikutnya"
-          >
-            <ChevronRight className="h-4 w-4" aria-hidden="true" />
-          </Button>
-        </div>
+        <PaginationControl
+          page={meta.page}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          disabled={loading}
+          showLabels={false}
+          aria-label={`Navigasi halaman ${caption}`}
+          className="mx-0 w-auto"
+        />
       </div>
     </section>
   );

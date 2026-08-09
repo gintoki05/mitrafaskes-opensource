@@ -5,6 +5,7 @@ import { RefreshCw, CheckCircle2, AlertTriangle, Clock, Code } from 'lucide-reac
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { PaginationControl } from '@/components/ui/pagination';
 import { AccessPermission } from '@mitrafaskes/shared';
 import { RouteGuard } from '@/components/RouteGuard';
 import { can } from '@/lib/auth';
@@ -20,6 +21,7 @@ export default function SatusehatPage() {
   const canRetry = can(session?.user ?? null, AccessPermission.SYNC_RETRY);
   const {
     logs,
+    logsMeta,
     selectedLog,
     logsLoading,
     retryingId,
@@ -30,6 +32,7 @@ export default function SatusehatPage() {
     retry,
     selectLog,
   } = useSyncLogs();
+  const totalPages = Math.max(1, Math.ceil(logsMeta.total / logsMeta.pageSize));
 
   useEffect(() => {
     if (successMessage) {
@@ -55,7 +58,7 @@ export default function SatusehatPage() {
         description="Status pengiriman resource HL7 FHIR dan tindakan retry yang tersedia sesuai izin pengguna."
         action={
           <Button
-            onClick={() => void refresh()}
+            onClick={() => void refresh(logsMeta.page)}
             variant="secondary"
             disabled={logsLoading}
             aria-busy={logsLoading}
@@ -76,7 +79,7 @@ export default function SatusehatPage() {
             <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-4 sm:px-6">
               <CardTitle className="text-sm font-bold text-foreground">Daftar Log Riwayat Sinkronisasi</CardTitle>
               <Badge className="border-primary/30 bg-primary/10 font-mono text-xs font-bold text-primary">
-                {logs.length} Log Total
+                {logsMeta.total} Log Total
               </Badge>
             </CardHeader>
 
@@ -153,7 +156,7 @@ export default function SatusehatPage() {
                         size="sm"
                         onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
-                          void retry(log.id);
+                          void retry(log.id, logsMeta.page);
                         }}
                         disabled={retryingId !== null}
                         aria-busy={retryingId === log.id}
@@ -166,6 +169,22 @@ export default function SatusehatPage() {
                 </div>
               ))}
             </div>
+            {totalPages > 1 ? (
+              <div className="flex flex-col gap-2 border-t border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <span>
+                  Halaman {logsMeta.page} dari {totalPages} · {logsMeta.total} log
+                </span>
+                <PaginationControl
+                  page={logsMeta.page}
+                  totalPages={totalPages}
+                  onPageChange={(page) => void refresh(page)}
+                  disabled={logsLoading}
+                  showLabels={false}
+                  aria-label="Navigasi halaman log sinkronisasi"
+                  className="mx-0 w-auto"
+                />
+              </div>
+            ) : null}
           </Card>
         </div>
 

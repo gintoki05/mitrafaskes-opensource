@@ -19,6 +19,7 @@ export default function RmePage() {
   const [saving, setSaving] = useState(false);
   const {
     encounters,
+    encountersMeta,
     selectedEncounter,
     encountersLoading,
     loadError,
@@ -55,7 +56,7 @@ export default function RmePage() {
         toast.success('RME berhasil disimpan', {
           description: 'Rekam medis otomatis ditransformasikan ke SATUSEHAT Kemenkes RI.',
         });
-        void refreshEncounters();
+        void refreshEncounters(encountersMeta.page);
       } else {
         throw new Error('RME tidak dapat disimpan. Periksa data lalu coba lagi.');
       }
@@ -91,10 +92,12 @@ export default function RmePage() {
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
           <RmeEncounterQueue
             encounters={encounters}
+            meta={encountersMeta}
             selectedEncounter={selectedEncounter}
             encountersLoading={encountersLoading}
             loadError={loadError}
             onSelectEncounter={selectEncounter}
+            onPageChange={(page) => void refreshEncounters(page)}
           />
 
           <div className="min-w-0 space-y-6 lg:col-span-3">

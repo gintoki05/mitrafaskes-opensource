@@ -8,6 +8,8 @@ import {
   AddressUse,
   Gender,
   Patient,
+  PatientListQuery,
+  PatientListResponse,
   PatientIdentifierType,
   PatientNameUse,
   PatientRelationshipCode,
@@ -26,8 +28,13 @@ class InMemoryPatientRepository {
   private readonly patients: Patient[] = [];
   private sequence = 1;
 
-  async findMany(): Promise<Patient[]> {
-    return [...this.patients];
+  async findMany(input: PatientListQuery = {}): Promise<PatientListResponse> {
+    const page = input.page ?? 1;
+    const pageSize = Math.min(input.pageSize ?? 25, 100);
+    return {
+      items: this.patients.slice((page - 1) * pageSize, page * pageSize),
+      meta: { page, pageSize, total: this.patients.length },
+    };
   }
 
   async findById(id: string): Promise<Patient | null> {
@@ -157,6 +164,32 @@ describe('Access control (e2e)', () => {
       .expect(200);
 
     expect(response.status).toBe(200);
+  });
+
+  it('returns server-side pagination metadata for collection endpoints', async () => {
+    const encounters = await request(app.getHttpServer())
+      .get('/api/encounters?page=2&pageSize=1')
+      .set(bearer('mock-jwt-token-perawat_ani'))
+      .expect(200);
+
+    expect(encounters.body.meta).toEqual({ page: 2, pageSize: 1, total: 2 });
+    expect(encounters.body.items).toHaveLength(1);
+
+    const patients = await request(app.getHttpServer())
+      .get('/api/patients?page=1&pageSize=1')
+      .set(bearer('mock-jwt-token-admin'))
+      .expect(200);
+
+    expect(patients.body.meta).toEqual({ page: 1, pageSize: 1, total: 0 });
+    expect(patients.body.items).toEqual([]);
+
+    const logs = await request(app.getHttpServer())
+      .get('/api/satusehat/logs?page=1&pageSize=1')
+      .set(bearer('mock-jwt-token-admin'))
+      .expect(200);
+
+    expect(logs.body.meta).toEqual({ page: 1, pageSize: 1, total: 1 });
+    expect(logs.body.items).toHaveLength(1);
   });
 
   it('returns 403 when an authenticated role bypasses the UI', async () => {
@@ -336,12 +369,12 @@ describe('Access control (e2e)', () => {
       .get('/api/satusehat/logs')
       .set(bearer('mock-jwt-token-perawat_ani'))
       .expect(200);
-    expect(registrationResponse.body[0].payload).toBeUndefined();
+    expect(registrationResponse.body.items[0].payload).toBeUndefined();
 
     const adminResponse = await request(app.getHttpServer())
       .get('/api/satusehat/logs')
       .set(bearer('mock-jwt-token-admin'))
       .expect(200);
-    expect(adminResponse.body[0].payload).toBeDefined();
+    expect(adminResponse.body.items[0].payload).toBeDefined();
   });
 });

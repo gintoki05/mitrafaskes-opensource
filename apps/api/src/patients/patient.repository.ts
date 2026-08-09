@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Patient } from '@mitrafaskes/shared';
+import {
+  Patient,
+  PatientListQuery,
+  PatientListResponse,
+} from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
 import { MedicalRecordNumberGenerator } from './medical-record-number.generator';
 import { patientInclude, toPatient } from './patient.mapper';
@@ -330,19 +334,19 @@ export class PatientRepository {
           relatedPatient: relationship.relatedPatientId
             ? { connect: { id: relationship.relatedPatientId } }
             : undefined,
-          relatedPerson: relationship.relatedPerson
-            ? {
-                create: {
-                  fullName: relationship.relatedPerson.fullName,
-                  gender: relationship.relatedPerson.gender,
-                  birthDate: relationship.relatedPerson.birthDate,
-                  phone: relationship.relatedPerson.phone,
-                  email: relationship.relatedPerson.email,
-                  addressText: relationship.relatedPerson.addressText,
-                },
-              }
-            : relationship.relatedPersonId
-              ? { connect: { id: relationship.relatedPersonId } }
+          relatedPerson: relationship.relatedPersonId
+            ? { connect: { id: relationship.relatedPersonId } }
+            : relationship.relatedPerson
+              ? {
+                  create: {
+                    fullName: relationship.relatedPerson.fullName,
+                    gender: relationship.relatedPerson.gender,
+                    birthDate: relationship.relatedPerson.birthDate,
+                    phone: relationship.relatedPerson.phone,
+                    email: relationship.relatedPerson.email,
+                    addressText: relationship.relatedPerson.addressText,
+                  },
+                }
               : undefined,
           startAt: relationship.startAt,
           endAt: relationship.endAt,
@@ -352,5 +356,31 @@ export class PatientRepository {
         })),
       },
     };
+  }
+
+  private async updateRelatedPersonDetails(
+    transaction: Prisma.TransactionClient,
+    patientId: string,
+    relationships: ValidatedPatientInput['relationships'],
+  ): Promise<void> {
+    for (const relationship of relationships) {
+      if (!relationship.relatedPersonId || !relationship.relatedPerson)
+        continue;
+
+      await transaction.patientRelatedPerson.updateMany({
+        where: {
+          id: relationship.relatedPersonId,
+          relationships: { some: { patientId } },
+        },
+        data: {
+          fullName: relationship.relatedPerson.fullName,
+          gender: relationship.relatedPerson.gender ?? null,
+          birthDate: relationship.relatedPerson.birthDate ?? null,
+          phone: relationship.relatedPerson.phone ?? null,
+          email: relationship.relatedPerson.email ?? null,
+          addressText: relationship.relatedPerson.addressText ?? null,
+        },
+      });
+    }
   }
 }

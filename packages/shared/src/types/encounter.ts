@@ -1,3 +1,5 @@
+import type { PaginatedListResponse } from './pagination';
+
 export enum EncounterStatus {
   WAITING = "WAITING",
   IN_PROGRESS = "IN_PROGRESS",
@@ -29,3 +31,5 @@ export interface CreateEncounterDto {
   doctorId: string;
   notes?: string;
 }
+
+export type EncounterListResponse = PaginatedListResponse<Encounter>;

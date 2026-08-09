@@ -1,12 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useReducer } from 'react';
-import type { MasterDataIcd10Response } from '@mitrafaskes/shared';
+import type {
+  EncounterListResponse,
+  ListMeta,
+  MasterDataIcd10Response,
+} from '@mitrafaskes/shared';
 import { apiFetch } from '@/lib/auth';
 import { Encounter, Icd10Entry } from '@/lib/clinical-types';
 
 type RmeResourcesState = {
   encounters: Encounter[];
+  encountersMeta: ListMeta;
   selectedEncounter: Encounter | null;
   encountersLoading: boolean;
   loadError: string;
@@ -15,13 +20,14 @@ type RmeResourcesState = {
 
 type RmeResourcesAction =
   | { type: 'encounters-loading' }
-  | { type: 'encounters-loaded'; encounters: Encounter[] }
+  | { type: 'encounters-loaded'; response: EncounterListResponse }
   | { type: 'encounters-failed'; error: string }
   | { type: 'select-encounter'; encounter: Encounter }
   | { type: 'icd-loaded'; results: Icd10Entry[] };
 
 const initialState: RmeResourcesState = {
   encounters: [],
+  encountersMeta: { page: 1, pageSize: 25, total: 0 },
   selectedEncounter: null,
   encountersLoading: true,
   loadError: '',
@@ -34,11 +40,14 @@ function rmeResourcesReducer(state: RmeResourcesState, action: RmeResourcesActio
       return { ...state, encountersLoading: true, loadError: '' };
     case 'encounters-loaded': {
       const selectedEncounter = state.selectedEncounter
-        ? action.encounters.find((encounter) => encounter.id === state.selectedEncounter?.id) ?? action.encounters[0] ?? null
-        : action.encounters[0] ?? null;
+        ? action.response.items.find(
+            (encounter) => encounter.id === state.selectedEncounter?.id,
+          ) ?? action.response.items[0] ?? null
+        : action.response.items[0] ?? null;
       return {
         ...state,
-        encounters: action.encounters,
+        encounters: action.response.items,
+        encountersMeta: action.response.meta,
         selectedEncounter,
         encountersLoading: false,
         loadError: '',
@@ -53,10 +62,11 @@ function rmeResourcesReducer(state: RmeResourcesState, action: RmeResourcesActio
   }
 }
 
-async function requestEncounters(): Promise<Encounter[]> {
-  const response = await apiFetch('/api/encounters');
+async function requestEncounters(page = 1): Promise<EncounterListResponse> {
+  const params = new URLSearchParams({ page: String(page), pageSize: '25' });
+  const response = await apiFetch(`/api/encounters?${params.toString()}`);
   if (!response.ok) throw new Error('Antrean pasien tidak dapat dimuat.');
-  return response.json() as Promise<Encounter[]>;
+  return response.json() as Promise<EncounterListResponse>;
 }
 
 async function requestIcd10(query: string): Promise<Icd10Entry[]> {
@@ -85,8 +95,8 @@ export function useRmeResources() {
 
     async function loadInitialEncounters() {
       try {
-        const encounters = await requestEncounters();
-        if (active) dispatch({ type: 'encounters-loaded', encounters });
+        const response = await requestEncounters();
+        if (active) dispatch({ type: 'encounters-loaded', response });
       } catch (error) {
         if (active) {
           dispatch({
@@ -103,10 +113,13 @@ export function useRmeResources() {
     };
   }, []);
 
-  const refreshEncounters = useCallback(async () => {
+  const refreshEncounters = useCallback(async (page = 1) => {
     dispatch({ type: 'encounters-loading' });
     try {
-      dispatch({ type: 'encounters-loaded', encounters: await requestEncounters() });
+      dispatch({
+        type: 'encounters-loaded',
+        response: await requestEncounters(page),
+      });
     } catch (error) {
       dispatch({
         type: 'encounters-failed',

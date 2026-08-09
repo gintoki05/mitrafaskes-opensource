@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, MapPinned, Search } from "lucide-react";
+import { ChevronRight, MapPinned, Search } from "lucide-react";
 import type { RegionLevel, RegionSummary } from "@mitrafaskes/shared";
 import { Button } from "@/components/ui/button";
+import { PaginationControl } from "@/components/ui/pagination";
 import {
   Card,
   CardContent,
@@ -282,26 +283,14 @@ export function MasterWilayahExplorer() {
               <span className="text-muted-foreground">
                 Halaman {regions.meta.page} dari {totalPages}
               </span>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1 || regions.loading}
-                  onClick={() => setPage((current) => current - 1)}
-                >
-                  <ChevronLeft aria-hidden="true" /> Sebelumnya
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages || regions.loading}
-                  onClick={() => setPage((current) => current + 1)}
-                >
-                  Berikutnya <ChevronRight aria-hidden="true" />
-                </Button>
-              </div>
+              <PaginationControl
+                page={regions.meta.page}
+                totalPages={totalPages}
+                onPageChange={setPage}
+                disabled={regions.loading}
+                aria-label={`Navigasi halaman ${REGION_LEVEL_LABELS[level].toLowerCase()}`}
+                className="mx-0 w-auto"
+              />
             </div>
           </>
         )}

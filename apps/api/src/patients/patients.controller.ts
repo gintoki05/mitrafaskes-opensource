@@ -17,6 +17,12 @@ import { SatusehatPatientService } from './satusehat-patient.service';
 
 type PatientHttpQuery = Record<string, string | undefined>;
 
+const parsePositiveInteger = (value: string | undefined): number | undefined => {
+  if (!value) return undefined;
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
+};
+
 @Controller('api/patients')
 @UseGuards(SessionPermissionGuard)
 @ApiTags('Patients')
@@ -28,8 +34,12 @@ export class PatientsController {
 
   @Get()
   @RequirePermission(AccessPermission.PATIENT_READ)
-  findMany(@Query('search') search?: string) {
-    return this.patients.findMany(search);
+  findMany(@Query() query: PatientHttpQuery) {
+    return this.patients.findMany({
+      search: query.search,
+      page: parsePositiveInteger(query.page),
+      pageSize: parsePositiveInteger(query.pageSize),
+    });
   }
 
   @Get('satusehat/lookup')

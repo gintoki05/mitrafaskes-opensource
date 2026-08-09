@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useReducer } from 'react';
 import { apiFetch } from '@/lib/auth';
-import { SyncLog } from '@/lib/clinical-types';
+import type { ListMeta } from '@mitrafaskes/shared';
+import type { SyncLog, SyncLogListResponse } from '@/lib/clinical-types';
 
 type SyncLogsState = {
   logs: SyncLog[];
+  logsMeta: ListMeta;
   selectedLog: SyncLog | null;
   logsLoading: boolean;
   retryingId: string | null;
@@ -16,15 +18,16 @@ type SyncLogsState = {
 
 type SyncLogsAction =
   | { type: 'load-start' }
-  | { type: 'load-success'; logs: SyncLog[] }
+  | { type: 'load-success'; response: SyncLogListResponse }
   | { type: 'load-failure'; error: string }
   | { type: 'select-log'; log: SyncLog }
   | { type: 'retry-start'; logId: string }
-  | { type: 'retry-success'; logs: SyncLog[] }
+  | { type: 'retry-success'; response: SyncLogListResponse }
   | { type: 'retry-failure'; error: string };
 
 const initialState: SyncLogsState = {
   logs: [],
+  logsMeta: { page: 1, pageSize: 25, total: 0 },
   selectedLog: null,
   logsLoading: true,
   retryingId: null,
@@ -33,20 +36,37 @@ const initialState: SyncLogsState = {
   successMessage: '',
 };
 
-function withSelectedLog(state: SyncLogsState, logs: SyncLog[]): SyncLogsState {
+function withSelectedLog(
+  state: SyncLogsState,
+  response: SyncLogListResponse,
+): SyncLogsState {
   const selectedLog = state.selectedLog
-    ? logs.find((log) => log.id === state.selectedLog?.id) ?? logs[0] ?? null
-    : logs[0] ?? null;
+    ? response.items.find((log) => log.id === state.selectedLog?.id) ??
+      response.items[0] ??
+      null
+    : response.items[0] ?? null;
 
-  return { ...state, logs, selectedLog };
+  return {
+    ...state,
+    logs: response.items,
+    logsMeta: response.meta,
+    selectedLog,
+  };
 }
 
-function syncLogsReducer(state: SyncLogsState, action: SyncLogsAction): SyncLogsState {
+function syncLogsReducer(
+  state: SyncLogsState,
+  action: SyncLogsAction,
+): SyncLogsState {
   switch (action.type) {
     case 'load-start':
       return { ...state, logsLoading: true, error: '' };
     case 'load-success':
-      return { ...withSelectedLog(state, action.logs), logsLoading: false, error: '' };
+      return {
+        ...withSelectedLog(state, action.response),
+        logsLoading: false,
+        error: '',
+      };
     case 'load-failure':
       return { ...state, logsLoading: false, error: action.error };
     case 'select-log':
@@ -61,7 +81,7 @@ function syncLogsReducer(state: SyncLogsState, action: SyncLogsAction): SyncLogs
       };
     case 'retry-success':
       return {
-        ...withSelectedLog(state, action.logs),
+        ...withSelectedLog(state, action.response),
         retryingId: null,
         retryError: '',
         successMessage: 'Permintaan retry berhasil dikirim.',
@@ -71,10 +91,11 @@ function syncLogsReducer(state: SyncLogsState, action: SyncLogsAction): SyncLogs
   }
 }
 
-async function requestLogs(): Promise<SyncLog[]> {
-  const response = await apiFetch('/api/satusehat/logs');
+async function requestLogs(page = 1): Promise<SyncLogListResponse> {
+  const params = new URLSearchParams({ page: String(page), pageSize: '25' });
+  const response = await apiFetch(`/api/satusehat/logs?${params.toString()}`);
   if (!response.ok) throw new Error('Log sinkronisasi tidak dapat dimuat.');
-  return response.json() as Promise<SyncLog[]>;
+  return response.json() as Promise<SyncLogListResponse>;
 }
 
 function messageFrom(error: unknown, fallback: string): string {
@@ -89,8 +110,8 @@ export function useSyncLogs() {
 
     async function loadInitialLogs() {
       try {
-        const logs = await requestLogs();
-        if (active) dispatch({ type: 'load-success', logs });
+        const response = await requestLogs();
+        if (active) dispatch({ type: 'load-success', response });
       } catch (error) {
         if (active) {
           dispatch({
@@ -107,10 +128,10 @@ export function useSyncLogs() {
     };
   }, []);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (page = 1) => {
     dispatch({ type: 'load-start' });
     try {
-      dispatch({ type: 'load-success', logs: await requestLogs() });
+      dispatch({ type: 'load-success', response: await requestLogs(page) });
     } catch (error) {
       dispatch({
         type: 'load-failure',
@@ -119,15 +140,20 @@ export function useSyncLogs() {
     }
   }, []);
 
-  const retry = useCallback(async (logId: string) => {
+  const retry = useCallback(async (logId: string, page = 1) => {
     dispatch({ type: 'retry-start', logId });
     try {
       const response = await apiFetch(
         `/api/satusehat/sync/${logId}/retry`,
         { method: 'POST' },
       );
-      if (!response.ok) throw new Error('Retry sinkronisasi tidak dapat dijalankan.');
-      dispatch({ type: 'retry-success', logs: await requestLogs() });
+      if (!response.ok) {
+        throw new Error('Retry sinkronisasi tidak dapat dijalankan.');
+      }
+      dispatch({
+        type: 'retry-success',
+        response: await requestLogs(page),
+      });
     } catch (error) {
       dispatch({
         type: 'retry-failure',

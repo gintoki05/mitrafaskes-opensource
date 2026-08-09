@@ -2,24 +2,32 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
+import type { ListMeta } from '@mitrafaskes/shared';
 import type { Encounter } from '@/lib/clinical-types';
 
 type RmeEncounterQueueProps = {
   encounters: Encounter[];
+  meta: ListMeta;
   selectedEncounter: Encounter | null;
   encountersLoading: boolean;
   loadError: string;
   onSelectEncounter: (encounter: Encounter) => void;
+  onPageChange: (page: number) => void;
 };
 
 export function RmeEncounterQueue({
   encounters,
+  meta,
   selectedEncounter,
   encountersLoading,
   loadError,
   onSelectEncounter,
+  onPageChange,
 }: RmeEncounterQueueProps) {
+  const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
+
   return (
     <div className="min-w-0 space-y-4">
       <Card>
@@ -57,9 +65,23 @@ export function RmeEncounterQueue({
               </Badge>
             </button>
           ))}
+          {totalPages > 1 ? (
+            <div className="border-t border-border pt-3">
+              <p className="mb-2 text-center text-[11px] text-muted-foreground">
+                Halaman {meta.page} dari {totalPages} · {meta.total} antrean
+              </p>
+              <PaginationControl
+                page={meta.page}
+                totalPages={totalPages}
+                onPageChange={onPageChange}
+                disabled={encountersLoading}
+                showLabels={false}
+                aria-label="Navigasi halaman antrean RME"
+              />
+            </div>
+          ) : null}
         </CardContent>
       </Card>
     </div>
   );
 }
-

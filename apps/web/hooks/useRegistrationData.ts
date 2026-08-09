@@ -1,12 +1,23 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useReducer } from 'react';
-import { apiFetch } from '@/lib/auth';
-import { Encounter, Patient } from '@/lib/clinical-types';
+import { useCallback, useEffect, useReducer } from "react";
+import type {
+  EncounterListResponse,
+  ListMeta,
+  PaginatedListResponse,
+  Patient,
+  PatientListResponse,
+} from "@mitrafaskes/shared";
+import { apiFetch } from "@/lib/auth";
+import type { Encounter } from "@/lib/clinical-types";
+
+const DEFAULT_PAGE_SIZE = 25;
 
 type RegistrationDataState = {
   patients: Patient[];
+  patientsMeta: ListMeta;
   encounters: Encounter[];
+  encountersMeta: ListMeta;
   patientsLoading: boolean;
   encountersLoading: boolean;
   patientsError: string;
@@ -14,27 +25,58 @@ type RegistrationDataState = {
 };
 
 type RegistrationDataAction =
-  | { type: 'patients-loading' }
-  | { type: 'patients-loaded'; patients: Patient[] }
-  | { type: 'patients-failed'; error: string }
-  | { type: 'encounters-loading' }
-  | { type: 'encounters-loaded'; encounters: Encounter[] }
-  | { type: 'encounters-failed'; error: string }
+  | { type: "patients-loading" }
+  | { type: "patients-loaded"; response: PatientListResponse }
+  | { type: "patients-failed"; error: string }
+  | { type: "encounters-loading" }
+  | { type: "encounters-loaded"; response: EncounterListResponse }
+  | { type: "encounters-failed"; error: string }
   | {
-      type: 'initial-load-complete';
-      patients: Patient[];
-      encounters: Encounter[];
+      type: "initial-load-complete";
+      patients: PatientListResponse;
+      encounters: EncounterListResponse;
       patientsError: string;
       encountersError: string;
     };
 
+const emptyResponse = <T>(page = 1): { items: T[]; meta: ListMeta } => ({
+  items: [],
+  meta: { page, pageSize: DEFAULT_PAGE_SIZE, total: 0 },
+});
+
+type ListPayload<T> = PaginatedListResponse<T> | T[];
+
+function normalizeListPayload<T>(
+  payload: ListPayload<T>,
+  page: number,
+): PaginatedListResponse<T> {
+  if (Array.isArray(payload)) {
+    return {
+      items: payload,
+      meta: {
+        page,
+        pageSize: payload.length || DEFAULT_PAGE_SIZE,
+        total: payload.length,
+      },
+    };
+  }
+
+  if (payload && Array.isArray(payload.items) && payload.meta) {
+    return payload;
+  }
+
+  return emptyResponse<T>(page);
+}
+
 const initialState: RegistrationDataState = {
   patients: [],
+  patientsMeta: emptyResponse<Patient>().meta,
   encounters: [],
+  encountersMeta: emptyResponse<Encounter>().meta,
   patientsLoading: true,
   encountersLoading: true,
-  patientsError: '',
-  encountersError: '',
+  patientsError: "",
+  encountersError: "",
 };
 
 function registrationDataReducer(
@@ -42,22 +84,40 @@ function registrationDataReducer(
   action: RegistrationDataAction,
 ): RegistrationDataState {
   switch (action.type) {
-    case 'patients-loading':
-      return { ...state, patientsLoading: true, patientsError: '' };
-    case 'patients-loaded':
-      return { ...state, patients: action.patients, patientsLoading: false, patientsError: '' };
-    case 'patients-failed':
-      return { ...state, patientsLoading: false, patientsError: action.error };
-    case 'encounters-loading':
-      return { ...state, encountersLoading: true, encountersError: '' };
-    case 'encounters-loaded':
-      return { ...state, encounters: action.encounters, encountersLoading: false, encountersError: '' };
-    case 'encounters-failed':
-      return { ...state, encountersLoading: false, encountersError: action.error };
-    case 'initial-load-complete':
+    case "patients-loading":
+      return { ...state, patientsLoading: true, patientsError: "" };
+    case "patients-loaded":
       return {
-        patients: action.patients,
-        encounters: action.encounters,
+        ...state,
+        patients: action.response.items,
+        patientsMeta: action.response.meta,
+        patientsLoading: false,
+        patientsError: "",
+      };
+    case "patients-failed":
+      return { ...state, patientsLoading: false, patientsError: action.error };
+    case "encounters-loading":
+      return { ...state, encountersLoading: true, encountersError: "" };
+    case "encounters-loaded":
+      return {
+        ...state,
+        encounters: action.response.items,
+        encountersMeta: action.response.meta,
+        encountersLoading: false,
+        encountersError: "",
+      };
+    case "encounters-failed":
+      return {
+        ...state,
+        encountersLoading: false,
+        encountersError: action.error,
+      };
+    case "initial-load-complete":
+      return {
+        patients: action.patients.items,
+        patientsMeta: action.patients.meta,
+        encounters: action.encounters.items,
+        encountersMeta: action.encounters.meta,
         patientsLoading: false,
         encountersLoading: false,
         patientsError: action.patientsError,
@@ -66,18 +126,31 @@ function registrationDataReducer(
   }
 }
 
-async function requestPatients(query = ''): Promise<Patient[]> {
-  const response = await apiFetch(
-    `/api/patients?search=${encodeURIComponent(query)}`,
-  );
-  if (!response.ok) throw new Error('Daftar pasien tidak dapat dimuat.');
-  return response.json() as Promise<Patient[]>;
+function listParams(page: number): URLSearchParams {
+  const params = new URLSearchParams();
+  params.set("page", String(page));
+  params.set("pageSize", String(DEFAULT_PAGE_SIZE));
+  return params;
 }
 
-async function requestEncounters(): Promise<Encounter[]> {
-  const response = await apiFetch('/api/encounters');
-  if (!response.ok) throw new Error('Antrean rawat jalan tidak dapat dimuat.');
-  return response.json() as Promise<Encounter[]>;
+async function requestPatients(
+  query = "",
+  page = 1,
+): Promise<PatientListResponse> {
+  const params = listParams(page);
+  if (query.trim()) params.set("search", query.trim());
+  const response = await apiFetch(`/api/patients?${params.toString()}`);
+  if (!response.ok) throw new Error("Daftar pasien tidak dapat dimuat.");
+  const payload = (await response.json()) as ListPayload<Patient>;
+  return normalizeListPayload(payload, page) as PatientListResponse;
+}
+
+async function requestEncounters(page = 1): Promise<EncounterListResponse> {
+  const params = listParams(page);
+  const response = await apiFetch(`/api/encounters?${params.toString()}`);
+  if (!response.ok) throw new Error("Antrean rawat jalan tidak dapat dimuat.");
+  const payload = (await response.json()) as ListPayload<Encounter>;
+  return normalizeListPayload(payload, page) as EncounterListResponse;
 }
 
 function messageFrom(error: unknown, fallback: string): string {
@@ -98,17 +171,29 @@ export function useRegistrationData() {
       if (!active) return;
 
       dispatch({
-        type: 'initial-load-complete',
-        patients: patientsResult.status === 'fulfilled' ? patientsResult.value : [],
-        encounters: encountersResult.status === 'fulfilled' ? encountersResult.value : [],
+        type: "initial-load-complete",
+        patients:
+          patientsResult.status === "fulfilled"
+            ? patientsResult.value
+            : emptyResponse<Patient>(),
+        encounters:
+          encountersResult.status === "fulfilled"
+            ? encountersResult.value
+            : emptyResponse<Encounter>(),
         patientsError:
-          patientsResult.status === 'rejected'
-            ? messageFrom(patientsResult.reason, 'Daftar pasien tidak dapat dimuat.')
-            : '',
+          patientsResult.status === "rejected"
+            ? messageFrom(
+                patientsResult.reason,
+                "Daftar pasien tidak dapat dimuat.",
+              )
+            : "",
         encountersError:
-          encountersResult.status === 'rejected'
-            ? messageFrom(encountersResult.reason, 'Antrean rawat jalan tidak dapat dimuat.')
-            : '',
+          encountersResult.status === "rejected"
+            ? messageFrom(
+                encountersResult.reason,
+                "Antrean rawat jalan tidak dapat dimuat.",
+              )
+            : "",
       });
     }
 
@@ -118,26 +203,32 @@ export function useRegistrationData() {
     };
   }, []);
 
-  const refreshPatients = useCallback(async (query = '') => {
-    dispatch({ type: 'patients-loading' });
+  const refreshPatients = useCallback(async (query = "", page = 1) => {
+    dispatch({ type: "patients-loading" });
     try {
-      dispatch({ type: 'patients-loaded', patients: await requestPatients(query) });
+      dispatch({
+        type: "patients-loaded",
+        response: await requestPatients(query, page),
+      });
     } catch (error) {
       dispatch({
-        type: 'patients-failed',
-        error: messageFrom(error, 'Daftar pasien tidak dapat dimuat.'),
+        type: "patients-failed",
+        error: messageFrom(error, "Daftar pasien tidak dapat dimuat."),
       });
     }
   }, []);
 
-  const refreshEncounters = useCallback(async () => {
-    dispatch({ type: 'encounters-loading' });
+  const refreshEncounters = useCallback(async (page = 1) => {
+    dispatch({ type: "encounters-loading" });
     try {
-      dispatch({ type: 'encounters-loaded', encounters: await requestEncounters() });
+      dispatch({
+        type: "encounters-loaded",
+        response: await requestEncounters(page),
+      });
     } catch (error) {
       dispatch({
-        type: 'encounters-failed',
-        error: messageFrom(error, 'Antrean rawat jalan tidak dapat dimuat.'),
+        type: "encounters-failed",
+        error: messageFrom(error, "Antrean rawat jalan tidak dapat dimuat."),
       });
     }
   }, []);

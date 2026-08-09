@@ -1,17 +1,29 @@
 'use client';
 
 import { Clock3 } from 'lucide-react';
+import type { ListMeta } from '@mitrafaskes/shared';
 import { Badge } from '@/components/ui/badge';
+import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
 import type { Encounter } from '@/lib/clinical-types';
 
 type QueuePanelProps = {
   encounters: Encounter[];
+  meta: ListMeta;
   encountersLoading: boolean;
   encountersError: string;
+  onPageChange: (page: number) => void;
 };
 
-export function QueuePanel({ encounters, encountersLoading, encountersError }: QueuePanelProps) {
+export function QueuePanel({
+  encounters,
+  meta,
+  encountersLoading,
+  encountersError,
+  onPageChange,
+}: QueuePanelProps) {
+  const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
+
   return (
     <section id="antrean-aktif" className="data-surface scroll-mt-24" aria-labelledby="queue-title">
       <div className="data-toolbar">
@@ -23,7 +35,7 @@ export function QueuePanel({ encounters, encountersLoading, encountersError }: Q
           <p className="mt-1 text-xs text-muted-foreground">Kunjungan pasien yang sedang diproses hari ini; data identitas tetap berada di Data Pasien.</p>
         </div>
         <Badge variant="outline" className="border-primary/25 bg-primary/5 font-mono text-primary">
-          {encounters.length} antrean
+          {meta.total} antrean
         </Badge>
       </div>
       <div className="divide-y divide-border">
@@ -48,6 +60,22 @@ export function QueuePanel({ encounters, encountersLoading, encountersError }: Q
           </div>
         ))}
       </div>
+      {totalPages > 1 ? (
+        <div className="flex flex-col gap-2 border-t border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            Halaman {meta.page} dari {totalPages} · {meta.total} antrean
+          </span>
+          <PaginationControl
+            page={meta.page}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            disabled={encountersLoading}
+            showLabels={false}
+            aria-label="Navigasi halaman antrean pendaftaran"
+            className="mx-0 w-auto"
+          />
+        </div>
+      ) : null}
     </section>
   );
 }

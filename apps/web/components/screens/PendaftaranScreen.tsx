@@ -35,7 +35,9 @@ export default function PendaftaranPage() {
   const canCreateQueue = can(currentUser, AccessPermission.QUEUE_CREATE);
   const {
     patients,
+    patientsMeta,
     encounters,
+    encountersMeta,
     patientsLoading,
     encountersLoading,
     patientsError,
@@ -47,7 +49,7 @@ export default function PendaftaranPage() {
 
   const handleSearchSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void refreshPatients(search);
+    void refreshPatients(search, 1);
   };
 
   const openNewPatient = () => {
@@ -65,7 +67,7 @@ export default function PendaftaranPage() {
   };
 
   const handlePatientSaved = async () => {
-    await refreshPatients(search);
+    await refreshPatients(search, patientsMeta.page);
   };
 
   const handleEditPatient = (patient: Patient) => {
@@ -88,7 +90,7 @@ export default function PendaftaranPage() {
       });
       if (response.ok) {
         toast.success('Pasien berhasil ditambahkan ke antrean.');
-        void refreshEncounters();
+        void refreshEncounters(encountersMeta.page);
       } else {
         throw new Error('Pasien tidak dapat ditambahkan ke antrean.');
       }
@@ -125,8 +127,8 @@ export default function PendaftaranPage() {
 
         <RegistrationViewTabs
           activeView={activeView}
-          patientCount={patients.length}
-          queueCount={encounters.length}
+          patientCount={patientsMeta.total}
+          queueCount={encountersMeta.total}
           onChange={setActiveView}
         />
 
@@ -145,11 +147,13 @@ export default function PendaftaranPage() {
               patients={patients}
               patientsLoading={patientsLoading}
               patientsError={patientsError}
+              meta={patientsMeta}
               search={search}
               canCreateQueue={canCreateQueue}
               canWritePatient={canWritePatient}
               onSearchChange={setSearch}
               onSearchSubmit={handleSearchSubmit}
+              onPageChange={(page) => void refreshPatients(search, page)}
               onQueuePatient={handleDaftarAntrean}
               onViewPatient={(patient) => setDetailPatientId(patient.id)}
               onEditPatient={handleEditPatient}
@@ -159,7 +163,13 @@ export default function PendaftaranPage() {
           </div>
         ) : (
           <div id="registration-panel-queue" role="tabpanel" aria-labelledby="registration-tab-queue" tabIndex={0}>
-            <QueuePanel encounters={encounters} encountersLoading={encountersLoading} encountersError={encountersError} />
+            <QueuePanel
+              encounters={encounters}
+              meta={encountersMeta}
+              encountersLoading={encountersLoading}
+              encountersError={encountersError}
+              onPageChange={(page) => void refreshEncounters(page)}
+            />
           </div>
         )}
         <PatientFormDialog
@@ -177,9 +187,11 @@ export default function PendaftaranPage() {
           open={Boolean(detailPatientId)}
           patientId={detailPatientId}
           canWrite={canWritePatient}
+          canCreateQueue={canCreateQueue}
           getPatient={patientActions.get}
           onClose={() => setDetailPatientId(null)}
           onEdit={handleEditPatient}
+          onQueue={handleDaftarAntrean}
           onSync={handleSyncPatient}
           maritalStatuses={maritalStatusLookup.statuses}
         />
