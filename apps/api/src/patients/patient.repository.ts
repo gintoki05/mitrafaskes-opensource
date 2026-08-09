@@ -38,6 +38,18 @@ const uniqueDetails = (error: unknown): string[] => {
 const matchesUniqueField = (details: string[], field: string): boolean =>
   details.some((candidate) => candidate.includes(field.toLowerCase()));
 
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
+
+const normalizePositiveInteger = (
+  value: number | undefined,
+  fallback: number,
+) =>
+  value !== undefined && Number.isInteger(value) && value > 0
+    ? value
+    : fallback;
+
 @Injectable()
 export class PatientRepository {
   constructor(
@@ -45,63 +57,78 @@ export class PatientRepository {
     private readonly medicalRecordNumbers: MedicalRecordNumberGenerator,
   ) {}
 
-  async findMany(search?: string): Promise<Patient[]> {
-    const normalizedSearch = search?.trim();
-    const records = await this.prisma.patient.findMany({
-      where: normalizedSearch
-        ? {
-            OR: [
-              { nik: { contains: normalizedSearch } },
-              {
-                fullName: {
-                  contains: normalizedSearch,
-                  mode: 'insensitive',
-                },
+  async findMany(input: PatientListQuery = {}): Promise<PatientListResponse> {
+    const page = normalizePositiveInteger(input.page, DEFAULT_PAGE);
+    const pageSize = Math.min(
+      normalizePositiveInteger(input.pageSize, DEFAULT_PAGE_SIZE),
+      MAX_PAGE_SIZE,
+    );
+    const normalizedSearch = input.search?.trim();
+    const where: Prisma.PatientWhereInput | undefined = normalizedSearch
+      ? {
+          OR: [
+            { nik: { contains: normalizedSearch } },
+            {
+              fullName: {
+                contains: normalizedSearch,
+                mode: 'insensitive',
               },
-              {
-                medicalRecNo: {
-                  contains: normalizedSearch,
-                  mode: 'insensitive',
-                },
+            },
+            {
+              medicalRecNo: {
+                contains: normalizedSearch,
+                mode: 'insensitive',
               },
-              {
-                identifiers: {
-                  some: {
-                    normalizedValue: {
-                      contains: normalizedSearch,
-                      mode: 'insensitive',
-                    },
+            },
+            {
+              identifiers: {
+                some: {
+                  normalizedValue: {
+                    contains: normalizedSearch,
+                    mode: 'insensitive',
                   },
                 },
               },
-              {
-                names: {
-                  some: {
-                    text: {
-                      contains: normalizedSearch,
-                      mode: 'insensitive',
-                    },
+            },
+            {
+              names: {
+                some: {
+                  text: {
+                    contains: normalizedSearch,
+                    mode: 'insensitive',
                   },
                 },
               },
-              {
-                telecoms: {
-                  some: {
-                    normalizedValue: {
-                      contains: normalizedSearch,
-                      mode: 'insensitive',
-                    },
+            },
+            {
+              telecoms: {
+                some: {
+                  normalizedValue: {
+                    contains: normalizedSearch,
+                    mode: 'insensitive',
                   },
                 },
               },
-            ],
-          }
-        : undefined,
-      include: patientInclude,
-      orderBy: { createdAt: 'desc' },
-    });
+            },
+          ],
+        }
+      : undefined;
 
-    return records.map(toPatient);
+    const [records, total] = await Promise.all([
+      this.prisma.patient.findMany({
+        where,
+        include: patientInclude,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.patient.count({ where }),
+    ]);
+
+    return {
+      items: records.map(toPatient),
+      meta: { page, pageSize, total },
+    };
   }
 
   async findById(id: string): Promise<Patient | null> {
@@ -151,6 +178,12 @@ export class PatientRepository {
           select: { id: true, medicalRecNo: true, satusehatId: true },
         });
         if (!current) throw new PatientNotFoundError();
+
+        await this.updateRelatedPersonDetails(
+          transaction,
+          id,
+          input.relationships,
+        );
 
         const archivedAt = new Date();
         await Promise.all([

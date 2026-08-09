@@ -759,15 +759,14 @@ const validateRelationships = (
 
     const targetCount = [
       Boolean(relatedPatientId),
-      Boolean(relatedPersonId),
-      Boolean(relatedPersonValue),
+      Boolean(relatedPersonId || relatedPersonValue),
     ].filter(Boolean).length;
     if (targetCount !== 1) {
       issues.push({
         field,
         code: 'RELATIONSHIP_TARGET_REQUIRED',
         message:
-          'Relasi harus memiliki tepat satu relatedPatientId, relatedPersonId, atau relatedPerson',
+          'Relasi harus memiliki tepat satu target Patient atau related person',
       });
     }
     const relatedPerson = relatedPersonValue

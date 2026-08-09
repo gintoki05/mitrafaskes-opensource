@@ -1,12 +1,20 @@
-'use client';
+"use client";
 
-import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form';
-import { Controller } from 'react-hook-form';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Field, FieldError, FieldLabel } from '@/components/ui/field';
-import { Input } from '@/components/ui/input';
-import { SelectField } from '../master-faskes/FormField';
-import type { PatientFormValues } from './patient-form-schema';
+import { Plus } from "lucide-react";
+import {
+  useFieldArray,
+  type Control,
+  type FieldErrors,
+  type UseFormRegister,
+} from "react-hook-form";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  patientRelationshipFormDefaults,
+  type PatientFormValues,
+  type PatientRelationshipFormValues,
+} from "./patient-form-schema";
+import { PatientRelationshipRow } from "./PatientRelationshipRow";
 
 type PatientRelationshipFieldsProps = {
   control: Control<PatientFormValues>;
@@ -21,145 +29,60 @@ export function PatientRelationshipFields({
   register,
   disabled,
 }: PatientRelationshipFieldsProps) {
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "relationships",
+  });
+
   return (
     <Card>
       <CardHeader className="border-b border-border pb-3">
-        <CardTitle className="text-sm font-bold">Relasi pasien (opsional)</CardTitle>
-        <p className="text-xs text-muted-foreground">
-          Form MVP mendukung satu relasi utama; relasi lain yang sudah ada tetap dipertahankan saat edit.
-        </p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <CardTitle className="text-sm font-bold">Relasi pasien</CardTitle>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
+              Tambahkan lebih dari satu relasi. Setiap baris bisa diedit atau
+              dihapus; relasi historis tetap tersimpan di riwayat pasien.
+            </p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => append(patientRelationshipFormDefaults)}
+            disabled={disabled}
+          >
+            <Plus className="h-4 w-4" aria-hidden="true" />
+            Tambah relasi
+          </Button>
+        </div>
       </CardHeader>
-      <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">
-        <Controller
-          control={control}
-          name="relationshipCode"
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="patient-relationship-code">Jenis relasi</FieldLabel>
-              <SelectField
-                id="patient-relationship-code"
-                value={field.value}
-                onChange={field.onChange}
-                disabled={disabled}
-                aria-invalid={fieldState.invalid}
-              >
-                <option value="">Belum diisi</option>
-                <option value="MOTHER">Ibu</option>
-                <option value="FATHER">Ayah</option>
-                <option value="CHILD">Anak</option>
-                <option value="GUARDIAN">Wali</option>
-                <option value="CAREGIVER">Pendamping</option>
-                <option value="OTHER">Lainnya</option>
-              </SelectField>
-              <FieldError errors={[fieldState.error]} />
-            </Field>
-          )}
-        />
-
-        <Controller
-          control={control}
-          name="relationshipTarget"
-          render={({ field }) => (
-            <Field>
-              <FieldLabel htmlFor="patient-relationship-target">Target relasi</FieldLabel>
-              <SelectField
-                id="patient-relationship-target"
-                value={field.value}
-                onChange={field.onChange}
-                disabled={disabled}
-              >
-                <option value="">Belum diisi</option>
-                <option value="PERSON">Related person</option>
-                <option value="PATIENT">Patient lain</option>
-              </SelectField>
-            </Field>
-          )}
-        />
-
-        <Field className="sm:col-span-2" data-invalid={Boolean(errors.relatedPatientId)}>
-          <FieldLabel htmlFor="patient-related-patient-id">
-            ID Patient lokal terkait
-          </FieldLabel>
-          <Input
-            id="patient-related-patient-id"
-            {...register('relatedPatientId')}
-            disabled={disabled}
-            placeholder="Isi bila targetnya Patient lain"
-            aria-invalid={Boolean(errors.relatedPatientId)}
-          />
-          <FieldError errors={[errors.relatedPatientId]} />
-        </Field>
-
-        <Field className="sm:col-span-2" data-invalid={Boolean(errors.relatedPersonName)}>
-          <FieldLabel htmlFor="patient-related-person-name">Nama related person</FieldLabel>
-          <Input
-            id="patient-related-person-name"
-            {...register('relatedPersonName')}
-            disabled={disabled}
-            placeholder="Nama wali/pendamping non-Patient"
-            aria-invalid={Boolean(errors.relatedPersonName)}
-          />
-          <FieldError errors={[errors.relatedPersonName]} />
-        </Field>
-
-        <Controller
-          control={control}
-          name="relatedPersonGender"
-          render={({ field }) => (
-            <Field>
-              <FieldLabel htmlFor="patient-related-person-gender">Gender related person</FieldLabel>
-              <SelectField
-                id="patient-related-person-gender"
-                value={field.value}
-                onChange={field.onChange}
-                disabled={disabled}
-              >
-                <option value="">Belum diisi</option>
-                <option value="MALE">Laki-laki</option>
-                <option value="FEMALE">Perempuan</option>
-              </SelectField>
-            </Field>
-          )}
-        />
-        <Field>
-          <FieldLabel htmlFor="patient-related-person-birth-date">Tanggal lahir related person</FieldLabel>
-          <Input
-            id="patient-related-person-birth-date"
-            {...register('relatedPersonBirthDate')}
-            type="date"
-            disabled={disabled}
-          />
-        </Field>
-        <Field data-invalid={Boolean(errors.relatedPersonPhone)}>
-          <FieldLabel htmlFor="patient-related-person-phone">Telepon related person</FieldLabel>
-          <Input
-            id="patient-related-person-phone"
-            {...register('relatedPersonPhone')}
-            disabled={disabled}
-            inputMode="tel"
-            aria-invalid={Boolean(errors.relatedPersonPhone)}
-          />
-          <FieldError errors={[errors.relatedPersonPhone]} />
-        </Field>
-        <Field data-invalid={Boolean(errors.relatedPersonEmail)}>
-          <FieldLabel htmlFor="patient-related-person-email">Email related person</FieldLabel>
-          <Input
-            id="patient-related-person-email"
-            {...register('relatedPersonEmail')}
-            disabled={disabled}
-            type="email"
-            aria-invalid={Boolean(errors.relatedPersonEmail)}
-          />
-          <FieldError errors={[errors.relatedPersonEmail]} />
-        </Field>
-        <Field className="sm:col-span-2">
-          <FieldLabel htmlFor="patient-related-person-address">Alamat related person</FieldLabel>
-          <Input
-            id="patient-related-person-address"
-            {...register('relatedPersonAddress')}
-            disabled={disabled}
-          />
-        </Field>
+      <CardContent className="space-y-4 pt-4">
+        {fields.length === 0 ? (
+          <div className="rounded-[var(--radius-card)] border border-dashed border-border bg-muted/20 p-4 text-xs text-muted-foreground">
+            Belum ada relasi aktif. Tambahkan relasi bila pasien memiliki wali,
+            orang tua, anak, atau pendamping yang perlu dicatat.
+          </div>
+        ) : (
+          fields.map((field, index) => (
+            <PatientRelationshipRow
+              key={field.id}
+              control={control}
+              errors={
+                errors.relationships?.[index] as
+                  FieldErrors<PatientRelationshipFormValues> | undefined
+              }
+              register={register}
+              index={index}
+              disabled={disabled}
+              onRemove={() => remove(index)}
+            />
+          ))
+        )}
+        <p className="text-[11px] leading-relaxed text-muted-foreground">
+          Menghapus baris lalu menyimpan pasien akan mengakhiri relasi aktif
+          tersebut. Catatan historis tidak dihapus.
+        </p>
       </CardContent>
     </Card>
   );
