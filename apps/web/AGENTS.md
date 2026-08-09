@@ -45,3 +45,19 @@ Sebelum menambahkan bagian besar ke screen yang sudah ada, AI harus:
 3. Memecah screen terlebih dahulu jika perubahan menambah tanggung jawab baru
    atau melewati ambang review di atas.
 4. Menyebutkan file yang dibuat/diubah serta verifikasi yang dijalankan.
+
+## Kontrak shadcn dan batas Server/Client
+
+- `apps/web/components/ui` adalah sumber tunggal primitive UI. Gunakan
+  primitive shadcn/Base UI dan wrapper feature yang sudah ada sebelum menulis
+  kontrol baru; jangan mengganti Select/Combobox dengan `<select>` native atau
+  class dropdown lokal tanpa alasan teknis yang dicatat.
+- Jangan menyalin class default shadcn secara membabi buta ketika token Arctic
+  Cyan + Ink milik aplikasi berbeda. Pertahankan struktur/state/accessibility
+  shadcn, lalu gunakan token semantik aplikasi pada level primitive yang tepat.
+- `'use server'` hanya untuk Server Action yang memang dipanggil dari UI. API
+  domain tetap melalui NestJS dan hook frontend yang sudah ada. `'use client'`
+  ditempatkan pada batas terkecil yang memiliki state, event handler, effect,
+  atau API browser.
+- Untuk perubahan visual, cek minimal default, hover, focus, open, disabled,
+  loading, error, empty, dan konten panjang pada primitive yang terdampak.

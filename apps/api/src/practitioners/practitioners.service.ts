@@ -10,17 +10,10 @@ import type {
   MasterDataListQuery,
   MasterDataListResponse,
   PractitionerSummary,
-  SatusehatLinkageSummary,
-  SatusehatSyncSummary,
 } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
-import {
-  DEFAULT_SATUSEHAT_ENVIRONMENT,
-  LOCAL_PRACTITIONER_RESOURCE_TYPE,
-  PRACTITIONER_RESOURCE_TYPE,
-  SATUSEHAT_PROVIDER,
-} from './practitioner.constants';
 import { toPractitionerSummary } from './practitioner.mapper';
+import { PractitionerSyncStatusRepository } from './practitioner-sync-status.repository';
 import {
   PractitionerValidationError,
   validatePractitionerCreate,
@@ -41,22 +34,13 @@ const practitionerRelationInclude = {
   },
 };
 
-type PractitionerLinkRecord = {
-  localResourceId: string;
-  externalResourceId: string;
-  lastSyncedAt: Date | null;
-};
-
-type PractitionerLogRecord = {
-  resourceId: string;
-  status: 'PENDING' | 'SUCCESS' | 'FAILED';
-  errorMessage: string | null;
-  updatedAt: Date;
-};
-
 @Injectable()
 export class PractitionersService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly syncStatus: PractitionerSyncStatusRepository;
+
+  constructor(private readonly prisma: PrismaService) {
+    this.syncStatus = new PractitionerSyncStatusRepository(prisma);
+  }
 
   async create(input: unknown): Promise<PractitionerSummary> {
     let validated: ReturnType<typeof validatePractitionerCreate>;
@@ -135,7 +119,7 @@ export class PractitionersService {
         ? [{ createdAt: orderDirection }]
         : input.sort === 'active'
           ? [{ active: orderDirection }, { fullName: 'asc' }]
-        : [{ fullName: orderDirection }, { username: 'asc' }];
+          : [{ fullName: orderDirection }, { username: 'asc' }];
 
     const [records, total] = await Promise.all([
       this.prisma.user.findMany({
@@ -149,17 +133,14 @@ export class PractitionersService {
     ]);
 
     const ids = records.map((record) => record.id);
-    const [links, logs] = await Promise.all([
-      this.findLinkages(ids),
-      this.findLatestLogs(ids),
-    ]);
+    const { links, logs } = await this.syncStatus.findForList(ids);
 
     return {
       items: records.map((record) =>
         toPractitionerSummary(
           record,
-          this.toLinkage(links.get(record.id)),
-          this.toSyncSummary(logs.get(record.id)),
+          this.syncStatus.toLinkage(links.get(record.id)),
+          this.syncStatus.toSyncSummary(logs.get(record.id)),
         ),
       ),
       meta: { page, pageSize, total },
@@ -168,14 +149,11 @@ export class PractitionersService {
 
   async findById(id: string): Promise<PractitionerSummary> {
     const record = await this.getPractitionerRecord(id);
-    const [link, log] = await Promise.all([
-      this.findLinkage(id),
-      this.findLatestLog(id),
-    ]);
+    const { link, log } = await this.syncStatus.findForRecord(id);
     return toPractitionerSummary(
       record,
-      this.toLinkage(link),
-      this.toSyncSummary(log),
+      this.syncStatus.toLinkage(link),
+      this.syncStatus.toSyncSummary(log),
     );
   }
 
@@ -260,7 +238,9 @@ export class PractitionersService {
         select: { id: true },
       });
       if (!organization) {
-        throw new NotFoundException('Organization Practitioner tidak ditemukan.');
+        throw new NotFoundException(
+          'Organization Practitioner tidak ditemukan.',
+        );
       }
     }
 
@@ -294,142 +274,20 @@ export class PractitionersService {
     return record;
   }
 
-  async findLinkageByExternalId(externalResourceId: string, environment: string) {
-    return this.prisma.externalResourceLink.findUnique({
-      where: {
-        externalResourceScope: {
-          provider: SATUSEHAT_PROVIDER,
-          environment,
-          resourceType: PRACTITIONER_RESOURCE_TYPE,
-          externalResourceId,
-        },
-      },
-    });
-  }
-
-  private async findLinkages(
-    localResourceIds: string[],
-  ): Promise<Map<string, PractitionerLinkRecord>> {
-    const result = new Map<string, PractitionerLinkRecord>();
-    if (localResourceIds.length === 0) return result;
-
-    const records = await this.prisma.externalResourceLink.findMany({
-      where: {
-        provider: SATUSEHAT_PROVIDER,
-        environment: this.readEnvironment(),
-        resourceType: PRACTITIONER_RESOURCE_TYPE,
-        localResourceType: LOCAL_PRACTITIONER_RESOURCE_TYPE,
-        localResourceId: { in: localResourceIds },
-      },
-      select: {
-        localResourceId: true,
-        externalResourceId: true,
-        lastSyncedAt: true,
-      },
-    });
-    for (const record of records) result.set(record.localResourceId, record);
-    return result;
-  }
-
-  private async findLinkage(
-    localResourceId: string,
-  ): Promise<PractitionerLinkRecord | null> {
-    return this.prisma.externalResourceLink.findUnique({
-      where: {
-        localResourceScope: {
-          provider: SATUSEHAT_PROVIDER,
-          environment: this.readEnvironment(),
-          resourceType: PRACTITIONER_RESOURCE_TYPE,
-          localResourceType: LOCAL_PRACTITIONER_RESOURCE_TYPE,
-          localResourceId,
-        },
-      },
-      select: {
-        localResourceId: true,
-        externalResourceId: true,
-        lastSyncedAt: true,
-      },
-    });
-  }
-
-  private async findLatestLogs(
-    localResourceIds: string[],
-  ): Promise<Map<string, PractitionerLogRecord>> {
-    const result = new Map<string, PractitionerLogRecord>();
-    if (localResourceIds.length === 0) return result;
-    const records = await this.prisma.satusehatSyncLog.findMany({
-      where: {
-        resourceType: PRACTITIONER_RESOURCE_TYPE,
-        resourceId: { in: localResourceIds },
-      },
-      orderBy: { updatedAt: 'desc' },
-      select: {
-        resourceId: true,
-        status: true,
-        errorMessage: true,
-        updatedAt: true,
-      },
-    });
-    for (const record of records) {
-      if (!result.has(record.resourceId)) {
-        result.set(record.resourceId, {
-          resourceId: record.resourceId,
-          status: record.status,
-          errorMessage: record.errorMessage,
-          updatedAt: record.updatedAt,
-        });
-      }
-    }
-    return result;
-  }
-
-  private async findLatestLog(
-    localResourceId: string,
-  ): Promise<PractitionerLogRecord | null> {
-    const record = await this.prisma.satusehatSyncLog.findFirst({
-      where: {
-        resourceType: PRACTITIONER_RESOURCE_TYPE,
-        resourceId: localResourceId,
-      },
-      orderBy: { updatedAt: 'desc' },
-      select: {
-        resourceId: true,
-        status: true,
-        errorMessage: true,
-        updatedAt: true,
-      },
-    });
-    return record;
-  }
-
-  private toLinkage(
-    record: PractitionerLinkRecord | null | undefined,
-  ): SatusehatLinkageSummary | undefined {
-    if (!record) return undefined;
-    return {
-      externalResourceId: record.externalResourceId,
-      lastSyncedAt: record.lastSyncedAt?.toISOString(),
-    };
-  }
-
-  private toSyncSummary(
-    record: PractitionerLogRecord | null | undefined,
-  ): SatusehatSyncSummary | undefined {
-    if (!record) return undefined;
-    return {
-      status: record.status,
-      errorMessage: record.errorMessage ?? undefined,
-      updatedAt: record.updatedAt.toISOString(),
-    };
-  }
-
-  private readEnvironment(): string {
-    return (
-      process.env.SATUSEHAT_ENVIRONMENT?.trim() || DEFAULT_SATUSEHAT_ENVIRONMENT
+  async findLinkageByExternalId(
+    externalResourceId: string,
+    environment: string,
+  ) {
+    return this.syncStatus.findLinkageByExternalId(
+      externalResourceId,
+      environment,
     );
   }
 
-  private normalizePositiveInteger(value: number | undefined, fallback: number) {
+  private normalizePositiveInteger(
+    value: number | undefined,
+    fallback: number,
+  ) {
     return Number.isInteger(value) && value! > 0 ? value! : fallback;
   }
 
@@ -437,7 +295,8 @@ export class PractitionersService {
     error: unknown,
   ): error is Prisma.PrismaClientKnownRequestError {
     return (
-      error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002'
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
     );
   }
 

@@ -54,6 +54,48 @@ Before adding substantial code to an existing file, the AI should:
    responsibility or pushes the file beyond the review thresholds above.
 4. Report which files were changed and which verification commands were run.
 
+## Product sequence and decision gates
+
+- Follow the current resource sequence unless the user explicitly changes it:
+  `Organization -> Location -> Practitioner -> Patient -> Encounter ->
+  Condition -> Observation`.
+- Treat the catalog, domain dependency rules, and the user's explicit scope as
+  the source of truth for what comes next. Do not infer the next resource only
+  from an implementation detail or an isolated FHIR reference.
+- Before implementing a new resource, write down its prerequisite resources,
+  local-first behavior, remote operation, linkage/log behavior, and the manual
+  test scenario. If the order or intended behavior is ambiguous, stop and ask
+  instead of choosing a different sequence silently.
+
+## Frontend design-system contract
+
+- Reuse the existing shadcn-compatible primitives under
+  `apps/web/components/ui` and feature wrappers before creating a new control.
+  Selects must use the shared Select/SelectField implementation; do not add a
+  one-off native select or duplicate dropdown styling without a documented
+  reason.
+- Treat `apps/web/app/globals.css`, the shared UI primitives, and neighboring
+  screens as the incumbent visual system. Fix a local visual defect at the
+  narrowest component level; do not change global tokens to solve one state.
+- Keep domain/API contracts in `packages/shared`; keep form draft state and
+  display-only options feature-local.
+
+## Server boundary and delivery gates
+
+- Next pages should remain Server Components by default and compose the
+  smallest client boundary needed for interaction. In this repository,
+  application data access belongs in the NestJS API and frontend hooks; use
+  `'use server'` only for an intentional Next Server Action, not as a generic
+  replacement for the API.
+- Before commit, verify the affected architecture with the narrowest relevant
+  tests, lint/typecheck, build, migration/schema checks when applicable, and a
+  browser/manual path for UI changes. Review the final diff for duplicated
+  components, accidental route/import changes, oversized files, and false
+  sync status.
+- A feature is not complete merely because its local form works: its loading,
+  empty, error, disabled, permission, linkage, and repeat-sync states must be
+  accounted for when they apply.
+
 ## SATUSEHAT integration rules
 
 These rules apply to every feature or resource that interacts with SATUSEHAT,

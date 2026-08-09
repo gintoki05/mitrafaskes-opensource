@@ -14,7 +14,9 @@ describe('structured patient migration', () => {
     expect(migration).not.toMatch(
       /DROP\s+COLUMN\s+"(?:nik|fullName|phone|address|satusehatId)"/i,
     );
-    expect(migration).toContain('FROM "Patient"\nWHERE "nik" IS NOT NULL');
+    expect(migration).toMatch(
+      /FROM\s+"Patient"\s+WHERE\s+"nik"\s+IS\s+NOT\s+NULL/i,
+    );
     expect(migration).toContain('\'OFFICIAL\'::"PatientNameUse"');
     expect(migration).toContain('\'PHONE\'::"TelecomSystem"');
     expect(migration).toContain('\'HOME\'::"AddressUse"');
