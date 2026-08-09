@@ -57,6 +57,22 @@ export function LocationFormIdentityStep({
             />
             <FieldError id="location-name-error" errors={[errors.name]} />
           </Field>
+
+          <Field>
+            <FieldLabel htmlFor="location-satusehat-id">
+              ID SATUSEHAT
+            </FieldLabel>
+            <Input
+              {...register("satusehatId")}
+              id="location-satusehat-id"
+              readOnly
+              className="font-mono"
+              placeholder="Belum terhubung"
+            />
+            <FieldDescription>
+              Diisi dari hasil ambil/linkage SATUSEHAT; bukan kode lokasi lokal.
+            </FieldDescription>
+          </Field>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

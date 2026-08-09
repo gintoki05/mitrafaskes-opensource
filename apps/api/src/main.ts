@@ -23,7 +23,7 @@ async function bootstrap() {
     .addTag('Master Data', 'Data referensi klinis, termasuk ICD-10.')
     .addTag(
       'Master Faskes',
-      'Pengaturan organisasi, unit layanan, dan lokasi fasilitas kesehatan.',
+      'Pengaturan organisasi dan lokasi fasilitas kesehatan.',
     )
     .addTag('Medical Records', 'Pencatatan rekam medis elektronik (RME).')
     .addTag('SATUSEHAT', 'Status dan sinkronisasi data ke SATUSEHAT.')

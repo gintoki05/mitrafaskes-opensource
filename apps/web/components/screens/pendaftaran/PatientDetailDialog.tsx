@@ -11,6 +11,8 @@ import { SatusehatLinkageBadge } from '../master-faskes/SatusehatLinkageBadge';
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
 import { maritalStatusDisplay } from './marital-status-display';
 
+const PATIENT_IHS_SYSTEM = 'https://fhir.kemkes.go.id/id/ihs-number';
+
 type PatientDetailDialogProps = {
   open: boolean;
   patientId: string | null;
@@ -129,6 +131,11 @@ export function PatientDetailDialog({
               <section className="grid gap-3 rounded-[var(--radius-card)] border border-border bg-muted/30 p-4 sm:grid-cols-3">
                 <DetailField label="Nama resmi" value={patient.fullName} />
                 <DetailField label="NIK" value={patient.nik ?? 'Belum diisi'} mono />
+                <DetailField
+                  label="Nomor IHS / SATUSEHAT ID"
+                  value={patient.satusehat?.externalResourceId ?? patient.satusehatId ?? 'Belum terhubung'}
+                  mono
+                />
                 <DetailField label="Nomor rekam medis" value={patient.medicalRecNo} mono />
                 <DetailField label="Tanggal lahir" value={patient.birthDate} />
                 <DetailField label="Jenis kelamin" value={patient.gender === 'MALE' ? 'Laki-laki' : 'Perempuan'} />
@@ -146,7 +153,11 @@ export function PatientDetailDialog({
                 {patient.identifiers?.length ? (
                   patient.identifiers.map((identifier) => (
                     <div key={identifier.id} className="grid gap-1 rounded-md border border-border bg-background p-3 text-xs sm:grid-cols-[8rem_minmax(0,1fr)_auto] sm:items-center">
-                      <span className="font-semibold text-foreground">{identifier.type}</span>
+                      <span className="font-semibold text-foreground">
+                        {identifier.system === PATIENT_IHS_SYSTEM
+                          ? 'Nomor IHS (legacy)'
+                          : identifier.type}
+                      </span>
                       <span className="break-all font-mono text-muted-foreground">{identifier.value}</span>
                       <span className="text-muted-foreground">{identifier.active ? 'Aktif' : 'Historis'}</span>
                     </div>

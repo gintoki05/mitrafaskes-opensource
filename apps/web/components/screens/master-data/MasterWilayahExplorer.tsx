@@ -33,7 +33,7 @@ import {
   REGION_LEVEL_ORDER,
   REGION_PARENT_LEVEL,
 } from "./constants";
-import { useMasterDataRegions } from "./useMasterDataRegions";
+import { useMasterDataRegions } from "@/hooks/useMasterDataRegions";
 
 export function MasterWilayahExplorer() {
   const [level, setLevel] = useState<RegionLevel>("PROVINCE");

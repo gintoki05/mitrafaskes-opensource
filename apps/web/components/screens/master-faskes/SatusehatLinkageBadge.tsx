@@ -40,6 +40,9 @@ export function SatusehatLinkageBadge({
         />
       </span>
       <span>Terhubung</span>
+      <span className="font-mono text-[10px] text-muted-foreground">
+        {linkage.externalResourceId}
+      </span>
       <span className="sr-only">
         {resourceName} sudah tersinkron ke SATUSEHAT dengan ID {linkage.externalResourceId}
       </span>

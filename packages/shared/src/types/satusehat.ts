@@ -409,7 +409,6 @@ export interface SatusehatLocationLinkRequest {
 export interface SatusehatLocationImportRequest {
   externalResourceId: string;
   organizationId?: string;
-  serviceUnitId?: string;
   parentId?: string;
   code?: string;
 }

@@ -11,6 +11,10 @@ import {
   PatientRepository,
   PatientNotFoundError,
 } from './patient.repository';
+import {
+  PatientAddressRegionValidationError,
+  PatientAddressRegionValidator,
+} from './patient-address-region.validator';
 import { PatientSyncStatusRepository } from './patient-sync-status.repository';
 import {
   PatientValidationError,
@@ -21,6 +25,7 @@ import {
 export class PatientsService {
   constructor(
     private readonly repository: PatientRepository,
+    private readonly addressRegions: PatientAddressRegionValidator,
     @Optional() private readonly syncStatus?: PatientSyncStatusRepository,
   ) {}
 
@@ -50,11 +55,18 @@ export class PatientsService {
   async create(input: unknown): Promise<Patient> {
     try {
       const validated = validatePatientInput(input);
-      return await this.attachSyncStatus([await this.repository.create(validated)]).then(
-        ([patient]) => patient,
+      const canonical = await this.addressRegions.canonicalize(
+        validated.addresses,
+        { mode: 'CREATE' },
       );
+      return await this.attachSyncStatus([
+        await this.repository.create({ ...validated, addresses: canonical }),
+      ]).then(([patient]) => patient);
     } catch (error) {
-      if (error instanceof PatientValidationError) {
+      if (
+        error instanceof PatientValidationError ||
+        error instanceof PatientAddressRegionValidationError
+      ) {
         throw new BadRequestException({
           code: 'PATIENT_VALIDATION_FAILED',
           message: error.message,
@@ -98,12 +110,21 @@ export class PatientsService {
 
   async update(id: string, input: unknown): Promise<Patient> {
     try {
+      const current = await this.repository.findById(id);
+      if (!current) throw new PatientNotFoundError();
       const validated = validatePatientInput(input);
+      const canonical = await this.addressRegions.canonicalize(
+        validated.addresses,
+        { mode: 'UPDATE', previousAddresses: current.addresses },
+      );
       return await this.attachSyncStatus([
-        await this.repository.update(id, validated),
+        await this.repository.update(id, { ...validated, addresses: canonical }),
       ]).then(([patient]) => patient);
     } catch (error) {
-      if (error instanceof PatientValidationError) {
+      if (
+        error instanceof PatientValidationError ||
+        error instanceof PatientAddressRegionValidationError
+      ) {
         throw new BadRequestException({
           code: 'PATIENT_VALIDATION_FAILED',
           message: error.message,

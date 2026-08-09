@@ -18,6 +18,7 @@ import type {
   SatusehatPatientTelecomPayload,
 } from '@mitrafaskes/shared';
 import {
+  PATIENT_IHS_SYSTEM,
   PATIENT_MOTHER_NIK_SYSTEM,
   PATIENT_NIK_SYSTEM,
 } from './patient.constants';
@@ -37,7 +38,10 @@ export function toSatusehatPatientPayload(
   externalResourceId?: string,
 ): SatusehatPatientPayload {
   const currentIdentifiers = (patient.identifiers ?? []).filter(
-    (identifier) => identifier.active && !identifier.validTo,
+    (identifier) =>
+      identifier.active &&
+      !identifier.validTo &&
+      identifier.system !== PATIENT_IHS_SYSTEM,
   );
   const currentNames = (patient.names ?? []).filter((name) => !name.validTo);
   const currentTelecoms = (patient.telecoms ?? []).filter(
@@ -133,22 +137,9 @@ export function toSatusehatPatientPatch(
   const payload = toSatusehatPatientPayload(patient);
   const operations: SatusehatPatientPatchOperation[] = [
     { op: 'replace', path: '/identifier', value: payload.identifier },
-    { op: 'replace', path: '/active', value: payload.active },
     { op: 'replace', path: '/name', value: payload.name },
     { op: 'replace', path: '/gender', value: payload.gender },
     { op: 'replace', path: '/birthDate', value: payload.birthDate },
-    patient.multipleBirthOrder !== undefined
-      ? {
-          op: 'replace',
-          path: '/multipleBirthInteger',
-          value: patient.multipleBirthOrder,
-        }
-      : {
-          op: 'replace',
-          path: '/multipleBirthBoolean',
-          value: false,
-        },
-    { op: 'replace', path: '/telecom', value: payload.telecom ?? [] },
     { op: 'replace', path: '/address', value: payload.address ?? [] },
     {
       op: 'replace',
@@ -157,17 +148,11 @@ export function toSatusehatPatientPatch(
     },
   ];
 
-  if (payload.deceasedDateTime) {
-    operations.push({
+  if (payload.telecom && payload.telecom.length > 0) {
+    operations.splice(4, 0, {
       op: 'replace',
-      path: '/deceasedDateTime',
-      value: payload.deceasedDateTime,
-    });
-  } else {
-    operations.push({
-      op: 'replace',
-      path: '/deceasedBoolean',
-      value: false,
+      path: '/telecom',
+      value: payload.telecom,
     });
   }
 

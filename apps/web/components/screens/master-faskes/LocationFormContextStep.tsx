@@ -2,7 +2,6 @@ import { Controller, type Control, type UseFormSetValue } from "react-hook-form"
 import type {
   LocationSummary,
   OrganizationSummary,
-  ServiceUnitSummary,
 } from "@mitrafaskes/shared";
 import {
   Field,
@@ -17,7 +16,6 @@ import type { LocationForm as LocationFormValues } from "./types";
 type LocationFormContextStepProps = {
   control: Control<LocationFormValues>;
   organizations: OrganizationSummary[];
-  serviceUnits: ServiceUnitSummary[];
   locations: LocationSummary[];
   organizationId: string;
   excludeId?: string;
@@ -27,15 +25,11 @@ type LocationFormContextStepProps = {
 export function LocationFormContextStep({
   control,
   organizations,
-  serviceUnits,
   locations,
   organizationId,
   excludeId,
   setValue,
 }: LocationFormContextStepProps) {
-  const selectedServiceUnits = serviceUnits.filter(
-    (unit) => unit.organizationId === organizationId,
-  );
   const selectedLocationParents = locations.filter(
     (location) =>
       location.organizationId === organizationId && location.id !== excludeId,
@@ -60,7 +54,6 @@ export function LocationFormContextStep({
                 value={field.value}
                 onChange={(value) => {
                   field.onChange(value);
-                  setValue("serviceUnitId", "");
                   setValue("parentId", "");
                 }}
                 placeholder="Pilih organisasi"
@@ -72,37 +65,6 @@ export function LocationFormContextStep({
                 }))}
               />
               <FieldError id="location-organization-error" errors={[fieldState.error]} />
-            </Field>
-          )}
-        />
-
-        <Controller
-          name="serviceUnitId"
-          control={control}
-          render={({ field, fieldState }) => (
-            <Field data-invalid={fieldState.invalid}>
-              <FieldLabel htmlFor="location-unit" required="Opsional">
-                Unit layanan
-              </FieldLabel>
-              <ComboboxField
-                id="location-unit"
-                value={field.value}
-                disabled={!organizationId}
-                onChange={field.onChange}
-                placeholder={
-                  organizationId ? "Tidak ditetapkan" : "Pilih organisasi dulu"
-                }
-                aria-invalid={fieldState.invalid}
-                aria-describedby="location-unit-help location-unit-error"
-                options={selectedServiceUnits.map((unit) => ({
-                  value: unit.id,
-                  label: `${unit.code} - ${unit.name}`,
-                }))}
-              />
-              <FieldDescription id="location-unit-help" className="sm:min-h-9">
-                Hubungkan lokasi ke poli atau unit layanan bila sudah tersedia.
-              </FieldDescription>
-              <FieldError id="location-unit-error" errors={[fieldState.error]} />
             </Field>
           )}
         />

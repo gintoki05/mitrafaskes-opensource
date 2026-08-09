@@ -59,7 +59,6 @@ const parseListQuery = (
     type: query.type,
     status: query.status,
     organizationId: query.organizationId,
-    serviceUnitId: query.serviceUnitId,
     page: parsePositiveInteger(query.page),
     pageSize: parsePositiveInteger(query.pageSize),
     sort,
@@ -91,12 +90,6 @@ export class MasterDataController {
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
   findOrganizations(@Query() query: MasterDataListHttpQuery) {
     return this.masterData.findOrganizations(parseListQuery(query));
-  }
-
-  @Get('service-units')
-  @RequirePermission(AccessPermission.MASTER_DATA_READ)
-  findServiceUnits(@Query() query: MasterDataListHttpQuery) {
-    return this.masterData.findServiceUnits(parseListQuery(query));
   }
 
   @Get('locations')
@@ -186,18 +179,6 @@ export class MasterDataController {
   @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
   linkSatusehatOrganization(@Param('id') id: string, @Body() body: unknown) {
     return this.satusehatOrganizationLink.linkExistingOrganization(id, body);
-  }
-
-  @Post('service-units')
-  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
-  createServiceUnit(@Body() body: unknown) {
-    return this.masterData.createServiceUnit(body);
-  }
-
-  @Patch('service-units/:id')
-  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
-  updateServiceUnit(@Param('id') id: string, @Body() body: unknown) {
-    return this.masterData.updateServiceUnit(id, body);
   }
 
   @Post('locations')

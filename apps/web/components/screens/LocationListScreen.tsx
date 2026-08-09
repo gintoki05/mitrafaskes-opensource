@@ -63,7 +63,6 @@ export default function LocationListScreen() {
   const [locationStatusFilter, setLocationStatusFilter] =
     useState<LocationStatusFilter>("ALL");
   const [organizationFilter, setOrganizationFilter] = useState("ALL");
-  const [serviceUnitFilter, setServiceUnitFilter] = useState("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<LocationSummary | null>(null);
   const [syncLocation, setSyncLocation] = useState<LocationSummary | null>(null);
@@ -84,7 +83,6 @@ export default function LocationListScreen() {
   } = list;
   const {
     organizations,
-    serviceUnits,
     locations,
     createLocation,
     updateLocation,
@@ -125,16 +123,7 @@ export default function LocationListScreen() {
 
   const handleOrganizationFilter = (value: string) => {
     setOrganizationFilter(value);
-    setServiceUnitFilter("ALL");
-    setFilters({
-      organizationId: value === "ALL" ? undefined : value,
-      serviceUnitId: undefined,
-    });
-  };
-
-  const handleServiceUnitFilter = (value: string) => {
-    setServiceUnitFilter(value);
-    setFilters({ serviceUnitId: value === "ALL" ? undefined : value });
+    setFilters({ organizationId: value === "ALL" ? undefined : value });
   };
 
   const clearFilters = () => {
@@ -143,7 +132,6 @@ export default function LocationListScreen() {
     setTypeFilter("ALL");
     setLocationStatusFilter("ALL");
     setOrganizationFilter("ALL");
-    setServiceUnitFilter("ALL");
     setQuery(initialQuery);
   };
 
@@ -178,7 +166,6 @@ export default function LocationListScreen() {
     try {
       const payload = {
         ...input,
-        serviceUnitId: input.serviceUnitId || undefined,
         parentId: input.parentId || undefined,
       };
       if (editing) {
@@ -218,7 +205,6 @@ export default function LocationListScreen() {
         await updateLocation(location.id, {
           ...locationToForm(location),
           active: !location.active,
-          serviceUnitId: location.serviceUnitId || undefined,
           parentId: location.parentId || undefined,
         });
         toast.success(
@@ -249,7 +235,6 @@ export default function LocationListScreen() {
       getLocationColumns({
         canWrite,
         organizations,
-        serviceUnits,
         onPreview: setSyncLocation,
         onLink: openLink,
         onEdit: openEdit,
@@ -261,7 +246,6 @@ export default function LocationListScreen() {
       openLink,
       openStatusConfirmation,
       organizations,
-      serviceUnits,
     ],
   );
 
@@ -271,7 +255,7 @@ export default function LocationListScreen() {
         <PageHeader
           icon={<MapPin className="h-6 w-6" />}
           title="Location / Ruangan"
-          description="Kelola struktur lokasi fisik, ruangan, gedung, dan relasinya dengan unit layanan."
+          description="Kelola struktur lokasi fisik, ruangan, dan gedung di dalam organisasi."
           action={
             canWrite ? (
               <div className="flex flex-wrap gap-2">
@@ -375,29 +359,6 @@ export default function LocationListScreen() {
                   })),
                 ]}
               />
-              <ComboboxField
-                id="location-filter-service-unit"
-                aria-label="Filter unit layanan location"
-                value={serviceUnitFilter}
-                onChange={handleServiceUnitFilter}
-                placeholder="Semua unit layanan"
-                clearable={false}
-                className="w-56 max-w-full"
-                inputClassName="text-xs"
-                options={[
-                  { value: "ALL", label: "Semua unit layanan" },
-                  ...serviceUnits
-                  .filter(
-                    (unit) =>
-                      organizationFilter === "ALL" ||
-                      unit.organizationId === organizationFilter,
-                  )
-                  .map((unit) => ({
-                    value: unit.id,
-                    label: `${unit.code} - ${unit.name}`,
-                  })),
-                ]}
-              />
             </>
           }
           hasActiveFilters={Boolean(
@@ -405,8 +366,7 @@ export default function LocationListScreen() {
               query.active !== undefined ||
               query.type ||
               query.status ||
-              query.organizationId ||
-              query.serviceUnitId,
+              query.organizationId,
           )}
           onClearFilters={clearFilters}
           onRefresh={() => void refreshList()}
@@ -428,7 +388,6 @@ export default function LocationListScreen() {
           key={editing?.id ?? "new"}
           canWrite={canWrite}
           organizations={organizations}
-          serviceUnits={serviceUnits}
           locations={locations}
           submitting={submitting}
           onSubmit={handleSubmit}
@@ -473,7 +432,6 @@ export default function LocationListScreen() {
         open={importDialogOpen}
         organizations={organizations}
         locations={locations}
-        serviceUnits={serviceUnits}
         canWrite={canWrite}
         onClose={() => setImportDialogOpen(false)}
         onImported={async () => {

@@ -10,6 +10,8 @@ import {
 } from '@mitrafaskes/shared';
 import { patientFormDefaults, type PatientFormValues } from './patient-form-schema';
 
+const PATIENT_IHS_SYSTEM = 'https://fhir.kemkes.go.id/id/ihs-number';
+
 const current = <T extends { active?: boolean; validTo?: string }>(value: T) =>
   value.active !== false && !value.validTo;
 
@@ -32,9 +34,14 @@ export function patientFormValuesFromPatient(patient: Patient): PatientFormValue
     (entry) => entry.active !== false,
   );
   const relatedPerson = relationship?.relatedPerson;
-  const otherIdentifier = activeIdentifiers.find(
-    (identifier) => identifier.type === 'OTHER',
-  );
+  const satusehatId =
+    patient.satusehat?.externalResourceId ??
+    patient.satusehatId ??
+    activeIdentifiers.find(
+      (identifier) =>
+        identifier.type === 'OTHER' && identifier.system === PATIENT_IHS_SYSTEM,
+    )?.value ??
+    '';
 
   return {
     ...patientFormDefaults,
@@ -42,8 +49,7 @@ export function patientFormValuesFromPatient(patient: Patient): PatientFormValue
     motherNik: identifierValue('MOTHER_NIK'),
     passport: identifierValue('PASSPORT'),
     familyCard: identifierValue('FAMILY_CARD'),
-    otherIdentifierSystem: otherIdentifier?.system ?? '',
-    otherIdentifierValue: otherIdentifier?.value ?? '',
+    satusehatId,
     fullName:
       names.find((name) => name.use === 'OFFICIAL')?.text ?? patient.fullName,
     preferredName:
@@ -119,14 +125,26 @@ export function patientFormValuesToPayload(
           value: values.familyCard,
         }
       : undefined,
-    values.otherIdentifierValue
-      ? {
-          type: PatientIdentifierType.OTHER,
-          system: values.otherIdentifierSystem,
-          value: values.otherIdentifierValue,
-        }
-      : undefined,
   ].filter((value): value is NonNullable<typeof value> => Boolean(value));
+
+  const preservedOtherIdentifiers = (existingPatient?.identifiers ?? [])
+    .filter(
+      (identifier) =>
+        current(identifier) &&
+        identifier.type === PatientIdentifierType.OTHER &&
+        identifier.system !== PATIENT_IHS_SYSTEM,
+    )
+    .map((identifier) => ({
+      type: identifier.type,
+      system: identifier.system,
+      value: identifier.value,
+      verificationStatus: identifier.verificationStatus,
+      isPrimary: identifier.isPrimary,
+      active: identifier.active,
+      issuer: identifier.issuer,
+      validFrom: identifier.validFrom,
+      validTo: identifier.validTo,
+    }));
 
   const names = [
     { use: PatientNameUse.OFFICIAL, text: values.fullName },
@@ -246,7 +264,12 @@ export function patientFormValuesToPayload(
     birthPlaceText: values.birthPlaceText || undefined,
     maritalStatusCode: values.maritalStatusCode || undefined,
     citizenshipCode: values.citizenshipCode || undefined,
-    identifiers,
+    satusehatId:
+      values.satusehatId ||
+      existingPatient?.satusehat?.externalResourceId ||
+      existingPatient?.satusehatId ||
+      undefined,
+    identifiers: [...identifiers, ...preservedOtherIdentifiers],
     names,
     telecoms,
     addresses,

@@ -7,7 +7,6 @@ export function toLocationSummary(
   return {
     id: record.id,
     organizationId: record.organizationId,
-    serviceUnitId: record.serviceUnitId ?? undefined,
     parentId: record.parentId ?? undefined,
     code: record.code,
     name: record.name,

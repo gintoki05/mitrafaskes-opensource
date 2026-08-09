@@ -5,7 +5,6 @@ import { SatusehatLocationLinkService } from './satusehat-location-link.service'
 const location = {
   id: 'location-local',
   organizationId: 'org-local',
-  serviceUnitId: null,
   parentId: null,
   code: 'POLI-UMUM',
   name: 'Poli Umum',

@@ -1,7 +1,5 @@
 export type OrganizationType = 'HEALTHCARE_FACILITY' | 'SUB_ORGANIZATION';
 
-export type ServiceUnitType = 'POLYCLINIC' | 'DEPARTMENT' | 'SUPPORT' | 'OTHER';
-
 export type LocationType = 'BUILDING' | 'FLOOR' | 'ROOM' | 'OTHER';
 
 export type LocationStatus = 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
@@ -34,22 +32,9 @@ export interface OrganizationSummary {
   updatedAt: string;
 }
 
-export interface ServiceUnitSummary {
-  id: string;
-  organizationId: string;
-  parentId?: string;
-  code: string;
-  name: string;
-  type: ServiceUnitType;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface LocationSummary {
   id: string;
   organizationId: string;
-  serviceUnitId?: string;
   parentId?: string;
   code: string;
   name: string;
@@ -120,7 +105,6 @@ export interface PractitionerCreateRequest {
 
 export interface MasterFaskesData {
   organizations: OrganizationSummary[];
-  serviceUnits: ServiceUnitSummary[];
   locations: LocationSummary[];
 }
 
@@ -134,7 +118,6 @@ export interface MasterDataListQuery {
   type?: string;
   status?: string;
   organizationId?: string;
-  serviceUnitId?: string;
   page?: number;
   pageSize?: number;
   sort?: MasterDataListSort;

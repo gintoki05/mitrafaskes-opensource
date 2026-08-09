@@ -20,8 +20,7 @@ export const patientFormSchema = z
       }),
     passport: optionalValue('Nomor paspor tidak valid.'),
     familyCard: optionalValue('Nomor kartu keluarga tidak valid.'),
-    otherIdentifierSystem: optionalValue('Namespace identifier wajib diisi.'),
-    otherIdentifierValue: optionalValue('Nilai identifier wajib diisi.'),
+    satusehatId: optionalValue('Nomor IHS / SATUSEHAT ID tidak valid.'),
     fullName: z
       .string()
       .trim()
@@ -76,20 +75,6 @@ export const patientFormSchema = z
     relatedPersonAddress: optionalValue('Alamat related person tidak valid.'),
   })
   .superRefine((values, context) => {
-    if (values.otherIdentifierValue && !values.otherIdentifierSystem) {
-      context.addIssue({
-        code: 'custom',
-        path: ['otherIdentifierSystem'],
-        message: 'Namespace identifier wajib diisi.',
-      });
-    }
-    if (values.otherIdentifierSystem && !values.otherIdentifierValue) {
-      context.addIssue({
-        code: 'custom',
-        path: ['otherIdentifierValue'],
-        message: 'Nilai identifier wajib diisi.',
-      });
-    }
     const hasRelationship =
       values.relationshipTarget !== '' ||
       values.relatedPatientId ||
@@ -110,8 +95,7 @@ export const patientFormDefaults: PatientFormValues = {
   motherNik: '',
   passport: '',
   familyCard: '',
-  otherIdentifierSystem: '',
-  otherIdentifierValue: '',
+  satusehatId: '',
   fullName: '',
   preferredName: '',
   aliasName: '',

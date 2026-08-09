@@ -3,12 +3,12 @@ import type {
   LocationStatus,
   LocationType,
   OrganizationType,
-  ServiceUnitType,
 } from "@mitrafaskes/shared";
 
 export type OrganizationForm = {
   code: string;
   name: string;
+  satusehatId: string;
   type: OrganizationType;
   parentId: string;
   addressText: string;
@@ -17,21 +17,12 @@ export type OrganizationForm = {
   active: boolean;
 };
 
-export type ServiceUnitForm = {
-  organizationId: string;
-  parentId: string;
-  code: string;
-  name: string;
-  type: ServiceUnitType;
-  active: boolean;
-};
-
 export type LocationForm = {
   organizationId: string;
-  serviceUnitId: string;
   parentId: string;
   code: string;
   name: string;
+  satusehatId: string;
   type: LocationType;
   description: string;
   status: LocationStatus;
@@ -47,7 +38,7 @@ export type LocationForm = {
   active: boolean;
 };
 
-export type SubmittingKind = "organization" | "unit" | "location";
+export type SubmittingKind = "organization" | "location";
 
 export type SubmitHandler<T> = (input: T) => Promise<boolean>;
 

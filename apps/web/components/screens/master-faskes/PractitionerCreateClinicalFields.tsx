@@ -35,6 +35,19 @@ export function PractitionerCreateClinicalFields({
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
+          <FieldLabel htmlFor="practitioner-create-satusehat-id">
+            ID SATUSEHAT
+          </FieldLabel>
+          <Input
+            id="practitioner-create-satusehat-id"
+            value={form.satusehatId}
+            readOnly
+            className="font-mono"
+            placeholder="Diisi dari hasil lookup"
+            disabled={disabled}
+          />
+        </div>
+        <div>
           <FieldLabel htmlFor="practitioner-create-birth-date">
             Tanggal lahir
           </FieldLabel>

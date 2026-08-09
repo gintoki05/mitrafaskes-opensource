@@ -8,8 +8,7 @@ read-through ke provider saat Patient atau form lain dibuka.
 
 - IA: `/master-data` untuk overview dataset dan `/master-data/wilayah` untuk
   browser `Provinsi -> Kabupaten/Kota -> Kecamatan -> Desa/Kelurahan`.
-- `/master-faskes` tetap menjadi area Organization, Location, Service Unit, dan
-  Practitioner.
+- `/master-faskes` tetap menjadi area Organization, Location, dan Practitioner.
 - `MasterRegion` menyimpan record typed; `MasterDataImportRun` menyimpan
   metadata attempt tanpa payload provider mentah.
 - Snapshot baseline version `2026.08-baseline-1` di-seed dari

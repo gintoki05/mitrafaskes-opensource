@@ -7,7 +7,6 @@ import { MapPin } from "lucide-react";
 import type {
   LocationSummary,
   OrganizationSummary,
-  ServiceUnitSummary,
 } from "@mitrafaskes/shared";
 import {
   FormActions,
@@ -29,7 +28,6 @@ import type {
 type LocationFormProps = {
   canWrite: boolean;
   organizations: OrganizationSummary[];
-  serviceUnits: ServiceUnitSummary[];
   locations: LocationSummary[];
   submitting: SubmittingKind | null;
   onSubmit: SubmitHandler<LocationFormValues>;
@@ -42,7 +40,7 @@ type LocationFormProps = {
 const locationSteps: FormStep[] = [
   {
     label: "Konteks",
-    description: "Organisasi, unit, dan lokasi induk",
+    description: "Organisasi dan lokasi induk",
   },
   {
     label: "Identitas & status",
@@ -55,7 +53,7 @@ const locationSteps: FormStep[] = [
 ];
 
 const locationStepFields: FieldPath<LocationFormValues>[][] = [
-  ["organizationId", "serviceUnitId", "parentId"],
+  ["organizationId", "parentId"],
   ["code", "name", "type", "mode", "status", "active"],
   [
     "description",
@@ -73,7 +71,6 @@ const locationStepFields: FieldPath<LocationFormValues>[][] = [
 export function LocationForm({
   canWrite,
   organizations,
-  serviceUnits,
   locations,
   submitting,
   onSubmit,
@@ -143,7 +140,6 @@ export function LocationForm({
             <LocationFormContextStep
               control={control}
               organizations={organizations}
-              serviceUnits={serviceUnits}
               locations={locations}
               organizationId={organizationId}
               excludeId={excludeId}

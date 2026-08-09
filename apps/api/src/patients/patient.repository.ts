@@ -148,7 +148,7 @@ export class PatientRepository {
       const record = await this.prisma.$transaction(async (transaction) => {
         const current = await transaction.patient.findUnique({
           where: { id },
-          select: { id: true, medicalRecNo: true },
+          select: { id: true, medicalRecNo: true, satusehatId: true },
         });
         if (!current) throw new PatientNotFoundError();
 
@@ -183,7 +183,11 @@ export class PatientRepository {
         return transaction.patient.update({
           where: { id },
           data: {
-            ...this.buildPatientData(input, current.medicalRecNo),
+            ...this.buildPatientData(
+              input,
+              current.medicalRecNo,
+              current.satusehatId,
+            ),
             version: { increment: 1 },
           },
           include: patientInclude,
@@ -207,7 +211,11 @@ export class PatientRepository {
     }
   }
 
-  private buildPatientData(input: ValidatedPatientInput, medicalRecNo: string) {
+  private buildPatientData(
+    input: ValidatedPatientInput,
+    medicalRecNo: string,
+    existingSatusehatId?: string | null,
+  ) {
     return {
       nik: input.nik ?? null,
       fullName: input.fullName,
@@ -216,6 +224,7 @@ export class PatientRepository {
       address: input.address ?? null,
       phone: input.phone ?? null,
       medicalRecNo,
+      satusehatId: input.satusehatId ?? existingSatusehatId ?? null,
       active: input.active,
       birthPlaceText: input.birthPlaceText ?? null,
       multipleBirthOrder: input.multipleBirthOrder ?? null,

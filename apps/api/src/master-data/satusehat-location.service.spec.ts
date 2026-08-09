@@ -18,7 +18,6 @@ const organization = {
 const location = {
   id: 'location-1',
   organizationId: 'org-1',
-  serviceUnitId: 'unit-1',
   parentId: null,
   code: 'ROOM-01',
   name: 'Ruang Pemeriksaan 1',

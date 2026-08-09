@@ -1,4 +1,9 @@
-import type { Patient } from '@mitrafaskes/shared';
+import {
+  PatientIdentifierType,
+  VerificationStatus,
+  type Patient,
+} from '@mitrafaskes/shared';
+import { PATIENT_IHS_SYSTEM } from './patient.constants';
 import {
   toSatusehatPatientPatch,
   toSatusehatPatientPayload,
@@ -46,17 +51,26 @@ describe('SATUSEHAT Patient mapper', () => {
     );
   });
 
-  it('includes the matching multiple birth choice in Patient patches', () => {
-    expect(toSatusehatPatientPatch(patient)).toContainEqual({
+  it('omits SATUSEHAT-unsupported Patient patch operations', () => {
+    expect(toSatusehatPatientPatch(patient)).not.toContainEqual({
       op: 'replace',
-      path: '/multipleBirthBoolean',
-      value: false,
+      path: '/active',
+      value: true,
     });
-    expect(toSatusehatPatientPatch({ ...patient, multipleBirthOrder: 2 })).toContainEqual({
+    expect(toSatusehatPatientPatch(patient)).not.toContainEqual(
+      expect.objectContaining({ path: '/multipleBirthBoolean' }),
+    );
+    expect(toSatusehatPatientPatch({ ...patient, multipleBirthOrder: 2 })).not.toContainEqual(
+      expect.objectContaining({ path: '/multipleBirthInteger' }),
+    );
+    expect(toSatusehatPatientPatch(patient)).not.toContainEqual({
       op: 'replace',
-      path: '/multipleBirthInteger',
-      value: 2,
+      path: '/telecom',
+      value: [],
     });
+    expect(toSatusehatPatientPatch(patient)).not.toContainEqual(
+      expect.objectContaining({ path: '/deceasedBoolean' }),
+    );
   });
 
   it('maps administrative address codes to the SATUSEHAT address extension', () => {
@@ -92,6 +106,32 @@ describe('SATUSEHAT Patient mapper', () => {
           },
         ],
       }),
+    ]);
+  });
+
+  it('does not send the local IHS resource id as a Patient identifier', () => {
+    const patientWithIhs = {
+      ...patient,
+      identifiers: [
+        {
+          id: 'patient-identifier-ihs',
+          type: PatientIdentifierType.OTHER,
+          system: PATIENT_IHS_SYSTEM,
+          value: 'P02280547535',
+          normalizedValue: 'P02280547535',
+          verificationStatus: VerificationStatus.UNVERIFIED,
+          isPrimary: false,
+          active: true,
+        },
+      ],
+    };
+
+    expect(toSatusehatPatientPayload(patientWithIhs).identifier).toEqual([
+      {
+        use: 'official',
+        system: 'https://fhir.kemkes.go.id/id/nik',
+        value: patient.nik,
+      },
     ]);
   });
 });

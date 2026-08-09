@@ -93,6 +93,22 @@ export function OrganizationFormIdentityStep({
           <FieldError id="organization-name-error" errors={[errors.name]} />
         </Field>
 
+        <Field>
+          <FieldLabel htmlFor="organization-satusehat-id">
+            ID SATUSEHAT
+          </FieldLabel>
+          <Input
+            {...register("satusehatId")}
+            id="organization-satusehat-id"
+            readOnly
+            className="font-mono"
+            placeholder="Belum terhubung"
+          />
+          <FieldDescription>
+            Diisi dari hasil ambil/linkage SATUSEHAT; bukan kode master lokal.
+          </FieldDescription>
+        </Field>
+
         <Controller
           name="parentId"
           control={control}

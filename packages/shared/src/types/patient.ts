@@ -258,6 +258,11 @@ export interface CreatePatientDto {
   gender: Gender;
   address?: string;
   phone?: string;
+  /**
+   * The SATUSEHAT resource id known from a remote lookup. This is kept as a
+   * compatibility/display field; a successful linkage remains authoritative.
+   */
+  satusehatId?: string;
   active?: boolean;
   birthPlaceText?: string;
   multipleBirthOrder?: number;

@@ -2,7 +2,6 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type {
   LocationSummary,
   OrganizationSummary,
-  ServiceUnitSummary,
 } from "@mitrafaskes/shared";
 import { Edit3, Link2, Power, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -17,7 +16,6 @@ import { SatusehatLinkageBadge } from "./SatusehatLinkageBadge";
 type LocationColumnOptions = {
   canWrite: boolean;
   organizations: OrganizationSummary[];
-  serviceUnits: ServiceUnitSummary[];
   onPreview: (location: LocationSummary) => void;
   onLink: (location: LocationSummary) => void;
   onEdit: (location: LocationSummary) => void;
@@ -34,7 +32,6 @@ function labelFor<T extends string>(
 export function getLocationColumns({
   canWrite,
   organizations,
-  serviceUnits,
   onPreview,
   onLink,
   onEdit,
@@ -72,17 +69,6 @@ export function getLocationColumns({
           {organizations.find(
             (organization) => organization.id === row.original.organizationId,
           )?.name ?? "Organisasi tidak ditemukan"}
-        </span>
-      ),
-    },
-    {
-      id: "serviceUnit",
-      header: "Unit layanan",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">
-          {serviceUnits.find((unit) => unit.id === row.original.serviceUnitId)
-            ?.name ?? "Tidak ditetapkan"}
         </span>
       ),
     },

@@ -15,10 +15,22 @@ export interface MasterDataRegionQuery {
   pageSize: number;
 }
 
-const emptyData: MasterDataRegionsResponse = {
-  items: [],
-  meta: { page: 1, pageSize: 50, total: 0 },
-};
+export interface MasterDataRegionsState extends MasterDataRegionsResponse {
+  loading: boolean;
+  error: string;
+  refresh: () => Promise<void>;
+}
+
+function emptyData(query: MasterDataRegionQuery): MasterDataRegionsResponse {
+  return {
+    items: [],
+    meta: { page: query.page, pageSize: query.pageSize, total: 0 },
+  };
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
 
 async function readError(response: Response): Promise<Error> {
   try {
@@ -34,20 +46,41 @@ async function readError(response: Response): Promise<Error> {
   }
 }
 
-export function useMasterDataRegions(query: MasterDataRegionQuery) {
-  const [data, setData] = useState<MasterDataRegionsResponse>(emptyData);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const queryKey = JSON.stringify(query);
+export function useMasterDataRegions(
+  query: MasterDataRegionQuery,
+  options: { enabled?: boolean } = {},
+): MasterDataRegionsState {
+  const enabled = options.enabled ?? true;
+  const currentQuery = useMemo(
+    () => ({
+      level: query.level,
+      parentCode: query.parentCode,
+      search: query.search,
+      page: query.page,
+      pageSize: query.pageSize,
+    }),
+    [
+      query.level,
+      query.parentCode,
+      query.search,
+      query.page,
+      query.pageSize,
+    ],
+  );
   const serializedQuery = useMemo(() => {
     const params = new URLSearchParams();
-    const current = JSON.parse(queryKey) as MasterDataRegionQuery;
-    for (const [key, value] of Object.entries(current)) {
-      if (value === undefined || value === '') continue;
-      params.set(key, String(value));
-    }
+    params.set('level', query.level);
+    if (query.parentCode) params.set('parentCode', query.parentCode);
+    if (query.search) params.set('search', query.search);
+    params.set('page', String(query.page));
+    params.set('pageSize', String(query.pageSize));
     return params.toString();
-  }, [queryKey]);
+  }, [query.level, query.parentCode, query.search, query.page, query.pageSize]);
+  const [data, setData] = useState<MasterDataRegionsResponse>(() =>
+    emptyData(query),
+  );
+  const [loading, setLoading] = useState(enabled);
+  const [error, setError] = useState('');
 
   const request = useCallback(
     async (signal?: AbortSignal) => {
@@ -62,12 +95,13 @@ export function useMasterDataRegions(query: MasterDataRegionQuery) {
   );
 
   const refresh = useCallback(async () => {
+    if (!enabled) return;
     setLoading(true);
     setError('');
     try {
       setData(await request());
     } catch (requestError) {
-      if (requestError instanceof DOMException && requestError.name === 'AbortError') return;
+      if (isAbortError(requestError)) return;
       setError(
         requestError instanceof Error
           ? requestError.message
@@ -76,19 +110,28 @@ export function useMasterDataRegions(query: MasterDataRegionQuery) {
     } finally {
       setLoading(false);
     }
-  }, [request]);
+  }, [enabled, request]);
 
   useEffect(() => {
     const controller = new AbortController();
     void Promise.resolve().then(async () => {
       if (controller.signal.aborted) return;
+      if (!enabled) {
+        setData(emptyData(currentQuery));
+        setLoading(false);
+        setError('');
+        return;
+      }
+
+      setData(emptyData(currentQuery));
       setLoading(true);
       setError('');
+
       try {
         const next = await request(controller.signal);
         if (!controller.signal.aborted) setData(next);
-      } catch (requestError) {
-        if (!controller.signal.aborted) {
+      } catch (requestError: unknown) {
+        if (!controller.signal.aborted && !isAbortError(requestError)) {
           setError(
             requestError instanceof Error
               ? requestError.message
@@ -99,8 +142,9 @@ export function useMasterDataRegions(query: MasterDataRegionQuery) {
         if (!controller.signal.aborted) setLoading(false);
       }
     });
+
     return () => controller.abort();
-  }, [request]);
+  }, [currentQuery, enabled, request]);
 
   return { ...data, loading, error, refresh };
 }

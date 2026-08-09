@@ -92,4 +92,4 @@ dikonfigurasi.
 5. Buat atau import `SUB_ORGANIZATION` di bawah organisasi induk. Parent
    SATUSEHAT akan diisi atau diverifikasi melalui `Organization.partOf`.
 
-Unit layanan dan `Location` akan mengikuti setelah struktur Organization ini tervalidasi di sandbox.
+`Location` mengikuti setelah struktur Organization ini tervalidasi di sandbox.

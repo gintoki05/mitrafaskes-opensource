@@ -105,7 +105,8 @@ export function PatientSatusehatLookupPanel({
           Tarik data dari SATUSEHAT
         </h2>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Cari dengan NIK atau Nomor IHS untuk mengisi identitas inti. Aksi ini
+          Cari dengan NIK atau Nomor IHS untuk mengisi identitas inti dan ID
+          SATUSEHAT. Aksi ini
           belum menyimpan atau menghubungkan pasien lokal.
         </p>
       </div>
@@ -229,7 +230,7 @@ function PatientSatusehatLookupResult({
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span>
-            Nomor IHS:{' '}
+            Nomor IHS / SATUSEHAT ID:{' '}
             <strong className="font-mono font-medium text-foreground">
               {item.externalResourceId}
             </strong>

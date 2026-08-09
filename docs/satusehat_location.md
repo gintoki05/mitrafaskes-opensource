@@ -21,8 +21,6 @@ Referensi resmi:
   longitude sebagai mandatory, tetapi implementasi ini mengikuti perilaku
   sandbox yang menerima Location tanpa `position`; kegagalan validasi remote
   tetap dicatat sebagai `FAILED` pada log sinkronisasi.
-- `serviceUnitId` adalah relasi internal Mitra Faskes dan tidak dikirim sebagai
-  referensi FHIR pada tahap ini.
 
 ## Endpoint lokal
 
@@ -60,8 +58,8 @@ Import Location SATUSEHAT menjadi data lokal:
 POST /api/master/locations/satusehat/import
 ```
 
-Body menerima `externalResourceId`, `organizationId` opsional, `parentId`,
-`serviceUnitId`, dan `code` lokal opsional. Jika Organization tidak diberikan,
+Body menerima `externalResourceId`, `organizationId` opsional, `parentId`, dan
+`code` lokal opsional. Jika Organization tidak diberikan,
 sistem mencari Organization lokal melalui linkage `managingOrganization`.
 Parent remote harus sudah diimpor atau dihubungkan agar relasi `partOf` dapat
 dipertahankan.

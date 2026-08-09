@@ -7,6 +7,7 @@ import { PatientSyncStatusRepository } from './patient-sync-status.repository';
 import { PatientsController } from './patients.controller';
 import { PatientsService } from './patients.service';
 import { SatusehatPatientService } from './satusehat-patient.service';
+import { PatientAddressRegionValidator } from './patient-address-region.validator';
 
 @Module({
   imports: [SatusehatModule],
@@ -16,6 +17,7 @@ import { SatusehatPatientService } from './satusehat-patient.service';
     MedicalRecordNumberGenerator,
     PatientRepository,
     PatientSyncStatusRepository,
+    PatientAddressRegionValidator,
     PatientsService,
     SatusehatPatientService,
   ],

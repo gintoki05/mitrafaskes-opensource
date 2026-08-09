@@ -24,7 +24,6 @@ const organization = {
 const importedLocation = {
   id: 'location-local',
   organizationId: 'org-local',
-  serviceUnitId: null,
   parentId: null,
   code: 'POLI-UMUM',
   name: 'Poli Umum',

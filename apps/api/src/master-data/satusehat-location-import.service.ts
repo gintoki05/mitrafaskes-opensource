@@ -151,7 +151,6 @@ export class SatusehatLocationImportService {
       );
       const location = await this.masterData.createLocation({
         organizationId,
-        serviceUnitId: request.serviceUnitId,
         parentId,
         code: this.toLocalCode(remote, request.code),
         name: remote.name,
@@ -458,7 +457,6 @@ export class SatusehatLocationImportService {
     return {
       externalResourceId,
       organizationId: this.optionalText(body.organizationId),
-      serviceUnitId: this.optionalText(body.serviceUnitId),
       parentId: this.optionalText(body.parentId),
       code: this.optionalText(body.code),
     };

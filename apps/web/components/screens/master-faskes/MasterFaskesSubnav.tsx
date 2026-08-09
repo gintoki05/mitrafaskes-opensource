@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Building2, Layers3, MapPin, Network, Stethoscope } from 'lucide-react';
+import { Building2, MapPin, Network, Stethoscope } from 'lucide-react';
 
 const links = [
   {
@@ -24,11 +24,6 @@ const links = [
     href: '/master-faskes/practitioner',
     label: 'Practitioner / Nakes',
     icon: Stethoscope,
-  },
-  {
-    href: '/master-faskes/unit-layanan',
-    label: 'Unit layanan / Poli',
-    icon: Layers3,
   },
 ] as const;
 

@@ -20,6 +20,7 @@ import { PatientIdentityFields } from './PatientIdentityFields';
 import { PatientRelationshipFields } from './PatientRelationshipFields';
 import { PatientSatusehatLookupPanel } from './PatientSatusehatLookupPanel';
 import { toPatientDraftPrefill } from './patientSatusehatPrefill';
+import { usePatientWilayahLookup } from './usePatientWilayahLookup';
 import {
   patientFormDefaults,
   patientFormSchema,
@@ -68,6 +69,15 @@ export function PatientFormDialog({
     setValue,
   } = form;
   const currentNik = useWatch({ control, name: 'nik' });
+  const provinceCode = useWatch({ control, name: 'provinceCode' });
+  const regencyCode = useWatch({ control, name: 'regencyCode' });
+  const districtCode = useWatch({ control, name: 'districtCode' });
+  const wilayahLookup = usePatientWilayahLookup({
+    enabled: open,
+    provinceCode,
+    regencyCode,
+    districtCode,
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -79,6 +89,12 @@ export function PatientFormDialog({
   const isEditing = Boolean(patient);
   const applySatusehatData = (remote: SatusehatPatientRemoteSummary) => {
     const prefill = toPatientDraftPrefill(remote);
+    if (prefill.satusehatId !== undefined) {
+      setValue('satusehatId', prefill.satusehatId, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
     if (prefill.fullName !== undefined) {
       setValue('fullName', prefill.fullName, {
         shouldDirty: true,
@@ -110,7 +126,7 @@ export function PatientFormDialog({
       });
     }
     toast.success('Data SATUSEHAT sudah dimasukkan ke form.', {
-      description: `${remote.name} · Nomor IHS ${remote.externalResourceId}`,
+      description: `${remote.name} · Nomor IHS / SATUSEHAT ID ${remote.externalResourceId}`,
     });
   };
 
@@ -173,9 +189,12 @@ export function PatientFormDialog({
               maritalStatusLookup={maritalStatusLookup}
             />
             <PatientContactFields
+              control={control}
               errors={errors}
               register={register}
+              setValue={setValue}
               disabled={!canWrite || isSubmitting}
+              wilayahLookup={wilayahLookup}
             />
             <PatientRelationshipFields
               control={control}

@@ -9,7 +9,6 @@ import {
   LocationType,
   OrganizationType,
   Prisma,
-  ServiceUnitType,
 } from '@prisma/client';
 import {
   LocationSummary,
@@ -18,14 +17,12 @@ import {
   MasterFaskesData,
   OrganizationSummary,
   SatusehatLinkageSummary,
-  ServiceUnitSummary,
 } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
 import {
   MasterDataValidationError,
   validateLocationInput,
   validateOrganizationInput,
-  validateServiceUnitInput,
 } from './master-data.validation';
 import {
   DEFAULT_SATUSEHAT_ENVIRONMENT,
@@ -91,27 +88,12 @@ const toOrganization = (
   updatedAt: record.updatedAt.toISOString(),
 });
 
-const toServiceUnit = (
-  record: Prisma.ServiceUnitGetPayload<Prisma.ServiceUnitDefaultArgs>,
-): ServiceUnitSummary => ({
-  id: record.id,
-  organizationId: record.organizationId,
-  parentId: optional(record.parentId),
-  code: record.code,
-  name: record.name,
-  type: record.type,
-  active: record.active,
-  createdAt: record.createdAt.toISOString(),
-  updatedAt: record.updatedAt.toISOString(),
-});
-
 const toLocation = (
   record: Prisma.LocationGetPayload<Prisma.LocationDefaultArgs>,
   satusehat?: SatusehatLinkageRecord,
 ): LocationSummary => ({
   id: record.id,
   organizationId: record.organizationId,
-  serviceUnitId: optional(record.serviceUnitId),
   parentId: optional(record.parentId),
   code: record.code,
   name: record.name,
@@ -178,11 +160,8 @@ export class MasterDataService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll(): Promise<MasterFaskesData> {
-    const [organizations, serviceUnits, locations] = await Promise.all([
+    const [organizations, locations] = await Promise.all([
       this.prisma.healthcareOrganization.findMany({
-        orderBy: [{ active: 'desc' }, { name: 'asc' }],
-      }),
-      this.prisma.serviceUnit.findMany({
         orderBy: [{ active: 'desc' }, { name: 'asc' }],
       }),
       this.prisma.location.findMany({
@@ -207,7 +186,6 @@ export class MasterDataService {
       organizations: organizations.map((organization) =>
         toOrganization(organization, organizationLinks.get(organization.id)),
       ),
-      serviceUnits: serviceUnits.map(toServiceUnit),
       locations: locations.map((location) =>
         toLocation(location, locationLinks.get(location.id)),
       ),
@@ -248,34 +226,6 @@ export class MasterDataService {
     };
   }
 
-  async findServiceUnits(
-    input: MasterDataListQuery = {},
-  ): Promise<MasterDataListResponse<ServiceUnitSummary>> {
-    const query = normalizeListQuery(input);
-    const where: Prisma.ServiceUnitWhereInput = {};
-    const search = searchOr(query.search, ['code', 'name']);
-
-    if (search) where.OR = search;
-    if (query.active !== undefined) where.active = query.active;
-    if (query.type) where.type = query.type as ServiceUnitType;
-    if (query.organizationId) where.organizationId = query.organizationId;
-
-    const [records, total] = await Promise.all([
-      this.prisma.serviceUnit.findMany({
-        where,
-        orderBy: orderBy(query),
-        skip: (query.page - 1) * query.pageSize,
-        take: query.pageSize,
-      }),
-      this.prisma.serviceUnit.count({ where }),
-    ]);
-
-    return {
-      items: records.map(toServiceUnit),
-      meta: { page: query.page, pageSize: query.pageSize, total },
-    };
-  }
-
   async findLocations(
     input: MasterDataListQuery = {},
   ): Promise<MasterDataListResponse<LocationSummary>> {
@@ -288,7 +238,6 @@ export class MasterDataService {
     if (query.type) where.type = query.type as LocationType;
     if (query.status) where.status = query.status as LocationStatus;
     if (query.organizationId) where.organizationId = query.organizationId;
-    if (query.serviceUnitId) where.serviceUnitId = query.serviceUnitId;
 
     const [records, total] = await Promise.all([
       this.prisma.location.findMany({
@@ -383,66 +332,9 @@ export class MasterDataService {
     }
   }
 
-  async createServiceUnit(input: unknown): Promise<ServiceUnitSummary> {
-    const validated = this.validate(() => validateServiceUnitInput(input));
-    await this.ensureOrganization(validated.organizationId);
-    await this.ensureServiceUnitParent(
-      validated.parentId,
-      validated.organizationId,
-    );
-    try {
-      const record = await this.prisma.serviceUnit.create({ data: validated });
-      return toServiceUnit(record);
-    } catch (error) {
-      this.handleWriteError(
-        error,
-        'Kode unit layanan sudah digunakan dalam organisasi ini',
-      );
-    }
-  }
-
-  async updateServiceUnit(
-    id: string,
-    input: unknown,
-  ): Promise<ServiceUnitSummary> {
-    const validated = this.validate(() => validateServiceUnitInput(input));
-    if (validated.parentId === id) {
-      throw new ConflictException({
-        code: 'SERVICE_UNIT_SELF_PARENT',
-        message: 'Unit layanan tidak dapat menjadi induk bagi dirinya sendiri',
-      });
-    }
-    await this.ensureExists(
-      () => this.prisma.serviceUnit.findUnique({ where: { id } }),
-      'Unit layanan tidak ditemukan',
-    );
-    await this.ensureOrganization(validated.organizationId);
-    await this.ensureServiceUnitParent(
-      validated.parentId,
-      validated.organizationId,
-      id,
-    );
-    try {
-      const record = await this.prisma.serviceUnit.update({
-        where: { id },
-        data: { ...validated, parentId: validated.parentId ?? null },
-      });
-      return toServiceUnit(record);
-    } catch (error) {
-      this.handleWriteError(
-        error,
-        'Kode unit layanan sudah digunakan dalam organisasi ini',
-      );
-    }
-  }
-
   async createLocation(input: unknown): Promise<LocationSummary> {
     const validated = this.validate(() => validateLocationInput(input));
     await this.ensureOrganization(validated.organizationId);
-    await this.ensureServiceUnit(
-      validated.serviceUnitId,
-      validated.organizationId,
-    );
     await this.ensureLocationParent(
       validated.parentId,
       validated.organizationId,
@@ -471,10 +363,6 @@ export class MasterDataService {
       'Lokasi tidak ditemukan',
     );
     await this.ensureOrganization(validated.organizationId);
-    await this.ensureServiceUnit(
-      validated.serviceUnitId,
-      validated.organizationId,
-    );
     await this.ensureLocationParent(
       validated.parentId,
       validated.organizationId,
@@ -486,7 +374,6 @@ export class MasterDataService {
         data: {
           ...validated,
           parentId: validated.parentId ?? null,
-          serviceUnitId: validated.serviceUnitId ?? null,
           latitude: validated.latitude ?? null,
           longitude: validated.longitude ?? null,
           altitude: validated.altitude ?? null,
@@ -543,55 +430,6 @@ export class MasterDataService {
       },
       'ORGANIZATION_HIERARCHY_CYCLE',
       'Organisasi tidak dapat dipindahkan menjadi anak dari turunannya',
-    );
-  }
-
-  private async ensureServiceUnit(
-    id: string | undefined,
-    organizationId: string,
-  ): Promise<void> {
-    if (!id) return;
-    const unit = await this.prisma.serviceUnit.findUnique({ where: { id } });
-    if (!unit) throw new NotFoundException('Unit layanan tidak ditemukan');
-    if (unit.organizationId !== organizationId) {
-      throw new ConflictException({
-        code: 'SERVICE_UNIT_ORGANIZATION_MISMATCH',
-        message: 'Unit layanan harus berada pada organisasi yang sama',
-      });
-    }
-  }
-
-  private async ensureServiceUnitParent(
-    parentId: string | undefined,
-    organizationId: string,
-    childId?: string,
-  ): Promise<void> {
-    if (!parentId) return;
-    const parent = await this.prisma.serviceUnit.findUnique({
-      where: { id: parentId },
-    });
-    if (!parent)
-      throw new NotFoundException('Induk unit layanan tidak ditemukan');
-    if (parent.organizationId !== organizationId) {
-      throw new ConflictException({
-        code: 'SERVICE_UNIT_PARENT_ORGANIZATION_MISMATCH',
-        message: 'Induk unit layanan harus berada pada organisasi yang sama',
-      });
-    }
-    if (!childId) return;
-
-    await this.ensureNoHierarchyCycle(
-      childId,
-      parentId,
-      async (id) => {
-        const record = await this.prisma.serviceUnit.findUnique({
-          where: { id },
-          select: { parentId: true },
-        });
-        return record?.parentId;
-      },
-      'SERVICE_UNIT_HIERARCHY_CYCLE',
-      'Unit layanan tidak dapat dipindahkan menjadi anak dari turunannya',
     );
   }
 

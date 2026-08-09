@@ -3,13 +3,8 @@ import type {
   LocationStatus,
   LocationType,
   OrganizationType,
-  ServiceUnitType,
 } from "@mitrafaskes/shared";
-import type {
-  LocationForm,
-  OrganizationForm,
-  ServiceUnitForm,
-} from "./types";
+import type { LocationForm, OrganizationForm } from "./types";
 
 export type SelectOption<T extends string> = {
   value: T;
@@ -19,13 +14,6 @@ export type SelectOption<T extends string> = {
 export const organizationTypes: SelectOption<OrganizationType>[] = [
   { value: "HEALTHCARE_FACILITY", label: "Faskes / organisasi induk" },
   { value: "SUB_ORGANIZATION", label: "Sub-organisasi" },
-];
-
-export const serviceUnitTypes: SelectOption<ServiceUnitType>[] = [
-  { value: "POLYCLINIC", label: "Poli / layanan klinis" },
-  { value: "DEPARTMENT", label: "Departemen / unit" },
-  { value: "SUPPORT", label: "Unit pendukung" },
-  { value: "OTHER", label: "Lainnya" },
 ];
 
 export const locationTypes: SelectOption<LocationType>[] = [
@@ -49,6 +37,7 @@ export const locationModes: SelectOption<LocationMode>[] = [
 export const emptyOrganization: OrganizationForm = {
   code: "",
   name: "",
+  satusehatId: "",
   type: "HEALTHCARE_FACILITY",
   parentId: "",
   addressText: "",
@@ -57,21 +46,12 @@ export const emptyOrganization: OrganizationForm = {
   active: true,
 };
 
-export const emptyServiceUnit: ServiceUnitForm = {
-  organizationId: "",
-  parentId: "",
-  code: "",
-  name: "",
-  type: "POLYCLINIC",
-  active: true,
-};
-
 export const emptyLocation: LocationForm = {
   organizationId: "",
-  serviceUnitId: "",
   parentId: "",
   code: "",
   name: "",
+  satusehatId: "",
   type: "ROOM",
   description: "",
   status: "ACTIVE",

@@ -31,55 +31,10 @@ describe('MasterDataService hierarchy invariants', () => {
     expect(prisma.healthcareOrganization.update).not.toHaveBeenCalled();
   });
 
-  it('rejects a service unit update that creates a cycle', async () => {
-    const prisma = {
-      healthcareOrganization: {
-        findUnique: jest.fn(() => Promise.resolve({ id: 'org-1' })),
-      },
-      serviceUnit: {
-        findUnique: jest.fn(({ where }: { where: { id: string } }) => {
-          if (where.id === 'unit-a') {
-            return Promise.resolve({
-              id: 'unit-a',
-              organizationId: 'org-1',
-              parentId: 'unit-b',
-            });
-          }
-          if (where.id === 'unit-b') {
-            return Promise.resolve({
-              id: 'unit-b',
-              organizationId: 'org-1',
-              parentId: 'unit-a',
-            });
-          }
-          return Promise.resolve(null);
-        }),
-        update: jest.fn(),
-      },
-    };
-    const service = new MasterDataService(prisma as never);
-
-    await expect(
-      service.updateServiceUnit('unit-a', {
-        organizationId: 'org-1',
-        parentId: 'unit-b',
-        code: 'UNIT-A',
-        name: 'Unit A',
-        type: 'POLYCLINIC',
-      }),
-    ).rejects.toThrow(
-      'Unit layanan tidak dapat dipindahkan menjadi anak dari turunannya',
-    );
-    expect(prisma.serviceUnit.update).not.toHaveBeenCalled();
-  });
-
   it('rejects a location update that creates a cycle', async () => {
     const prisma = {
       healthcareOrganization: {
         findUnique: jest.fn(() => Promise.resolve({ id: 'org-1' })),
-      },
-      serviceUnit: {
-        findUnique: jest.fn(() => Promise.resolve(null)),
       },
       location: {
         findUnique: jest.fn(({ where }: { where: { id: string } }) => {
@@ -173,7 +128,7 @@ describe('MasterDataService list queries', () => {
     });
   });
 
-  it('applies organization and service-unit filters to locations', async () => {
+  it('applies organization and location filters', async () => {
     const findMany = jest.fn().mockResolvedValue([]);
     const count = jest.fn().mockResolvedValue(0);
     const service = new MasterDataService({
@@ -183,7 +138,6 @@ describe('MasterDataService list queries', () => {
 
     await service.findLocations({
       organizationId: 'org-1',
-      serviceUnitId: 'unit-1',
       status: 'SUSPENDED',
       type: 'ROOM',
     });
@@ -192,27 +146,11 @@ describe('MasterDataService list queries', () => {
       expect.objectContaining({
         where: {
           organizationId: 'org-1',
-          serviceUnitId: 'unit-1',
           status: 'SUSPENDED',
           type: 'ROOM',
         },
       }),
     );
-  });
-
-  it('caps an oversized page request at the API maximum', async () => {
-    const findMany = jest.fn().mockResolvedValue([]);
-    const count = jest.fn().mockResolvedValue(0);
-    const service = new MasterDataService({
-      serviceUnit: { findMany, count },
-    } as never);
-
-    const result = await service.findServiceUnits({ page: 0, pageSize: 999 });
-
-    expect(findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ skip: 0, take: 100 }),
-    );
-    expect(result.meta).toEqual({ page: 1, pageSize: 100, total: 0 });
   });
 
   it('includes the SATUSEHAT linkage on organization and location summaries', async () => {
@@ -232,7 +170,6 @@ describe('MasterDataService list queries', () => {
     const location = {
       id: 'location-1',
       organizationId: 'org-1',
-      serviceUnitId: null,
       parentId: null,
       code: 'ROOM-1',
       name: 'Ruang 1',
@@ -275,7 +212,6 @@ describe('MasterDataService list queries', () => {
         findMany: organizationFindMany,
       },
       location: { findMany: locationFindMany },
-      serviceUnit: { findMany: jest.fn().mockResolvedValue([]) },
       externalResourceLink: { findMany: linkFindMany },
     } as never);
 

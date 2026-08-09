@@ -128,6 +128,19 @@ function PractitionerProfileDialogContent({
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
+            <FieldLabel htmlFor="practitioner-profile-satusehat-id">
+              ID SATUSEHAT
+            </FieldLabel>
+            <Input
+              id="practitioner-profile-satusehat-id"
+              value={practitioner.satusehat?.externalResourceId ?? ''}
+              readOnly
+              className="font-mono"
+              placeholder="Belum terhubung"
+              disabled={!canWrite || saving}
+            />
+          </div>
+          <div>
             <FieldLabel htmlFor="practitioner-profile-nik" required>
               NIK
             </FieldLabel>

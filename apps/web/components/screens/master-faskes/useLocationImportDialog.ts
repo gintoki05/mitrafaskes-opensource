@@ -5,7 +5,6 @@ import type {
   LocationSummary,
   OrganizationSummary,
   SatusehatLocationRemoteSummary,
-  ServiceUnitSummary,
 } from '@mitrafaskes/shared';
 import { toast } from 'sonner';
 import { useSatusehatLocations } from '@/hooks/useSatusehatLocations';
@@ -15,7 +14,6 @@ export const LOCATION_IMPORT_PAGE_SIZE = 8;
 type UseLocationImportDialogOptions = {
   organizations: OrganizationSummary[];
   locations: LocationSummary[];
-  serviceUnits: ServiceUnitSummary[];
   canWrite: boolean;
   onClose: () => void;
   onImported: () => void | Promise<void>;
@@ -24,7 +22,6 @@ type UseLocationImportDialogOptions = {
 export function useLocationImportDialog({
   organizations,
   locations,
-  serviceUnits,
   canWrite,
   onClose,
   onImported,
@@ -53,12 +50,8 @@ export function useLocationImportDialog({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkCodes, setBulkCodes] = useState<Record<string, string>>({});
   const [parentIds, setParentIds] = useState<Record<string, string>>({});
-  const [serviceUnitIds, setServiceUnitIds] = useState<Record<string, string>>(
-    {},
-  );
   const [code, setCode] = useState('');
   const [parentId, setParentId] = useState('');
-  const [serviceUnitId, setServiceUnitId] = useState('');
   const [page, setPage] = useState(1);
   const [searching, setSearching] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -71,24 +64,13 @@ export function useLocationImportDialog({
       ),
     [locations, organizationId],
   );
-  const serviceUnitOptions = useMemo(
-    () =>
-      serviceUnits.filter(
-        (serviceUnit) =>
-          serviceUnit.organizationId === organizationId && serviceUnit.active,
-      ),
-    [serviceUnits, organizationId],
-  );
-
   const resetSelection = () => {
     setSelected(null);
     setSelectedIds([]);
     setBulkCodes({});
     setParentIds({});
-    setServiceUnitIds({});
     setCode('');
     setParentId('');
-    setServiceUnitId('');
     setPage(1);
   };
 
@@ -142,10 +124,8 @@ export function useLocationImportDialog({
     setSelectedIds([itemId]);
     setBulkCodes({ [itemId]: defaultCode });
     setParentIds({ [itemId]: defaultParentId });
-    setServiceUnitIds({ [itemId]: '' });
     setCode(defaultCode);
     setParentId(defaultParentId);
-    setServiceUnitId('');
   };
 
   const toggleItem = (
@@ -163,7 +143,6 @@ export function useLocationImportDialog({
     );
     const nextCodes = { ...bulkCodes };
     const nextParentIds = { ...parentIds };
-    const nextServiceUnitIds = { ...serviceUnitIds };
 
     if (selected && code.trim()) {
       nextCodes[selected.externalResourceId] = code.trim();
@@ -173,23 +152,19 @@ export function useLocationImportDialog({
       if (!nextParentIds[itemId]) {
         nextParentIds[itemId] = item.parentLinkedLocalResourceId ?? '';
       }
-      if (!nextServiceUnitIds[itemId]) nextServiceUnitIds[itemId] = '';
     } else {
       delete nextCodes[itemId];
       delete nextParentIds[itemId];
-      delete nextServiceUnitIds[itemId];
     }
 
     setSelectedIds(nextIds);
     setBulkCodes(nextCodes);
     setParentIds(nextParentIds);
-    setServiceUnitIds(nextServiceUnitIds);
 
     if (nextIds.length === 0) {
       setSelected(null);
       setCode('');
       setParentId('');
-      setServiceUnitId('');
     } else if (nextIds.length === 1) {
       const nextItem = nextItems[0];
       setSelected(nextItem ?? null);
@@ -197,16 +172,10 @@ export function useLocationImportDialog({
       setParentId(
         nextItem ? nextParentIds[nextItem.externalResourceId] ?? '' : '',
       );
-      setServiceUnitId(
-        nextItem
-          ? nextServiceUnitIds[nextItem.externalResourceId] ?? ''
-          : '',
-      );
     } else {
       setSelected(null);
       setCode('');
       setParentId('');
-      setServiceUnitId('');
     }
   };
 
@@ -216,7 +185,6 @@ export function useLocationImportDialog({
     const nextIds = nextItems.map((item) => item.externalResourceId);
     const nextCodes = checked ? { ...bulkCodes } : {};
     const nextParentIds = checked ? { ...parentIds } : {};
-    const nextServiceUnitIds = checked ? { ...serviceUnitIds } : {};
 
     if (selected && code.trim()) {
       nextCodes[selected.externalResourceId] = code.trim();
@@ -227,20 +195,15 @@ export function useLocationImportDialog({
       if (!nextParentIds[itemId]) {
         nextParentIds[itemId] = item.parentLinkedLocalResourceId ?? '';
       }
-      if (!nextServiceUnitIds[itemId]) nextServiceUnitIds[itemId] = '';
     }
 
     setSelectedIds(nextIds);
     setBulkCodes(nextCodes);
     setParentIds(nextParentIds);
-    setServiceUnitIds(nextServiceUnitIds);
     setSelected(nextItems.length === 1 ? nextItems[0] : null);
     setCode(nextItems.length === 1 ? nextCodes[nextIds[0]] ?? '' : '');
     setParentId(
       nextItems.length === 1 ? nextParentIds[nextIds[0]] ?? '' : '',
-    );
-    setServiceUnitId(
-      nextItems.length === 1 ? nextServiceUnitIds[nextIds[0]] ?? '' : '',
     );
   };
 
@@ -273,7 +236,6 @@ export function useLocationImportDialog({
       const result = await importLocation({
         externalResourceId: selected.externalResourceId,
         organizationId: organizationId || undefined,
-        serviceUnitId: serviceUnitId || undefined,
         parentId: selected.parentExternalResourceId
           ? parentId || undefined
           : undefined,
@@ -362,8 +324,6 @@ export function useLocationImportDialog({
           const result = await importLocation({
             externalResourceId: item.externalResourceId,
             organizationId: organizationId || undefined,
-            serviceUnitId:
-              serviceUnitIds[item.externalResourceId] || undefined,
             parentId: item.parentExternalResourceId
               ? parentIds[item.externalResourceId] || undefined
               : undefined,
@@ -434,14 +394,6 @@ export function useLocationImportDialog({
         ]),
       ),
     );
-    setServiceUnitIds(
-      Object.fromEntries(
-        failedItems.map((item) => [
-          item.externalResourceId,
-          serviceUnitIds[item.externalResourceId] ?? '',
-        ]),
-      ),
-    );
     if (failedItems.length === 1) {
       const failedItem = failedItems[0];
       setSelected(failedItem);
@@ -451,12 +403,10 @@ export function useLocationImportDialog({
           failedItem.parentLinkedLocalResourceId ??
           '',
       );
-      setServiceUnitId(serviceUnitIds[failedItem.externalResourceId] ?? '');
     } else {
       setSelected(null);
       setCode('');
       setParentId('');
-      setServiceUnitId('');
     }
 
     const firstFailedIndex = items.findIndex(
@@ -516,13 +466,10 @@ export function useLocationImportDialog({
     selectedImportItems,
     bulkCodes,
     parentIds,
-    serviceUnitIds,
     code,
     setCode,
     parentId,
     setParentId,
-    serviceUnitId,
-    setServiceUnitId,
     page: currentPage,
     setPage,
     totalPages,
@@ -533,7 +480,6 @@ export function useLocationImportDialog({
     allSelectableSelected,
     someSelectableSelected,
     parentOptions,
-    serviceUnitOptions,
     searching,
     importing,
     runSearch,
@@ -544,7 +490,6 @@ export function useLocationImportDialog({
     importSelectedBulk,
     setBulkCodes,
     setParentIds,
-    setServiceUnitIds,
     resetSelection,
   };
 }

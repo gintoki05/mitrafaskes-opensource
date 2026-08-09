@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import type {
   Patient,
+  SatusehatPatientLookupIdentifier,
   SatusehatPatientLookupQuery,
   SatusehatPatientLinkRequest as PatientLinkRequest,
   SatusehatPatientMutationResponse,
@@ -16,7 +17,9 @@ import { ScreenState } from '@/components/ScreenState';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
+import { FieldLabel, SelectField } from '../master-faskes/FormField';
 import { SatusehatLinkageBadge } from '../master-faskes/SatusehatLinkageBadge';
 import { formatSatusehatOperation, SatusehatPreviewSummary } from '../master-faskes/SatusehatPreviewSummary';
 import { isPatientPatchPayload, PatientPatchPreview } from './PatientPatchPreview';
@@ -62,6 +65,11 @@ export function PatientSyncDialog({
     loading: boolean;
     message: string;
   }>({ items: [], loading: false, message: '' });
+  const [lookupIdentifierType, setLookupIdentifierType] =
+    useState<SatusehatPatientLookupIdentifier>('NIK');
+  const [lookupIhsNumber, setLookupIhsNumber] = useState(
+    () => patient?.satusehat?.externalResourceId ?? patient?.satusehatId ?? '',
+  );
   const [selectedRemoteId, setSelectedRemoteId] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
 
@@ -92,23 +100,35 @@ export function PatientSyncDialog({
 
   if (!open || !patient) return null;
 
+  const lookupIdentifier =
+    lookupIdentifierType === 'NIK' ? patient.nik ?? '' : lookupIhsNumber;
+  const lookupLabel = lookupIdentifierType === 'NIK' ? 'NIK' : 'Nomor IHS';
+  const lookupValid =
+    lookupIdentifierType === 'NIK'
+      ? /^\d{16}$/.test(lookupIdentifier)
+      : /^[A-Za-z0-9.-]{1,64}$/.test(lookupIdentifier);
+
   const lookupPatient = async () => {
-    if (!patient.nik) {
-      setLookup({ items: [], loading: false, message: 'Pasien belum memiliki NIK untuk lookup SATUSEHAT.' });
+    if (!lookupValid) {
+      setLookup({
+        items: [],
+        loading: false,
+        message: `${lookupLabel} belum diisi dengan format yang valid.`,
+      });
       return;
     }
     setLookup({ items: [], loading: true, message: '' });
     setSelectedRemoteId(null);
     try {
       const result = await lookupSatusehat({
-        identifierType: 'NIK',
-        identifier: patient.nik,
+        identifierType: lookupIdentifierType,
+        identifier: lookupIdentifier,
       });
       setLookup({
         items: result.items,
         loading: false,
         message: result.items.length === 0
-          ? 'Pasien dengan NIK tersebut tidak ditemukan di SATUSEHAT. Anda tetap dapat mengirim data lokal sebagai Patient baru.'
+          ? `Patient dengan ${lookupLabel} tersebut tidak ditemukan di SATUSEHAT.`
           : '',
       });
     } catch (requestError) {
@@ -235,25 +255,53 @@ export function PatientSyncDialog({
               <div>
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
                   <Search className="h-4 w-4 text-primary" aria-hidden="true" />
-                  Lookup Patient berdasarkan NIK
+                  Lookup Patient berdasarkan NIK atau Nomor IHS
                 </h3>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   Temukan Patient yang sudah ada di SATUSEHAT sebelum membuat linkage baru.
                 </p>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,11rem)_minmax(0,1fr)_auto] sm:items-end">
+              <div>
+                <FieldLabel htmlFor="patient-sync-lookup-type">Cari berdasarkan</FieldLabel>
+                <SelectField
+                  id="patient-sync-lookup-type"
+                  value={lookupIdentifierType}
+                  onChange={(value) => {
+                    setLookupIdentifierType(value as SatusehatPatientLookupIdentifier);
+                    setLookup({ items: [], loading: false, message: '' });
+                    setSelectedRemoteId(null);
+                  }}
+                  disabled={lookup.loading || syncing || linking}
+                >
+                  <option value="NIK">NIK</option>
+                  <option value="IHS">Nomor IHS</option>
+                </SelectField>
+              </div>
+              <div>
+                <FieldLabel htmlFor="patient-sync-lookup-identifier">{lookupLabel}</FieldLabel>
+                <Input
+                  id="patient-sync-lookup-identifier"
+                  value={lookupIdentifier}
+                  onChange={(event) => setLookupIhsNumber(event.target.value)}
+                  readOnly={lookupIdentifierType === 'NIK'}
+                  placeholder={lookupIdentifierType === 'NIK' ? 'NIK pasien lokal' : 'Contoh: P02478375538'}
+                  disabled={lookupIdentifierType === 'NIK' || lookup.loading || syncing || linking}
+                />
               </div>
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 onClick={() => void lookupPatient()}
-                disabled={!patient.nik || lookup.loading || syncing || linking}
+                disabled={!lookupValid || lookup.loading || syncing || linking}
                 aria-busy={lookup.loading}
               >
                 {lookup.loading ? <RefreshCw className="h-3.5 w-3.5 motion-safe:animate-spin" aria-hidden="true" /> : <Search className="h-3.5 w-3.5" aria-hidden="true" />}
-                {lookup.loading ? 'Mencari...' : 'Lookup NIK'}
+                {lookup.loading ? 'Mencari...' : `Lookup ${lookupLabel}`}
               </Button>
             </div>
-            {!patient.nik ? <p className="text-xs text-muted-foreground">Lengkapi NIK lokal terlebih dahulu untuk menggunakan lookup.</p> : null}
             {lookup.message ? <p className="rounded-[var(--radius-control)] border border-border bg-background px-3 py-2 text-xs text-muted-foreground" role="status">{lookup.message}</p> : null}
             {lookup.items.length > 0 ? (
               <div className="space-y-2 border-t border-border pt-3" aria-live="polite">

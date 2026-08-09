@@ -109,13 +109,6 @@ enum OrganizationType {
   SUB_ORGANIZATION
 }
 
-enum ServiceUnitType {
-  POLYCLINIC
-  DEPARTMENT
-  SUPPORT
-  OTHER
-}
-
 enum LocationType {
   BUILDING
   FLOOR
@@ -148,7 +141,6 @@ model HealthcareOrganization {
   updatedAt   DateTime             @updatedAt
   parent      HealthcareOrganization?  @relation("OrganizationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
   children    HealthcareOrganization[] @relation("OrganizationHierarchy")
-  serviceUnits ServiceUnit[]
   locations   Location[]           @relation("OrganizationLocations")
   practitioners User[]             @relation("OrganizationPractitioners")
 
@@ -156,30 +148,9 @@ model HealthcareOrganization {
   @@index([active, name])
 }
 
-model ServiceUnit {
-  id             String               @id @default(uuid())
-  organizationId String
-  parentId       String?
-  code           String               @db.VarChar(64)
-  name           String               @db.VarChar(150)
-  type           ServiceUnitType      @default(POLYCLINIC)
-  active         Boolean              @default(true)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  organization   HealthcareOrganization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
-  parent         ServiceUnit?         @relation("ServiceUnitHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
-  children       ServiceUnit[]        @relation("ServiceUnitHierarchy")
-  locations      Location[]           @relation("ServiceUnitLocations")
-
-  @@unique([organizationId, code])
-  @@index([organizationId, active, name])
-  @@index([parentId])
-}
-
 model Location {
   id             String                @id @default(uuid())
   organizationId String
-  serviceUnitId  String?
   parentId       String?
   code           String                @db.VarChar(64)
   name           String                @db.VarChar(150)
@@ -199,14 +170,12 @@ model Location {
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
   organization   HealthcareOrganization @relation("OrganizationLocations", fields: [organizationId], references: [id], onDelete: Restrict)
-  serviceUnit    ServiceUnit?          @relation("ServiceUnitLocations", fields: [serviceUnitId], references: [id], onDelete: SetNull)
   parent         Location?             @relation("LocationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
   children       Location[]            @relation("LocationHierarchy")
   practitioners  User[]                @relation("LocationPractitioners")
 
   @@unique([organizationId, code])
   @@index([organizationId, active, name])
-  @@index([serviceUnitId])
   @@index([parentId])
 }
 

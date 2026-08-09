@@ -1,7 +1,6 @@
 import type {
   LocationSummary,
   SatusehatLocationRemoteSummary,
-  ServiceUnitSummary,
 } from '@mitrafaskes/shared';
 import { Download, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,30 +11,24 @@ import { FieldLabel } from './FormField';
 type LocationImportBulkPanelProps = {
   items: SatusehatLocationRemoteSummary[];
   parentOptions: LocationSummary[];
-  serviceUnitOptions: ServiceUnitSummary[];
   codes: Record<string, string>;
   parentIds: Record<string, string>;
-  serviceUnitIds: Record<string, string>;
   canWrite: boolean;
   importing: boolean;
   onCodeChange: (externalResourceId: string, value: string) => void;
   onParentChange: (externalResourceId: string, value: string) => void;
-  onServiceUnitChange: (externalResourceId: string, value: string) => void;
   onImport: () => void;
 };
 
 export function LocationImportBulkPanel({
   items,
   parentOptions,
-  serviceUnitOptions,
   codes,
   parentIds,
-  serviceUnitIds,
   canWrite,
   importing,
   onCodeChange,
   onParentChange,
-  onServiceUnitChange,
   onImport,
 }: LocationImportBulkPanelProps) {
   return (
@@ -51,8 +44,8 @@ export function LocationImportBulkPanel({
           Simpan {items.length} Location ke Master Faskes
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Lengkapi kode lokal untuk setiap Location. Parent dan unit layanan
-          diatur per data agar struktur poli atau ruangan tetap sesuai.
+          Lengkapi kode lokal untuk setiap Location. Parent diatur per data
+          agar struktur gedung atau ruangan tetap sesuai.
         </p>
       </div>
 
@@ -75,7 +68,7 @@ export function LocationImportBulkPanel({
                 </span>
               </div>
 
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <FieldLabel
                     htmlFor={`satusehat-location-bulk-code-${item.externalResourceId}`}
@@ -127,25 +120,6 @@ export function LocationImportBulkPanel({
                   )}
                 </div>
 
-                <div>
-                  <FieldLabel
-                    htmlFor={`satusehat-location-bulk-service-unit-${item.externalResourceId}`}
-                  >
-                    Unit layanan lokal
-                  </FieldLabel>
-                  <ComboboxField
-                    id={`satusehat-location-bulk-service-unit-${item.externalResourceId}`}
-                    value={serviceUnitIds[item.externalResourceId] ?? ''}
-                    onChange={(value) =>
-                      onServiceUnitChange(item.externalResourceId, value)
-                    }
-                    placeholder="Tidak ditetapkan"
-                    options={serviceUnitOptions.map((serviceUnit) => ({
-                      value: serviceUnit.id,
-                      label: `${serviceUnit.code} - ${serviceUnit.name}`,
-                    }))}
-                  />
-                </div>
               </div>
             </div>
           );
