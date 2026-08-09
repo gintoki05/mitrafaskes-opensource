@@ -3,6 +3,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PatientsService } from './patients/patients.service';
 import { SatusehatAuthService } from './satusehat/satusehat-auth.service';
+import { MasterIcd10Service } from './master-data/master-icd10.service';
 
 describe('AppController', () => {
   let appController: AppController;
@@ -24,6 +25,12 @@ describe('AppController', () => {
           provide: SatusehatAuthService,
           useValue: {
             getConnectionStatus: jest.fn(),
+          },
+        },
+        {
+          provide: MasterIcd10Service,
+          useValue: {
+            list: jest.fn(),
           },
         },
       ],

@@ -54,6 +54,19 @@ export interface MaritalStatusSummary {
   updatedAt: string;
 }
 
+export interface Icd10Summary {
+  code: string;
+  display: string;
+  nameIndo?: string;
+  nameEng: string;
+  active: boolean;
+  displayOrder: number;
+  source: MasterDataSource | string;
+  sourceVersion?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface RegionDetail {
   item: RegionSummary;
   children: RegionSummary[];

@@ -117,7 +117,11 @@ export function RmeForm({
     if (diagnoses.some((diagnosis) => diagnosis.icd10Code === icd.code)) return;
     updateDiagnoses([
       ...diagnoses,
-      { icd10Code: icd.code, nameIndo: icd.nameIndo, isPrimary: diagnoses.length === 0 },
+      {
+        icd10Code: icd.code,
+        nameIndo: icd.nameIndo ?? icd.display,
+        isPrimary: diagnoses.length === 0,
+      },
     ]);
     onIcdSearchChange('');
   };

@@ -1,6 +1,7 @@
 export interface MasterIcd10 {
   code: string;
-  nameIndo: string;
+  display: string;
+  nameIndo?: string;
   nameEng: string;
 }
 

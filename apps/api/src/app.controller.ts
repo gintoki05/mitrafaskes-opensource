@@ -14,7 +14,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { MemoryStore, INITIAL_ICD10 } from './store/memory-store';
+import { MemoryStore } from './store/memory-store';
 import { SatusehatFhirTransformer } from './satusehat/fhir-transformer';
 import { AccessPermission, evaluateAccess } from '@mitrafaskes/shared';
 import { Public, RequirePermission } from './auth/access-control.decorator';
@@ -24,6 +24,7 @@ import {
 } from './auth/session-permission.guard';
 import { PatientsService } from './patients/patients.service';
 import { SatusehatAuthService } from './satusehat/satusehat-auth.service';
+import { MasterIcd10Service } from './master-data/master-icd10.service';
 
 @Controller('api')
 @UseGuards(SessionPermissionGuard)
@@ -31,6 +32,7 @@ export class AppController {
   constructor(
     private readonly patients: PatientsService,
     private readonly satusehatAuth: SatusehatAuthService,
+    private readonly icd10: MasterIcd10Service,
   ) {}
 
   @Get()
@@ -168,15 +170,14 @@ export class AppController {
   @Get('master/icd10')
   @ApiTags('Master Data')
   @RequirePermission(AccessPermission.RME_READ)
-  getIcd10(@Query('q') q?: string) {
-    if (!q) return INITIAL_ICD10;
-    const query = String(q).toLowerCase();
-    return INITIAL_ICD10.filter(
-      (item) =>
-        item.code.toLowerCase().includes(query) ||
-        item.nameIndo.toLowerCase().includes(query) ||
-        item.nameEng.toLowerCase().includes(query),
-    );
+  async getIcd10(@Query('q') q?: string) {
+    const results = await this.icd10.list(q);
+    return results.map(({ code, display, nameIndo, nameEng }) => ({
+      code,
+      display,
+      nameIndo: nameIndo ?? display,
+      nameEng,
+    }));
   }
 
   // 5. RME Dokter Endpoints
@@ -208,11 +209,14 @@ export class AppController {
       throw new NotFoundException('Kunjungan / Encounter tidak ditemukan');
     }
 
+    const icd10Entries = await this.icd10.list();
+
     const formattedDiagnoses = (diagnoses || []).map(
       (d: any, index: number) => {
-        const icdMeta = INITIAL_ICD10.find((i) => i.code === d.icd10Code) || {
+        const icdMeta = icd10Entries.find((i) => i.code === d.icd10Code) || {
           code: d.icd10Code,
-          nameIndo: d.icd10Code,
+          display: d.icd10Code,
+          nameIndo: undefined,
           nameEng: d.icd10Code,
         };
         return {

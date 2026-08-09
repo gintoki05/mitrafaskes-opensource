@@ -21,6 +21,7 @@ import {
 } from '../auth/session-permission.guard';
 import { MasterWilayahService } from './master-wilayah.service';
 import { MasterMaritalStatusService } from './master-marital-status.service';
+import { MasterIcd10Service } from './master-icd10.service';
 import { parseRegionLevel } from './master-wilayah.validation';
 
 type MasterDataRequest = Request & { user: AuthenticatedUser };
@@ -46,6 +47,7 @@ export class MasterDataReferenceController {
   constructor(
     private readonly masterWilayah: MasterWilayahService,
     private readonly maritalStatuses: MasterMaritalStatusService,
+    private readonly icd10: MasterIcd10Service,
   ) {}
 
   @Get('datasets')
@@ -60,6 +62,12 @@ export class MasterDataReferenceController {
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
   listMaritalStatuses() {
     return this.maritalStatuses.list();
+  }
+
+  @Get('icd10')
+  @RequirePermission(AccessPermission.MASTER_DATA_READ)
+  listIcd10(@Query('q') query?: string) {
+    return this.icd10.list(query);
   }
 
   @Get('regions')

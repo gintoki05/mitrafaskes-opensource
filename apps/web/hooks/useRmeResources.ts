@@ -60,7 +60,7 @@ async function requestEncounters(): Promise<Encounter[]> {
 
 async function requestIcd10(query: string): Promise<Icd10Entry[]> {
   const response = await apiFetch(
-    `/api/master/icd10?q=${encodeURIComponent(query)}`,
+    `/api/master-data/icd10?q=${encodeURIComponent(query)}`,
   );
   if (!response.ok) throw new Error('Referensi ICD-10 tidak dapat dimuat.');
   return response.json() as Promise<Icd10Entry[]>;

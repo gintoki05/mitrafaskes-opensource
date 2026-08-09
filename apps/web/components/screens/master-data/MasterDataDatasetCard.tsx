@@ -34,6 +34,7 @@ export function MasterDataDatasetCard({
 }) {
   const isWilayah = dataset.domain === 'WILAYAH';
   const isMaritalStatus = dataset.domain === 'MARITAL_STATUS';
+  const isIcd10 = dataset.domain === 'ICD10';
 
   return (
     <Card className="h-full">
@@ -87,8 +88,10 @@ export function MasterDataDatasetCard({
             >
               Buka browser <ArrowRight className="size-4 shrink-0" aria-hidden="true" />
             </Link>
-          ) : isMaritalStatus ? (
-            <span className="text-xs text-success">Lookup Patient lokal</span>
+          ) : isMaritalStatus || isIcd10 ? (
+            <span className="text-xs text-success">
+              {isIcd10 ? 'Lookup RME lokal' : 'Lookup Patient lokal'}
+            </span>
           ) : (
             <span className="text-xs text-muted-foreground">
               Fase berikutnya

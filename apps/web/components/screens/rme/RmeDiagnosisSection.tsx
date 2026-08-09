@@ -58,9 +58,11 @@ export function RmeDiagnosisSection({
               >
                 <div>
                   <strong className="mr-2 font-mono text-primary">{icd.code}</strong>
-                  <span className="text-foreground">{icd.nameIndo}</span>
+                  <span className="text-foreground">{icd.nameIndo ?? icd.display}</span>
                 </div>
-                <span className="text-[10px] italic text-muted-foreground">{icd.nameEng}</span>
+                {icd.nameIndo && icd.nameIndo !== icd.display ? (
+                  <span className="text-[10px] italic text-muted-foreground">{icd.display}</span>
+                ) : null}
               </button>
             ))}
           </div>
@@ -94,4 +96,3 @@ export function RmeDiagnosisSection({
     </Card>
   );
 }
-

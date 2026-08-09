@@ -15,6 +15,7 @@ import { MASTER_WILAYAH_PROVIDER } from './master-wilayah.provider';
 import { SatusehatMasterWilayahAdapter } from './satusehat-master-wilayah.adapter';
 import { MasterDataDatasetStatusService } from './master-data-dataset-status.service';
 import { MasterMaritalStatusService } from './master-marital-status.service';
+import { MasterIcd10Service } from './master-icd10.service';
 
 @Module({
   imports: [SatusehatModule],
@@ -30,6 +31,7 @@ import { MasterMaritalStatusService } from './master-marital-status.service';
     SatusehatLocationService,
     MasterWilayahService,
     MasterMaritalStatusService,
+    MasterIcd10Service,
     MasterDataDatasetStatusService,
     SatusehatMasterWilayahAdapter,
     {
@@ -37,5 +39,6 @@ import { MasterMaritalStatusService } from './master-marital-status.service';
       useExisting: SatusehatMasterWilayahAdapter,
     },
   ],
+  exports: [MasterIcd10Service],
 })
 export class MasterDataModule {}

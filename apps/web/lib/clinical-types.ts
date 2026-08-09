@@ -21,6 +21,7 @@ export interface SyncLog {
 
 export interface Icd10Entry {
   code: string;
-  nameIndo: string;
+  display: string;
+  nameIndo?: string;
   nameEng: string;
 }

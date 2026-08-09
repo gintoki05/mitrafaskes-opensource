@@ -491,10 +491,21 @@ model MedicalRecord {
 }
 
 model MasterIcd10 {
-  code      String      @id
-  nameIndo  String
-  nameEng   String
-  diagnoses Diagnosis[]
+  code          String      @id @db.VarChar(32)
+  display       String      @db.VarChar(255)
+  nameIndo      String?     @db.VarChar(255)
+  nameEng       String      @db.VarChar(255)
+  active        Boolean     @default(true)
+  displayOrder  Int
+  source        String      @db.VarChar(64)
+  sourceVersion String?     @db.VarChar(128)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  diagnoses     Diagnosis[]
+
+  @@index([active, displayOrder, code])
+  @@index([active, display])
+  @@index([active, nameIndo])
 }
 
 model Diagnosis {

@@ -22,6 +22,11 @@ import {
   MASTER_MARITAL_STATUS_SNAPSHOT,
   MASTER_MARITAL_STATUS_SNAPSHOT_VERSION,
 } from "./seed-data/master-marital-status.snapshot";
+import {
+  MASTER_ICD10_SNAPSHOT,
+  MASTER_ICD10_SNAPSHOT_SOURCE,
+  MASTER_ICD10_SNAPSHOT_VERSION,
+} from "./seed-data/master-icd10.snapshot";
 
 const prisma = new PrismaClient();
 
@@ -46,81 +51,70 @@ async function seedPatient(
   }
 }
 
-const COMMON_ICD10 = [
-  {
-    code: "A09",
-    nameIndo: "Diare dan Gastroenteritis oleh Penyebab Infeksi",
-    nameEng: "Infectious gastroenteritis and colitis, unspecified",
-  },
-  {
-    code: "J00",
-    nameIndo: "Nasofaringitis Akut (Flu / Batuk Pilek)",
-    nameEng: "Acute nasopharyngitis [common cold]",
-  },
-  {
-    code: "I10",
-    nameIndo: "Hipertensi Esensial (Tekanan Darah Tinggi)",
-    nameEng: "Essential (primary) hypertension",
-  },
-  {
-    code: "E11",
-    nameIndo: "Diabetes Melitus Tipe 2",
-    nameEng: "Type 2 diabetes mellitus",
-  },
-  {
-    code: "K29.7",
-    nameIndo: "Gastritis, Tidak Spesifik (Sakit Maag)",
-    nameEng: "Gastritis, unspecified",
-  },
-  {
-    code: "J18.9",
-    nameIndo: "Pneumonia, Tidak Spesifik",
-    nameEng: "Pneumonia, unspecified",
-  },
-  {
-    code: "B35.4",
-    nameIndo: "Tinea Corporis (Panu / Kurap)",
-    nameEng: "Tinea corporis",
-  },
-  {
-    code: "R50.9",
-    nameIndo: "Demam, Tidak Spesifik",
-    nameEng: "Fever, unspecified",
-  },
-  { code: "R51", nameIndo: "Sakit Kepala (Headache)", nameEng: "Headache" },
-  { code: "M79.1", nameIndo: "Mialgia (Nyeri Otot)", nameEng: "Myalgia" },
-  {
-    code: "L03.9",
-    nameIndo: "Selulitis / Infeksi Kulit Akut",
-    nameEng: "Cellulitis, unspecified",
-  },
-  {
-    code: "H10.9",
-    nameIndo: "Konjungtivitis (Mata Merah)",
-    nameEng: "Conjunctivitis, unspecified",
-  },
-  {
-    code: "K02.9",
-    nameIndo: "Karies Gigi / Gigi Berlubang",
-    nameEng: "Dental caries, unspecified",
-  },
-  { code: "J45.9", nameIndo: "Asma Bronkial", nameEng: "Asthma, unspecified" },
-  {
-    code: "Z00.0",
-    nameIndo: "Pemeriksaan Kesehatan Umum (Medical Check-up)",
-    nameEng: "General medical examination",
-  },
-];
-
 async function main() {
-  console.log("Seeding Master ICD-10 data...");
-  for (const icd of COMMON_ICD10) {
-    await prisma.masterIcd10.upsert({
-      where: { code: icd.code },
-      update: icd,
-      create: icd,
+  console.log("Seeding local Master ICD-10 snapshot...");
+  await prisma.$transaction(async (tx) => {
+    const deactivated = await tx.masterIcd10.updateMany({
+      where: { active: true },
+      data: { active: false },
     });
-  }
+
+    for (const icd of MASTER_ICD10_SNAPSHOT) {
+      await tx.masterIcd10.upsert({
+        where: { code: icd.code },
+        update: {
+          display: icd.display,
+          nameIndo: icd.nameIndo ?? null,
+          nameEng: icd.nameEng,
+          active: true,
+          displayOrder: icd.displayOrder,
+          source: MASTER_ICD10_SNAPSHOT_SOURCE,
+          sourceVersion: MASTER_ICD10_SNAPSHOT_VERSION,
+        },
+        create: {
+          code: icd.code,
+          display: icd.display,
+          nameIndo: icd.nameIndo ?? null,
+          nameEng: icd.nameEng,
+          active: true,
+          displayOrder: icd.displayOrder,
+          source: MASTER_ICD10_SNAPSHOT_SOURCE,
+          sourceVersion: MASTER_ICD10_SNAPSHOT_VERSION,
+        },
+      });
+    }
+
+    await tx.masterDataImportRun.upsert({
+      where: { id: "master-import-run-icd10-2010" },
+      update: {
+        domain: "ICD10",
+        source: MASTER_ICD10_SNAPSHOT_SOURCE,
+        sourceVersion: MASTER_ICD10_SNAPSHOT_VERSION,
+        status: MasterDataImportStatus.SUCCESS,
+        recordsSeen: MASTER_ICD10_SNAPSHOT.length,
+        recordsUpserted: MASTER_ICD10_SNAPSHOT.length,
+        recordsDeactivated: deactivated.count,
+        attemptedAt: new Date(),
+        completedAt: new Date(),
+        succeededAt: new Date(),
+        errorCode: null,
+        errorMessage: null,
+      },
+      create: {
+        id: "master-import-run-icd10-2010",
+        domain: "ICD10",
+        source: MASTER_ICD10_SNAPSHOT_SOURCE,
+        sourceVersion: MASTER_ICD10_SNAPSHOT_VERSION,
+        status: MasterDataImportStatus.SUCCESS,
+        recordsSeen: MASTER_ICD10_SNAPSHOT.length,
+        recordsUpserted: MASTER_ICD10_SNAPSHOT.length,
+        recordsDeactivated: deactivated.count,
+        attemptedAt: new Date(),
+        completedAt: new Date(),
+        succeededAt: new Date(),
+      },
+    });
+  }, { timeout: 300000 });
 
   console.log("Seeding local Master Wilayah snapshot...");
   await prisma.$transaction(async (tx) => {

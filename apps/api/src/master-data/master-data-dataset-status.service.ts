@@ -44,6 +44,8 @@ export class MasterDataDatasetStatusService {
           ? this.prisma.masterRegion.count({ where: { active: true } })
           : domain === 'MARITAL_STATUS'
             ? this.prisma.masterMaritalStatus.count({ where: { active: true } })
+            : domain === 'ICD10'
+              ? this.prisma.masterIcd10.count({ where: { active: true } })
             : Promise.resolve(0),
         this.prisma.masterDataImportRun.findFirst({
           where: { domain },

@@ -17,12 +17,6 @@ export interface Encounter {
   };
 }
 
-export interface MasterIcd10 {
-  code: string;
-  nameIndo: string;
-  nameEng: string;
-}
-
 export interface SatusehatSyncLog {
   id: string;
   resourceType:
@@ -38,72 +32,6 @@ export interface SatusehatSyncLog {
   errorMessage?: string;
   updatedAt: string;
 }
-
-export const INITIAL_ICD10: MasterIcd10[] = [
-  {
-    code: 'A09',
-    nameIndo: 'Diare dan Gastroenteritis Infeksius',
-    nameEng: 'Infectious gastroenteritis and colitis, unspecified',
-  },
-  {
-    code: 'J00',
-    nameIndo: 'Nasofaringitis Akut (Flu / Batuk Pilek)',
-    nameEng: 'Acute nasopharyngitis [common cold]',
-  },
-  {
-    code: 'I10',
-    nameIndo: 'Hipertensi Esensial (Tekanan Darah Tinggi)',
-    nameEng: 'Essential (primary) hypertension',
-  },
-  {
-    code: 'E11',
-    nameIndo: 'Diabetes Melitus Tipe 2',
-    nameEng: 'Type 2 diabetes mellitus',
-  },
-  {
-    code: 'K29.7',
-    nameIndo: 'Gastritis, Tidak Spesifik (Sakit Maag)',
-    nameEng: 'Gastritis, unspecified',
-  },
-  {
-    code: 'J18.9',
-    nameIndo: 'Pneumonia, Tidak Spesifik',
-    nameEng: 'Pneumonia, unspecified',
-  },
-  {
-    code: 'B35.4',
-    nameIndo: 'Tinea Corporis (Panu / Kurap)',
-    nameEng: 'Tinea corporis',
-  },
-  {
-    code: 'R50.9',
-    nameIndo: 'Demam, Tidak Spesifik',
-    nameEng: 'Fever, unspecified',
-  },
-  { code: 'R51', nameIndo: 'Sakit Kepala / Cephalgia', nameEng: 'Headache' },
-  { code: 'M79.1', nameIndo: 'Mialgia (Nyeri Otot)', nameEng: 'Myalgia' },
-  {
-    code: 'L03.9',
-    nameIndo: 'Selulitis / Infeksi Kulit Akut',
-    nameEng: 'Cellulitis, unspecified',
-  },
-  {
-    code: 'H10.9',
-    nameIndo: 'Konjungtivitis (Mata Merah)',
-    nameEng: 'Conjunctivitis, unspecified',
-  },
-  {
-    code: 'K02.9',
-    nameIndo: 'Karies Gigi / Gigi Berlubang',
-    nameEng: 'Dental caries, unspecified',
-  },
-  { code: 'J45.9', nameIndo: 'Asma Bronkial', nameEng: 'Asthma, unspecified' },
-  {
-    code: 'Z00.0',
-    nameIndo: 'Pemeriksaan Kesehatan Umum (MCU)',
-    nameEng: 'General medical examination',
-  },
-];
 
 export class MemoryStore {
   static encounters: Encounter[] = [
