@@ -22,6 +22,7 @@ import { MasterFaskesTable } from "./master-faskes/MasterFaskesTable";
 import { SelectField } from "./master-faskes/FormField";
 import { LocationForm } from "./master-faskes/LocationForm";
 import { LocationImportDialog } from "./master-faskes/LocationImportDialog";
+import { LocationPractitionerAssignmentDialog } from "./master-faskes/LocationPractitionerAssignmentDialog";
 import { LocationLinkDialog } from "./master-faskes/LocationLinkDialog";
 import { LocationStatusAlert } from "./master-faskes/LocationStatusAlert";
 import { LocationSyncDialog } from "./master-faskes/LocationSyncDialog";
@@ -67,6 +68,8 @@ export default function LocationListScreen() {
   const [editing, setEditing] = useState<LocationSummary | null>(null);
   const [syncLocation, setSyncLocation] = useState<LocationSummary | null>(null);
   const [linkLocation, setLinkLocation] = useState<LocationSummary | null>(null);
+  const [assignDoctorsLocation, setAssignDoctorsLocation] =
+    useState<LocationSummary | null>(null);
   const [statusLocation, setStatusLocation] =
     useState<LocationSummary | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -146,6 +149,10 @@ export default function LocationListScreen() {
 
   const openLink = useCallback((location: LocationSummary) => {
     setLinkLocation(location);
+  }, []);
+
+  const openAssignDoctors = useCallback((location: LocationSummary) => {
+    setAssignDoctorsLocation(location);
   }, []);
 
   const openEdit = useCallback((location: LocationSummary) => {
@@ -237,6 +244,7 @@ export default function LocationListScreen() {
         organizations,
         onPreview: setSyncLocation,
         onLink: openLink,
+        onAssignDoctors: openAssignDoctors,
         onEdit: openEdit,
         onToggleStatus: openStatusConfirmation,
       }),
@@ -244,6 +252,7 @@ export default function LocationListScreen() {
       canWrite,
       openEdit,
       openLink,
+      openAssignDoctors,
       openStatusConfirmation,
       organizations,
     ],
@@ -416,6 +425,12 @@ export default function LocationListScreen() {
           await refreshList();
           await refreshOptions();
         }}
+      />
+      <LocationPractitionerAssignmentDialog
+        open={assignDoctorsLocation !== null}
+        location={assignDoctorsLocation}
+        canWrite={canWrite}
+        onClose={() => setAssignDoctorsLocation(null)}
       />
       <LocationStatusAlert
         location={statusLocation}

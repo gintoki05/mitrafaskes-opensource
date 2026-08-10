@@ -1,11 +1,23 @@
 'use client';
 
-import { Clock3 } from 'lucide-react';
-import type { ListMeta } from '@mitrafaskes/shared';
+import { useState } from 'react';
+import { EncounterStatus } from '@mitrafaskes/shared';
+import type { Encounter, ListMeta } from '@mitrafaskes/shared';
+import {
+  Check,
+  Clock3,
+  Play,
+  RefreshCw,
+  X,
+} from 'lucide-react';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
-import type { Encounter } from '@/lib/clinical-types';
+import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
+import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
+import type { EncounterApiError } from './useEncounterActions';
 
 type QueuePanelProps = {
   encounters: Encounter[];
@@ -13,7 +25,43 @@ type QueuePanelProps = {
   encountersLoading: boolean;
   encountersError: string;
   onPageChange: (page: number) => void;
+  onStatusChange: (encounter: Encounter, status: EncounterStatus) => Promise<void>;
+  onPreviewSatusehat: (encounter: Encounter) => void;
+  canStart: boolean;
+  canCancel: boolean;
+  canComplete: boolean;
+  canReadSyncStatus: boolean;
 };
+
+const statusLabels: Record<EncounterStatus, string> = {
+  WAITING: 'MENUNGGU',
+  IN_PROGRESS: 'DIPERIKSA',
+  COMPLETED: 'SELESAI',
+  CANCELLED: 'DIBATALKAN',
+};
+
+function statusClass(status: EncounterStatus): string {
+  if (status === 'WAITING') {
+    return 'clinical-status-warning border text-[11px] font-bold';
+  }
+  if (status === 'IN_PROGRESS') {
+    return 'border-primary/20 bg-primary/10 text-[11px] font-bold text-primary';
+  }
+  if (status === 'CANCELLED') {
+    return 'clinical-status-error border text-[11px] font-bold';
+  }
+  return 'clinical-status-success border text-[11px] font-bold';
+}
+
+function transitionErrorMessage(error: unknown): string {
+  const typedError = error as EncounterApiError;
+  if (typedError.code === 'ENCOUNTER_VERSION_CONFLICT') {
+    return 'Data antrean sudah berubah oleh pengguna lain. Daftar antrean sudah dimuat ulang; coba aksi lagi.';
+  }
+  return error instanceof Error
+    ? error.message
+    : 'Status kunjungan belum dapat diperbarui.';
+}
 
 export function QueuePanel({
   encounters,
@@ -21,8 +69,29 @@ export function QueuePanel({
   encountersLoading,
   encountersError,
   onPageChange,
+  onStatusChange,
+  onPreviewSatusehat,
+  canStart,
+  canCancel,
+  canComplete,
+  canReadSyncStatus,
 }: QueuePanelProps) {
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
+
+  const transition = async (encounter: Encounter, status: EncounterStatus) => {
+    setUpdatingId(encounter.id);
+    try {
+      await onStatusChange(encounter, status);
+    } catch (error) {
+      toast.error('Status kunjungan belum berubah', {
+        description: transitionErrorMessage(error),
+        duration: 7000,
+      });
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
   return (
     <section id="antrean-aktif" className="data-surface scroll-mt-24" aria-labelledby="queue-title">
@@ -32,7 +101,9 @@ export function QueuePanel({
             <Clock3 className="h-4 w-4 text-primary" aria-hidden="true" />
             Antrean rawat jalan hari ini
           </h2>
-          <p className="mt-1 text-xs text-muted-foreground">Kunjungan pasien yang sedang diproses hari ini; data identitas tetap berada di Data Pasien.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Nomor antrean dan Encounter stabil di database lokal; perubahan status mengikuti lifecycle kunjungan.
+          </p>
         </div>
         <Badge variant="outline" className="border-primary/25 bg-primary/5 font-mono text-primary">
           {meta.total} antrean
@@ -40,25 +111,126 @@ export function QueuePanel({
       </div>
       <div className="divide-y divide-border">
         {encountersLoading ? (
-          <div className="p-4"><ScreenState kind="loading" title="Memuat antrean" description="Mohon tunggu sebentar." compact /></div>
-        ) : encounters.length === 0 && !encountersError ? (
+          <div className="p-4">
+            <ScreenState kind="loading" title="Memuat antrean" description="Mohon tunggu sebentar." compact />
+          </div>
+        ) : encounters.length === 0 && encountersError ? (
+          <div className="p-4">
+            <ScreenState
+              kind="error"
+              title="Antrean belum tersedia"
+              description={encountersError}
+              compact
+              action={
+                <Button type="button" variant="outline" size="sm" onClick={() => onPageChange(meta.page)}>
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                  Coba lagi
+                </Button>
+              }
+            />
+          </div>
+        ) : encounters.length === 0 ? (
           <div className="p-4">
             <ScreenState kind="empty" title="Antrean masih kosong" description="Pasien yang didaftarkan ke poli akan muncul di sini." />
           </div>
-        ) : encounters.map((encounter) => (
-          <div key={encounter.id} className="flex min-w-0 flex-wrap items-center justify-between gap-4 px-4 py-4 transition-colors hover:bg-primary/[0.035] sm:px-5">
-            <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-primary text-sm font-bold text-primary-foreground">{encounter.queueNumber}</div>
-              <div className="min-w-0">
-                <div className="truncate text-sm font-bold text-foreground">{encounter.patient?.fullName ?? 'Pasien tanpa nama'}</div>
-                <div className="mt-1 font-mono text-xs text-muted-foreground">{encounter.patient?.medicalRecNo ?? 'Nomor RM belum tersedia'}</div>
+        ) : encounters.map((encounter) => {
+          const isUpdating = updatingId === encounter.id;
+          const canCancelThis = canCancel && (encounter.status === 'WAITING' || encounter.status === 'IN_PROGRESS');
+          const canStartThis = canStart && encounter.status === 'WAITING';
+          const canCompleteThis = canComplete && encounter.status === 'IN_PROGRESS';
+
+          return (
+            <div key={encounter.id} className="flex min-w-0 flex-wrap items-start justify-between gap-4 px-4 py-4 transition-colors hover:bg-primary/[0.035] sm:px-5">
+              <div className="flex min-w-0 items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-primary text-sm font-bold text-primary-foreground">
+                  {encounter.queueNumber}
+                </div>
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-bold text-foreground">
+                    {encounter.patient?.fullName ?? 'Pasien tanpa nama'}
+                  </div>
+                  <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                    <span className="font-mono">{encounter.encounterNumber}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{encounter.patient?.medicalRecNo ?? 'Nomor RM belum tersedia'}</span>
+                  </div>
+                  <div className="mt-2 grid gap-x-4 gap-y-1 text-[11px] text-muted-foreground sm:grid-cols-2">
+                    <span>Dokter: <strong className="text-foreground">{encounter.doctor?.fullName ?? 'Belum tersedia'}</strong></span>
+                    <span>Location: <strong className="text-foreground">{encounter.location?.name ?? 'Belum tersedia'}</strong></span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex min-w-[12rem] flex-1 flex-wrap items-center justify-end gap-2 sm:flex-none">
+                <Badge className={statusClass(encounter.status)}>
+                  {statusLabels[encounter.status]}
+                </Badge>
+                {canReadSyncStatus ? (
+                  <div className="flex items-center gap-1.5">
+                    <SatusehatLinkageBadge
+                      linkage={encounter.satusehat}
+                      resourceName={encounter.encounterNumber}
+                    />
+                    <SatusehatActionGroup
+                      resourceName={encounter.encounterNumber}
+                      onSync={() => onPreviewSatusehat(encounter)}
+                    />
+                  </div>
+                ) : null}
+                {canReadSyncStatus && encounter.satusehatSync?.status === 'FAILED' ? (
+                  <span
+                    className="max-w-[12rem] text-[11px] text-destructive"
+                    title={encounter.satusehatSync.errorMessage}
+                  >
+                    Sync terakhir gagal
+                  </span>
+                ) : null}
+                <div className="flex items-center gap-1" role="group" aria-label={`Aksi lifecycle ${encounter.encounterNumber}`}>
+                  {canStartThis ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-xs"
+                      disabled={isUpdating}
+                      onClick={() => void transition(encounter, EncounterStatus.IN_PROGRESS)}
+                      aria-label={`Mulai pemeriksaan ${encounter.encounterNumber}`}
+                      title={isUpdating ? 'Memperbarui status...' : 'Mulai pemeriksaan'}
+                    >
+                      <Play className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
+                  ) : null}
+                  {canCompleteThis ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-xs"
+                      disabled={isUpdating}
+                      onClick={() => void transition(encounter, EncounterStatus.COMPLETED)}
+                      aria-label={`Selesaikan pemeriksaan ${encounter.encounterNumber}`}
+                      title={isUpdating ? 'Memperbarui status...' : 'Selesaikan pemeriksaan'}
+                      className="text-success hover:bg-success/10 hover:text-success"
+                    >
+                      <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
+                  ) : null}
+                  {canCancelThis ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      disabled={isUpdating}
+                      onClick={() => void transition(encounter, EncounterStatus.CANCELLED)}
+                      aria-label={`Batalkan Encounter ${encounter.encounterNumber}`}
+                      title={isUpdating ? 'Memperbarui status...' : 'Batalkan Encounter'}
+                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" aria-hidden="true" />
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             </div>
-            <Badge className={encounter.status === 'WAITING' ? 'clinical-status-warning border text-[11px] font-bold' : encounter.status === 'IN_PROGRESS' ? 'border-primary/20 bg-primary/10 text-[11px] font-bold text-primary' : 'clinical-status-success border text-[11px] font-bold'}>
-              {encounter.status === 'WAITING' ? 'MENUNGGU' : encounter.status === 'IN_PROGRESS' ? 'DIPERIKSA' : 'SELESAI'}
-            </Badge>
-          </div>
-        ))}
+          );
+        })}
       </div>
       {totalPages > 1 ? (
         <div className="flex flex-col gap-2 border-t border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
@@ -69,12 +241,17 @@ export function QueuePanel({
             page={meta.page}
             totalPages={totalPages}
             onPageChange={onPageChange}
-            disabled={encountersLoading}
+            disabled={encountersLoading || Boolean(updatingId)}
             showLabels={false}
             aria-label="Navigasi halaman antrean pendaftaran"
             className="mx-0 w-auto"
           />
         </div>
+      ) : null}
+      {canReadSyncStatus && encounters.length > 0 ? (
+        <p className="border-t border-border px-4 py-3 text-[11px] text-muted-foreground sm:px-5">
+          Status SATUSEHAT berasal dari linkage lokal. Aksi SATUSEHAT pada tahap ini hanya membuka preflight/preview.
+        </p>
       ) : null}
     </section>
   );

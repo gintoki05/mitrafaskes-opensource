@@ -35,6 +35,7 @@ export const initialPractitionerForm: PractitionerFormState = {
   sipNumber: '',
   strNumber: '',
   organizationId: null,
+  locationIds: [],
   locationId: null,
   active: 'true',
 };

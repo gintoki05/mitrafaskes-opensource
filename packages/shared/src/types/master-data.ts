@@ -80,7 +80,10 @@ export interface PractitionerSummary {
   sipNumber?: string;
   strNumber?: string;
   organization?: PractitionerOrganizationReference;
+  /** Primary/legacy location kept for compatibility with existing consumers. */
   location?: PractitionerLocationReference;
+  /** Complete assignment set for this practitioner. */
+  locations: PractitionerLocationReference[];
   active: boolean;
   satusehat?: SatusehatLinkageSummary;
   satusehatSync?: SatusehatSyncSummary;
@@ -99,6 +102,9 @@ export interface PractitionerCreateRequest {
   sipNumber?: string | null;
   strNumber?: string | null;
   organizationId?: string | null;
+  /** Complete location assignment set. An empty array clears all assignments. */
+  locationIds?: string[] | null;
+  /** @deprecated Use locationIds for new clients. */
   locationId?: string | null;
   active?: boolean;
 }
@@ -118,6 +124,8 @@ export interface MasterDataListQuery {
   type?: string;
   status?: string;
   organizationId?: string;
+  locationId?: string;
+  role?: 'DOKTER' | 'PERAWAT';
   page?: number;
   pageSize?: number;
   sort?: MasterDataListSort;

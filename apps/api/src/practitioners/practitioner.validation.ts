@@ -15,7 +15,7 @@ export interface ValidatedPractitionerUpdate {
   birthDate?: Date | null;
   gender?: Gender | null;
   organizationId?: string | null;
-  locationId?: string | null;
+  locationIds?: string[];
   active?: boolean;
 }
 
@@ -30,7 +30,7 @@ export interface ValidatedPractitionerCreate {
   sipNumber?: string | null;
   strNumber?: string | null;
   organizationId?: string | null;
-  locationId?: string | null;
+  locationIds: string[];
   active: boolean;
 }
 
@@ -75,7 +75,10 @@ export function validatePractitionerCreate(
   const sipNumber = readOptionalField(body.sipNumber, 'sipNumber', 64, issues);
   const strNumber = readOptionalField(body.strNumber, 'strNumber', 64, issues);
   const organizationId = readOptionalId(body.organizationId, 'organizationId', issues);
-  const locationId = readOptionalId(body.locationId, 'locationId', issues);
+  const legacyLocationId = Object.prototype.hasOwnProperty.call(body, 'locationIds')
+    ? undefined
+    : readOptionalId(body.locationId, 'locationId', issues);
+  const locationIds = readLocationIds(body, legacyLocationId, issues);
   const active = readActive(body.active, issues);
 
   if (issues.length > 0) {
@@ -96,7 +99,7 @@ export function validatePractitionerCreate(
     sipNumber,
     strNumber,
     organizationId: organizationId ?? null,
-    locationId: locationId ?? null,
+    locationIds,
     active,
   };
 }
@@ -153,8 +156,13 @@ export function validatePractitionerUpdate(
     result.organizationId = readOptionalId(body.organizationId, 'organizationId', issues);
   }
 
-  if (Object.prototype.hasOwnProperty.call(body, 'locationId')) {
-    result.locationId = readOptionalId(body.locationId, 'locationId', issues);
+  const hasLocationIds = Object.prototype.hasOwnProperty.call(body, 'locationIds');
+  const hasLegacyLocationId = Object.prototype.hasOwnProperty.call(body, 'locationId');
+  if (hasLocationIds || hasLegacyLocationId) {
+    const legacyLocationId = hasLocationIds
+      ? undefined
+      : readOptionalId(body.locationId, 'locationId', issues);
+    result.locationIds = readLocationIds(body, legacyLocationId, issues);
   }
 
   if (Object.prototype.hasOwnProperty.call(body, 'active')) {
@@ -229,6 +237,54 @@ function readOptionalId(
     return undefined;
   }
   return text;
+}
+
+function readLocationIds(
+  body: Record<string, unknown>,
+  legacyLocationId: string | null | undefined,
+  issues: { field: string; message: string }[],
+): string[] {
+  if (!Object.prototype.hasOwnProperty.call(body, 'locationIds')) {
+    return legacyLocationId ? [legacyLocationId] : [];
+  }
+
+  const value = body.locationIds;
+  if (value === undefined || value === null || value === '') return [];
+  if (!Array.isArray(value)) {
+    issues.push({
+      field: 'locationIds',
+      message: 'locationIds harus berupa daftar ID location.',
+    });
+    return [];
+  }
+  if (value.length > 100) {
+    issues.push({
+      field: 'locationIds',
+      message: 'Maksimal 100 location dapat ditugaskan sekaligus.',
+    });
+  }
+
+  const ids: string[] = [];
+  for (const item of value.slice(0, 100)) {
+    if (typeof item !== 'string') {
+      issues.push({
+        field: 'locationIds',
+        message: 'Setiap locationId harus berupa ID teks.',
+      });
+      continue;
+    }
+    const id = item.trim();
+    if (!id) continue;
+    if (id.length > 64) {
+      issues.push({
+        field: 'locationIds',
+        message: 'ID location maksimal 64 karakter.',
+      });
+      continue;
+    }
+    if (!ids.includes(id)) ids.push(id);
+  }
+  return ids;
 }
 
 function readBirthDate(

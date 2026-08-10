@@ -22,7 +22,7 @@ type PatientDirectoryProps = {
   onSearchChange: (value: string) => void;
   onSearchSubmit: SubmitEventHandler<HTMLFormElement>;
   onPageChange: (page: number) => void;
-  onQueuePatient: (patientId: string) => void;
+  onQueuePatient: (patient: Patient) => void;
   onViewPatient: (patient: Patient) => void;
   onEditPatient: (patient: Patient) => void;
   onSyncPatient: (patient: Patient) => void;
@@ -185,7 +185,7 @@ export function PatientDirectory({
                         type="button"
                         variant="outline"
                         size="icon-xs"
-                        onClick={() => onQueuePatient(patient.id)}
+                        onClick={() => onQueuePatient(patient)}
                         aria-label={`Masukkan ${patient.fullName} ke antrean`}
                         title={`Masukkan ${patient.fullName} ke antrean`}
                         className="border-primary/35 bg-card text-primary hover:bg-primary/5"

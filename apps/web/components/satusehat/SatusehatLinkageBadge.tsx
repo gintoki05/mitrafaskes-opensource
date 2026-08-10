@@ -20,8 +20,20 @@ export function SatusehatLinkageBadge({
 
   if (!linkage) {
     return (
-      <span className="text-[11px] text-muted-foreground">
-        Belum tersinkron
+      <span
+        className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold text-muted-foreground"
+        title={`${resourceName} belum memiliki linkage SATUSEHAT.`}
+      >
+        <span className="flex h-6 w-6 shrink-0 overflow-hidden rounded border border-border bg-white">
+          <Image
+            src="/satusehat.png"
+            alt=""
+            width={40}
+            height={40}
+            className="h-full w-full object-cover grayscale"
+          />
+        </span>
+        <span>Belum tersinkron</span>
       </span>
     );
   }

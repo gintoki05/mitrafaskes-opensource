@@ -19,7 +19,7 @@ type PatientDetailDialogProps = {
   getPatient: (id: string) => Promise<Patient>;
   onClose: () => void;
   onEdit: (patient: Patient) => void;
-  onQueue: (patientId: string) => void;
+  onQueue: (patient: Patient) => void;
   onSync: (patient: Patient) => void;
   maritalStatuses: readonly MaritalStatusSummary[];
 };

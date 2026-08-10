@@ -62,19 +62,33 @@ export function getPractitionerColumns({
       id: 'location',
       header: 'Location',
       enableSorting: false,
-      cell: ({ row }) =>
-        row.original.location ? (
-          <div className="min-w-36 space-y-1 text-xs">
-            <div className="font-semibold text-foreground">
-              {row.original.location.code}
-            </div>
-            <div className="text-muted-foreground">
-              {row.original.location.name}
-            </div>
+      cell: ({ row }) => {
+        const locations =
+          row.original.locations?.length > 0
+            ? row.original.locations
+            : row.original.location
+              ? [row.original.location]
+              : [];
+        return locations.length > 0 ? (
+          <div className="min-w-44 space-y-1 text-xs" title={locations.map((location) => location.name).join(', ')}>
+            {locations.slice(0, 2).map((location) => (
+              <div key={location.id}>
+                <div className="font-semibold text-foreground">{location.name}</div>
+                <div className="font-mono text-[10px] text-muted-foreground">
+                  {location.code}
+                </div>
+              </div>
+            ))}
+            {locations.length > 2 ? (
+              <div className="text-[10px] font-semibold text-primary">
+                +{locations.length - 2} Location lain
+              </div>
+            ) : null}
           </div>
         ) : (
           <span className="text-xs text-muted-foreground">Belum ditetapkan</span>
-        ),
+        );
+      },
     },
     {
       id: 'license',

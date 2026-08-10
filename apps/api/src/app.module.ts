@@ -6,6 +6,8 @@ import { PatientsModule } from './patients/patients.module';
 import { MasterDataModule } from './master-data/master-data.module';
 import { SatusehatModule } from './satusehat/satusehat.module';
 import { PractitionersModule } from './practitioners/practitioners.module';
+import { EncountersModule } from './encounters/encounters.module';
+import { RmeModule } from './rme/rme.module';
 
 @Module({
   imports: [
@@ -13,6 +15,8 @@ import { PractitionersModule } from './practitioners/practitioners.module';
     MasterDataModule,
     SatusehatModule,
     PractitionersModule,
+    EncountersModule,
+    RmeModule,
   ],
   controllers: [AppController],
   providers: [AppService, SessionPermissionGuard],

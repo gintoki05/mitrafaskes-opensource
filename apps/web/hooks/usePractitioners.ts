@@ -216,6 +216,8 @@ export function usePractitioners(query?: MasterDataListQuery) {
         birthDate?: string | null;
         gender?: string | null;
         organizationId?: string | null;
+        locationIds?: string[] | null;
+        /** @deprecated Use locationIds for new clients. */
         locationId?: string | null;
         active?: boolean;
       },

@@ -32,6 +32,13 @@ const practitionerRelationInclude = {
   location: {
     select: { id: true, organizationId: true, code: true, name: true },
   },
+  locationAssignments: {
+    include: {
+      location: {
+        select: { id: true, organizationId: true, code: true, name: true },
+      },
+    },
+  },
 };
 
 @Injectable()
@@ -58,15 +65,16 @@ export class PractitionersService {
     }
 
     try {
-      const { password, ...profile } = validated;
-      await this.validatePractitionerContext(
-        profile.organizationId,
-        profile.locationId,
-      );
+      const { password, locationIds, ...profile } = validated;
+      await this.validatePractitionerContext(profile.organizationId, locationIds);
       const record = await this.prisma.user.create({
         data: {
           ...profile,
+          locationId: locationIds[0] ?? null,
           passwordHash: this.hashPassword(password),
+          locationAssignments: locationIds.length
+            ? { create: locationIds.map((locationId) => ({ locationId })) }
+            : undefined,
         },
         include: practitionerRelationInclude,
       });
@@ -105,6 +113,11 @@ export class PractitionersService {
     };
 
     if (input.active !== undefined) where.active = input.active;
+    if (input.organizationId) where.organizationId = input.organizationId;
+    if (input.locationId) {
+      where.locationAssignments = { some: { locationId: input.locationId } };
+    }
+    if (input.role) where.role = input.role as Role;
     if (search) {
       where.OR = [
         { username: { contains: search, mode: 'insensitive' } },
@@ -179,18 +192,47 @@ export class PractitionersService {
     )
       ? validated.organizationId
       : existing.organizationId;
-    const nextLocationId = Object.prototype.hasOwnProperty.call(
+    const hasLocationIds = Object.prototype.hasOwnProperty.call(
       validated,
-      'locationId',
-    )
-      ? validated.locationId
-      : existing.locationId;
-    await this.validatePractitionerContext(nextOrganizationId, nextLocationId);
+      'locationIds',
+    );
+    const existingLocationIds =
+      existing.locationAssignments?.map((assignment) => assignment.location.id) ??
+      (existing.locationId ? [existing.locationId] : []);
+    const nextLocationIds = hasLocationIds
+      ? validated.locationIds ?? []
+      : existingLocationIds;
+    await this.validatePractitionerContext(nextOrganizationId, nextLocationIds);
     try {
-      await this.prisma.user.update({
-        where: { id },
-        data: validated,
-      });
+      const { locationIds: _locationIds, ...profile } = validated;
+      const nextPrimaryLocationId = nextLocationIds.includes(existing.locationId ?? '')
+        ? existing.locationId
+        : nextLocationIds[0] ?? null;
+
+      if (hasLocationIds) {
+        await this.prisma.$transaction(async (transaction) => {
+          await transaction.user.update({
+            where: { id },
+            data: { ...profile, locationId: nextPrimaryLocationId },
+          });
+          await transaction.practitionerLocationAssignment.deleteMany({
+            where: { practitionerId: id },
+          });
+          if (nextLocationIds.length > 0) {
+            await transaction.practitionerLocationAssignment.createMany({
+              data: nextLocationIds.map((locationId) => ({
+                practitionerId: id,
+                locationId,
+              })),
+            });
+          }
+        });
+      } else {
+        await this.prisma.user.update({
+          where: { id },
+          data: profile,
+        });
+      }
     } catch (error) {
       if (this.isUniqueConstraintError(error)) {
         throw new ConflictException({
@@ -221,16 +263,16 @@ export class PractitionersService {
 
   private async validatePractitionerContext(
     organizationId: string | null | undefined,
-    locationId: string | null | undefined,
+    locationIds: string[],
   ): Promise<void> {
-    if (locationId && !organizationId) {
+    if (locationIds.length > 0 && !organizationId) {
       throw new ConflictException({
         code: 'PRACTITIONER_ORGANIZATION_REQUIRED_FOR_LOCATION',
         message: 'Pilih Organization sebelum memilih Location.',
         field: 'organizationId',
       });
     }
-    if (!organizationId && !locationId) return;
+    if (!organizationId && locationIds.length === 0) return;
 
     if (organizationId) {
       const organization = await this.prisma.healthcareOrganization.findUnique({
@@ -244,21 +286,21 @@ export class PractitionersService {
       }
     }
 
-    if (locationId) {
-      const location = await this.prisma.location.findUnique({
-        where: { id: locationId },
-        select: { id: true, organizationId: true },
+    if (locationIds.length === 0) return;
+
+    const locations = await this.prisma.location.findMany({
+      where: { id: { in: locationIds } },
+      select: { id: true, organizationId: true },
+    });
+    if (locations.length !== locationIds.length) {
+      throw new NotFoundException('Location Practitioner tidak ditemukan.');
+    }
+    if (locations.some((location) => location.organizationId !== organizationId)) {
+      throw new ConflictException({
+        code: 'PRACTITIONER_LOCATION_ORGANIZATION_MISMATCH',
+        message: 'Semua Location harus berada pada Organization yang dipilih.',
+        field: 'locationIds',
       });
-      if (!location) {
-        throw new NotFoundException('Location Practitioner tidak ditemukan.');
-      }
-      if (location.organizationId !== organizationId) {
-        throw new ConflictException({
-          code: 'PRACTITIONER_LOCATION_ORGANIZATION_MISMATCH',
-          message: 'Location harus berada pada Organization yang dipilih.',
-          field: 'locationId',
-        });
-      }
     }
   }
 

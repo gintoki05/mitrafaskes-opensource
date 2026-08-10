@@ -72,7 +72,7 @@ type PatientDetailContentProps = {
   canCreateQueue: boolean;
   onClose: () => void;
   onEdit: (patient: Patient) => void;
-  onQueue: (patientId: string) => void;
+  onQueue: (patient: Patient) => void;
   onSync: (patient: Patient) => void;
   maritalStatuses: readonly MaritalStatusSummary[];
 };
@@ -362,7 +362,7 @@ export function PatientDetailContent({
               </>
             ) : null}
             {canCreateQueue ? (
-              <Button type="button" size="sm" onClick={() => onQueue(patient.id)}>
+              <Button type="button" size="sm" onClick={() => onQueue(patient)}>
                 <ListPlus className="h-4 w-4" aria-hidden="true" />
                 Masukkan ke antrean
               </Button>

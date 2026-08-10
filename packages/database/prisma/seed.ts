@@ -4,6 +4,8 @@ import {
   Gender,
   MasterDataImportStatus,
   MasterRegionLevel,
+  LocationType,
+  OrganizationType,
   Prisma,
   PatientIdentifierType,
   PatientNameUse,
@@ -234,41 +236,119 @@ async function main() {
     });
   });
 
+  console.log("Seeding demo healthcare organization and location...");
+  await prisma.healthcareOrganization.upsert({
+    where: { id: "org-demo-clinic" },
+    update: {
+      code: "FASKES-DEMO-001",
+      name: "Klinik Demo Mitra Faskes",
+      type: OrganizationType.HEALTHCARE_FACILITY,
+      active: true,
+    },
+    create: {
+      id: "org-demo-clinic",
+      code: "FASKES-DEMO-001",
+      name: "Klinik Demo Mitra Faskes",
+      type: OrganizationType.HEALTHCARE_FACILITY,
+      active: true,
+      addressText: "Jl. Demo Kesehatan No. 1, Jakarta",
+      phone: "0215550101",
+    },
+  });
+
+  await prisma.location.upsert({
+    where: { id: "loc-demo-poli-umum" },
+    update: {
+      organizationId: "org-demo-clinic",
+      code: "POLI-UMUM",
+      name: "Poli Umum",
+      type: LocationType.ROOM,
+      status: "ACTIVE",
+      active: true,
+    },
+    create: {
+      id: "loc-demo-poli-umum",
+      organizationId: "org-demo-clinic",
+      code: "POLI-UMUM",
+      name: "Poli Umum",
+      type: LocationType.ROOM,
+      status: "ACTIVE",
+      active: true,
+      physicalTypeCode: "ro",
+    },
+  });
+
   console.log("Seeding Initial Demo Users...");
-  await prisma.user.upsert({
+  const adminUser = await prisma.user.upsert({
     where: { username: "admin" },
-    update: {},
+    update: {
+      organizationId: "org-demo-clinic",
+      locationId: "loc-demo-poli-umum",
+      active: true,
+    },
     create: {
       username: "admin",
       passwordHash: "admin123", // Demo hash
       fullName: "Siti Rahma (Admin Pendaftaran)",
       role: Role.ADMIN,
+      organizationId: "org-demo-clinic",
+      locationId: "loc-demo-poli-umum",
     },
   });
 
-  await prisma.user.upsert({
+  const doctorUser = await prisma.user.upsert({
     where: { username: "dr_budi" },
-    update: {},
+    update: {
+      organizationId: "org-demo-clinic",
+      locationId: "loc-demo-poli-umum",
+      role: Role.DOKTER,
+      active: true,
+    },
     create: {
       username: "dr_budi",
       passwordHash: "dok123",
       fullName: "dr. Budi Santoso, Sp.PD",
       role: Role.DOKTER,
+      organizationId: "org-demo-clinic",
+      locationId: "loc-demo-poli-umum",
       sipNumber: "SIP-449/123/2023",
       strNumber: "STR-998271102",
     },
   });
 
-  await prisma.user.upsert({
+  const nurseUser = await prisma.user.upsert({
     where: { username: "perawat_ani" },
-    update: {},
+    update: {
+      organizationId: "org-demo-clinic",
+      locationId: "loc-demo-poli-umum",
+      role: Role.PERAWAT,
+      active: true,
+    },
     create: {
       username: "perawat_ani",
       passwordHash: "perawat123",
       fullName: "Ani Wijaya, S.Kep",
       role: Role.PERAWAT,
+      organizationId: "org-demo-clinic",
+      locationId: "loc-demo-poli-umum",
     },
   });
+
+  for (const practitionerId of [adminUser.id, doctorUser.id, nurseUser.id]) {
+    await prisma.practitionerLocationAssignment.upsert({
+      where: {
+        practitionerId_locationId: {
+          practitionerId,
+          locationId: "loc-demo-poli-umum",
+        },
+      },
+      update: {},
+      create: {
+        practitionerId,
+        locationId: "loc-demo-poli-umum",
+      },
+    });
+  }
 
   console.log("Seeding Sample Patients...");
   const ahmadStructuredData = {

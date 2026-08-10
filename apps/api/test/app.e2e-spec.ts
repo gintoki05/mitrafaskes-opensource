@@ -21,6 +21,10 @@ import {
   PatientRepository,
 } from './../src/patients/patient.repository';
 import { ValidatedPatientInput } from './../src/patients/patient.validation';
+import { PatientAddressRegionValidator } from './../src/patients/patient-address-region.validator';
+import { PatientSyncStatusRepository } from './../src/patients/patient-sync-status.repository';
+import { EncountersService } from './../src/encounters/encounters.service';
+import { RmeService } from './../src/rme/rme.service';
 
 const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
 
@@ -129,6 +133,30 @@ describe('Access control (e2e)', () => {
     })
       .overrideProvider(PatientRepository)
       .useValue(patientRepository)
+      .overrideProvider(PatientAddressRegionValidator)
+      .useValue({
+        canonicalize: jest.fn(async (addresses: unknown[]) => addresses),
+      })
+      .overrideProvider(PatientSyncStatusRepository)
+      .useValue({
+        findForList: jest.fn().mockResolvedValue({
+          links: new Map(),
+          logs: new Map(),
+        }),
+        toLinkage: jest.fn(),
+        toSyncSummary: jest.fn(),
+      })
+      .overrideProvider(EncountersService)
+      .useValue({
+        findMany: jest.fn().mockResolvedValue({
+          items: [],
+          meta: { page: 2, pageSize: 1, total: 0 },
+        }),
+        create: jest.fn().mockResolvedValue({ id: 'enc-test-1' }),
+        updateStatus: jest.fn().mockResolvedValue({ id: 'enc-test-1' }),
+      })
+      .overrideProvider(RmeService)
+      .useValue({ findByEncounterId: jest.fn().mockResolvedValue(null) })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -172,8 +200,8 @@ describe('Access control (e2e)', () => {
       .set(bearer('mock-jwt-token-perawat_ani'))
       .expect(200);
 
-    expect(encounters.body.meta).toEqual({ page: 2, pageSize: 1, total: 2 });
-    expect(encounters.body.items).toHaveLength(1);
+    expect(encounters.body.meta).toEqual({ page: 2, pageSize: 1, total: 0 });
+    expect(encounters.body.items).toHaveLength(0);
 
     const patients = await request(app.getHttpServer())
       .get('/api/patients?page=1&pageSize=1')
@@ -200,6 +228,55 @@ describe('Access control (e2e)', () => {
       .expect(403);
 
     expect(response.body.code).toBe('FORBIDDEN');
+  });
+
+  it('enforces the Encounter lifecycle permission matrix at the API boundary', async () => {
+    await request(app.getHttpServer())
+      .post('/api/encounters')
+      .set(bearer('mock-jwt-token-perawat_ani'))
+      .send({ patientId: 'patient-1', locationId: 'location-1', doctorId: 'doctor-1' })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .patch('/api/encounters/enc-test-1/status')
+      .set(bearer('mock-jwt-token-perawat_ani'))
+      .send({ status: 'CANCELLED', expectedVersion: 1 })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .patch('/api/encounters/enc-test-1/status')
+      .set(bearer('mock-jwt-token-dr_budi'))
+      .send({ status: 'IN_PROGRESS', expectedVersion: 1 })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .patch('/api/encounters/enc-test-1/status')
+      .set(bearer('mock-jwt-token-dr_budi'))
+      .send({ status: 'COMPLETED', expectedVersion: 1 })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .get('/api/encounters')
+      .set(bearer('mock-jwt-token-admin'))
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .patch('/api/encounters/enc-test-1/status')
+      .set(bearer('mock-jwt-token-admin'))
+      .send({ status: 'CANCELLED', expectedVersion: 1 })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/api/encounters')
+      .set(bearer('mock-jwt-token-dr_budi'))
+      .send({ patientId: 'patient-1', locationId: 'location-1', doctorId: 'doctor-1' })
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .patch('/api/encounters/enc-test-1/status')
+      .set(bearer('mock-jwt-token-perawat_ani'))
+      .send({ status: 'COMPLETED', expectedVersion: 1 })
+      .expect(403);
   });
 
   it('normalizes NIK and allocates unique medical record numbers', async () => {

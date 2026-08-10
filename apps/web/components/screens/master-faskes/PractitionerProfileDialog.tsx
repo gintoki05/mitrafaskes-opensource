@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { usePractitioners } from '@/hooks/usePractitioners';
 import { FieldLabel, SelectField } from './FormField';
 import { MasterFaskesDialog } from './MasterFaskesDialog';
+import { PractitionerLocationSelector } from './PractitionerLocationSelector';
 
 type PractitionerProfileDialogProps = {
   open: boolean;
@@ -73,12 +74,12 @@ function PractitionerProfileDialogContent({
   const [organizationId, setOrganizationId] = useState(
     practitioner.organization?.id ?? '',
   );
-  const [locationId, setLocationId] = useState(practitioner.location?.id ?? '');
+  const [locationIds, setLocationIds] = useState(() =>
+    practitioner.locations?.map((location) => location.id) ??
+    (practitioner.location?.id ? [practitioner.location.id] : []),
+  );
   const [active, setActive] = useState(practitioner.active ? 'true' : 'false');
   const [saving, setSaving] = useState(false);
-  const availableLocations = organizationId
-    ? locations.filter((location) => location.organizationId === organizationId)
-    : [];
 
   const submit = async () => {
     if (!canWrite) return;
@@ -89,7 +90,7 @@ function PractitionerProfileDialogContent({
         birthDate: birthDate || null,
         gender: gender || null,
         organizationId: organizationId || null,
-        locationId: locationId || null,
+        locationIds,
         active: active === 'true',
       });
       toast.success('Profil Practitioner berhasil diperbarui.');
@@ -202,7 +203,7 @@ function PractitionerProfileDialogContent({
               value={organizationId}
               onChange={(value) => {
                 setOrganizationId(value);
-                setLocationId('');
+                setLocationIds([]);
               }}
               disabled={!canWrite || saving}
             >
@@ -214,25 +215,15 @@ function PractitionerProfileDialogContent({
               ))}
             </SelectField>
           </div>
-          <div>
-            <FieldLabel htmlFor="practitioner-profile-location">
-              Location
-            </FieldLabel>
-            <SelectField
+          <div className="sm:col-span-2">
+            <PractitionerLocationSelector
               id="practitioner-profile-location"
-              value={locationId}
-              onChange={setLocationId}
-              disabled={!canWrite || saving || !organizationId}
-            >
-              <option value="">
-                {organizationId ? 'Belum ditetapkan' : 'Pilih Organization dulu'}
-              </option>
-              {availableLocations.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.code} - {location.name}
-                </option>
-              ))}
-            </SelectField>
+              organizationId={organizationId}
+              locations={locations}
+              value={locationIds}
+              onChange={setLocationIds}
+              disabled={!canWrite || saving}
+            />
           </div>
         </div>
         <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">

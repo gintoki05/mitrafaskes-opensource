@@ -221,7 +221,7 @@ export function RmeForm({
         className="w-full rounded-[var(--radius-panel)] bg-primary py-4 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/85"
       >
         <CheckCircle className="mr-2 h-5 w-5 stroke-[2.5]" />
-        {saving || isSubmitting ? 'Menyimpan & Mensinkronkan...' : 'Simpan Rekam Medis (RME) & Sinkronkan ke SATUSEHAT'}
+        {saving || isSubmitting ? 'Menyimpan RME lokal...' : 'Simpan RME lokal & Selesaikan Encounter'}
       </Button>
     </form>
   );

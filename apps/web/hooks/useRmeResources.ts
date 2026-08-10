@@ -63,7 +63,11 @@ function rmeResourcesReducer(state: RmeResourcesState, action: RmeResourcesActio
 }
 
 async function requestEncounters(page = 1): Promise<EncounterListResponse> {
-  const params = new URLSearchParams({ page: String(page), pageSize: '25' });
+  const params = new URLSearchParams({
+    page: String(page),
+    pageSize: '25',
+    status: 'IN_PROGRESS',
+  });
   const response = await apiFetch(`/api/encounters?${params.toString()}`);
   if (!response.ok) throw new Error('Antrean pasien tidak dapat dimuat.');
   return response.json() as Promise<EncounterListResponse>;

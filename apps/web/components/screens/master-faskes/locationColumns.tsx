@@ -3,7 +3,7 @@ import type {
   LocationSummary,
   OrganizationSummary,
 } from "@mitrafaskes/shared";
-import { Edit3, Power } from "lucide-react";
+import { Edit3, Power, UserRoundPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SatusehatActionGroup } from "@/components/satusehat/SatusehatActionGroup";
@@ -19,6 +19,7 @@ type LocationColumnOptions = {
   organizations: OrganizationSummary[];
   onPreview: (location: LocationSummary) => void;
   onLink: (location: LocationSummary) => void;
+  onAssignDoctors: (location: LocationSummary) => void;
   onEdit: (location: LocationSummary) => void;
   onToggleStatus: (location: LocationSummary) => void;
 };
@@ -35,6 +36,7 @@ export function getLocationColumns({
   organizations,
   onPreview,
   onLink,
+  onAssignDoctors,
   onEdit,
   onToggleStatus,
 }: LocationColumnOptions): ColumnDef<LocationSummary>[] {
@@ -135,6 +137,16 @@ export function getLocationColumns({
           />
           {canWrite ? (
             <>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon-xs"
+                onClick={() => onAssignDoctors(row.original)}
+                aria-label={`Tugaskan dokter ke ${row.original.name}`}
+                title="Tugaskan dokter"
+              >
+                <UserRoundPlus className="h-3.5 w-3.5" aria-hidden="true" />
+              </Button>
               <Button
                 type="button"
                 variant="outline"

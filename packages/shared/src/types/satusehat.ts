@@ -431,7 +431,19 @@ export interface SatusehatLocationContext {
 
 export interface SatusehatEncounterPayload {
   resourceType: 'Encounter';
-  status: 'arrived' | 'in-progress' | 'finished';
+  identifier: {
+    use: 'official';
+    system: string;
+    value: string;
+  }[];
+  status: 'arrived' | 'in-progress' | 'finished' | 'cancelled';
+  statusHistory: {
+    status: 'arrived' | 'in-progress' | 'finished' | 'cancelled';
+    period: {
+      start: string;
+      end?: string;
+    };
+  }[];
   class: {
     system: string;
     code: string;
@@ -442,6 +454,13 @@ export interface SatusehatEncounterPayload {
     display: string;
   };
   participant: {
+    type: {
+      coding: {
+        system: string;
+        code: 'ATND';
+        display: 'attender';
+      }[];
+    }[];
     individual: {
       reference: string; // Practitioner/SIP_ID
       display: string;
@@ -457,6 +476,10 @@ export interface SatusehatEncounterPayload {
       display: string;
     };
   }[];
+  serviceProvider: {
+    reference: string;
+    display: string;
+  };
 }
 
 export interface SatusehatConditionPayload {

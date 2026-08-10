@@ -98,6 +98,12 @@ export class PractitionersController {
     return {
       search: query.search,
       active,
+      organizationId: query.organizationId,
+      locationId: query.locationId,
+      role:
+        query.role === 'DOKTER' || query.role === 'PERAWAT'
+          ? query.role
+          : undefined,
       page: parsePositiveInteger(query.page),
       pageSize: parsePositiveInteger(query.pageSize),
       sort,

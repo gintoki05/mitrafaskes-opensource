@@ -29,7 +29,7 @@ describe('Practitioner validation', () => {
       sipNumber: null,
       strNumber: null,
       organizationId: null,
-      locationId: null,
+      locationIds: [],
       active: true,
     });
   });
@@ -58,7 +58,7 @@ describe('Practitioner validation', () => {
         birthDate: '1994-01-01',
         gender: Gender.MALE,
         organizationId: 'organization-1',
-        locationId: 'location-1',
+        locationIds: ['location-1', 'location-2'],
         active: true,
       }),
     ).toEqual({
@@ -66,7 +66,7 @@ describe('Practitioner validation', () => {
       birthDate: new Date('1994-01-01T00:00:00.000Z'),
       gender: Gender.MALE,
       organizationId: 'organization-1',
-      locationId: 'location-1',
+      locationIds: ['location-1', 'location-2'],
       active: true,
     });
   });

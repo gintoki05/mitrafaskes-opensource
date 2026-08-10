@@ -1,0 +1,237 @@
+'use client';
+
+import { useMemo, useState, type FormEvent } from 'react';
+import type {
+  CreateEncounterDto,
+  Patient,
+  PractitionerSummary,
+} from '@mitrafaskes/shared';
+import { AlertTriangle, ClipboardPlus, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FieldDescription, FieldError } from '@/components/ui/field';
+import { FieldLabel, SelectField } from '../master-faskes/FormField';
+import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
+import { useMasterFaskesData } from '@/hooks/useMasterFaskesData';
+import { usePractitioners } from '@/hooks/usePractitioners';
+
+type EncounterRegistrationDialogProps = {
+  open: boolean;
+  patient: Patient | null;
+  onClose: () => void;
+  onSubmit: (input: CreateEncounterDto) => Promise<void>;
+};
+
+export function EncounterRegistrationDialog({
+  open,
+  patient,
+  onClose,
+  onSubmit,
+}: EncounterRegistrationDialogProps) {
+  const [locationId, setLocationId] = useState('');
+  const [doctorId, setDoctorId] = useState('');
+  const [formError, setFormError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const master = useMasterFaskesData();
+  const practitionerQuery = useMemo(
+    () =>
+      locationId
+        ? {
+            active: true,
+            locationId,
+            role: 'DOKTER' as const,
+            page: 1,
+            pageSize: 100,
+          }
+        : undefined,
+    [locationId],
+  );
+  const practitioners = usePractitioners(practitionerQuery);
+
+  const locations = useMemo(
+    () => {
+      const activeOrganizationIds = new Set(
+        master.organizations
+          .filter((organization) => organization.active)
+          .map((organization) => organization.id),
+      );
+      return master.locations.filter(
+        (location) =>
+          location.active &&
+          location.status === 'ACTIVE' &&
+          activeOrganizationIds.has(location.organizationId),
+      );
+    },
+    [master.locations, master.organizations],
+  );
+  const doctors = useMemo(
+    () =>
+      practitioners.items.filter(
+        (practitioner): practitioner is PractitionerSummary =>
+          practitioner.active &&
+          practitioner.role === 'DOKTER' &&
+          (practitioner.locations?.some((location) => location.id === locationId) ??
+            practitioner.location?.id === locationId),
+      ),
+    [locationId, practitioners.items],
+  );
+
+  const handleLocationChange = (value: string) => {
+    setLocationId(value);
+    setDoctorId('');
+    setFormError('');
+  };
+
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!patient) return;
+    if (!locationId || !doctorId) {
+      setFormError('Location dan dokter wajib dipilih sebelum mendaftar.');
+      return;
+    }
+
+    setSubmitting(true);
+    setFormError('');
+    try {
+      await onSubmit({ patientId: patient.id, locationId, doctorId });
+      onClose();
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : 'Pasien belum dapat dimasukkan ke antrean.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (!open || !patient) return null;
+
+  return (
+    <MasterFaskesDialog
+      open
+      label={`Daftarkan ${patient.fullName} ke antrean`}
+      onClose={onClose}
+      className="max-w-2xl"
+    >
+      <Card>
+        <CardHeader className="border-b border-border px-4 pb-4 pt-4 sm:px-6">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-lg font-bold">
+                <ClipboardPlus className="h-5 w-5 text-primary" aria-hidden="true" />
+                Daftarkan ke antrean
+              </CardTitle>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Pilih konteks pelayanan dan dokter yang ter-assign. Pendaftaran disimpan lokal terlebih dahulu.
+              </p>
+              <p className="mt-3 text-xs">
+                <span className="font-semibold text-foreground">{patient.fullName}</span>{' '}
+                <span className="font-mono text-muted-foreground">RM {patient.medicalRecNo}</span>
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              onClick={onClose}
+              aria-label="Tutup pendaftaran antrean"
+              title="Tutup"
+              className="text-muted-foreground"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="px-4 py-5 sm:px-6">
+          <form className="space-y-5" onSubmit={submit}>
+            {master.error ? (
+              <div className="rounded-md border border-destructive/25 bg-destructive/5 p-3 text-xs text-destructive" role="alert">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span>{master.error}</span>
+                </div>
+              </div>
+            ) : null}
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <FieldLabel htmlFor="encounter-location" required>
+                  Location pelayanan
+                </FieldLabel>
+                <SelectField
+                  id="encounter-location"
+                  value={locationId}
+                  onChange={handleLocationChange}
+                  disabled={master.loading || submitting}
+                  aria-label="Pilih Location pelayanan"
+                >
+                  <option value="">Pilih Location</option>
+                  {locations.map((location) => (
+                    <option key={location.id} value={location.id}>
+                      {location.name} · {location.code}
+                    </option>
+                  ))}
+                </SelectField>
+                <FieldDescription className="mt-1">
+                  Antrean dan assignment dokter mengikuti Location ini.
+                </FieldDescription>
+              </div>
+              <div>
+                <FieldLabel htmlFor="encounter-doctor" required>
+                  Dokter ter-assign
+                </FieldLabel>
+                <SelectField
+                  id="encounter-doctor"
+                  value={doctorId}
+                  onChange={setDoctorId}
+                  disabled={!locationId || practitioners.loading || submitting}
+                  aria-label="Pilih dokter ter-assign"
+                >
+                  <option value="">
+                    {locationId
+                      ? practitioners.loading
+                        ? 'Memuat dokter...'
+                        : 'Pilih dokter'
+                      : 'Pilih Location dahulu'}
+                  </option>
+                  {doctors.map((doctor) => (
+                    <option key={doctor.id} value={doctor.id}>
+                      {doctor.fullName}{doctor.sipNumber ? ` · ${doctor.sipNumber}` : ''}
+                    </option>
+                  ))}
+                </SelectField>
+                <FieldDescription className="mt-1">
+                  Hanya dokter aktif yang ditugaskan ke Location terpilih.
+                </FieldDescription>
+                {practitioners.error ? (
+                  <FieldError className="mt-1">{practitioners.error}</FieldError>
+                ) : null}
+                {locationId && !practitioners.loading && !practitioners.error && doctors.length === 0 ? (
+                  <FieldError className="mt-1">
+                    Belum ada dokter aktif yang ter-assign ke Location ini.
+                  </FieldError>
+                ) : null}
+              </div>
+            </div>
+
+            {formError ? (
+              <div className="rounded-md border border-destructive/25 bg-destructive/5 p-3 text-xs text-destructive" role="alert">
+                {formError}
+              </div>
+            ) : null}
+
+            <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
+              <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
+                Batal
+              </Button>
+              <Button type="submit" disabled={submitting || master.loading || !locationId || !doctorId}>
+                {submitting ? 'Menyimpan...' : 'Buat Encounter lokal'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </MasterFaskesDialog>
+  );
+}

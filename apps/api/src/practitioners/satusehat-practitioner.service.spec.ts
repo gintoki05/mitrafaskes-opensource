@@ -312,10 +312,12 @@ describe('PractitionersService create flow', () => {
   it('rejects a Location from a different Organization', async () => {
     const prisma = createPrismaMock();
     prisma.healthcareOrganization.findUnique.mockResolvedValue({ id: 'organization-1' });
-    prisma.location.findUnique.mockResolvedValue({
-      id: 'location-1',
-      organizationId: 'organization-2',
-    });
+    prisma.location.findMany.mockResolvedValue([
+      {
+        id: 'location-1',
+        organizationId: 'organization-2',
+      },
+    ]);
 
     const service = new PractitionersService(prisma as unknown as PrismaService);
 
@@ -347,6 +349,7 @@ function createPrismaMock() {
     },
     location: {
       findUnique: jest.fn(),
+      findMany: jest.fn(),
     },
     externalResourceLink: {
       findMany: jest.fn().mockResolvedValue([]),

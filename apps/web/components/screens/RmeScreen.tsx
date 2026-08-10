@@ -54,7 +54,7 @@ export default function RmePage() {
 
       if (response.ok) {
         toast.success('RME berhasil disimpan', {
-          description: 'Rekam medis otomatis ditransformasikan ke SATUSEHAT Kemenkes RI.',
+          description: 'Rekam medis tersimpan lokal dan Encounter diselesaikan. Sinkronisasi SATUSEHAT menunggu adapter/outbox PRI-23.',
         });
         void refreshEncounters(encountersMeta.page);
       } else {

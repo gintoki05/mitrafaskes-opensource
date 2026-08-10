@@ -31,13 +31,40 @@ type PractitionerUser = Pick<
     code: string;
     name: string;
   } | null;
+  locationAssignments?: Array<{
+    location: {
+      id: string;
+      organizationId: string;
+      code: string;
+      name: string;
+    };
+  }>;
 };
+
+function toLocationReference(location: {
+  id: string;
+  organizationId: string;
+  code: string;
+  name: string;
+}) {
+  return {
+    id: location.id,
+    organizationId: location.organizationId,
+    code: location.code,
+    name: location.name,
+  };
+}
 
 export function toPractitionerSummary(
   record: PractitionerUser,
   satusehat?: SatusehatLinkageSummary,
   satusehatSync?: SatusehatSyncSummary,
 ): PractitionerSummary {
+  const locations =
+    record.locationAssignments?.map((assignment) =>
+      toLocationReference(assignment.location),
+    ) ?? (record.location ? [toLocationReference(record.location)] : []);
+
   return {
     id: record.id,
     username: record.username,
@@ -56,13 +83,9 @@ export function toPractitionerSummary(
         }
       : undefined,
     location: record.location
-      ? {
-          id: record.location.id,
-          organizationId: record.location.organizationId,
-          code: record.location.code,
-          name: record.location.name,
-        }
+      ? toLocationReference(record.location)
       : undefined,
+    locations,
     active: record.active,
     satusehat,
     satusehatSync,

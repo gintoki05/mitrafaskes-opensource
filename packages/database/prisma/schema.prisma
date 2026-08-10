@@ -143,6 +143,7 @@ model HealthcareOrganization {
   children    HealthcareOrganization[] @relation("OrganizationHierarchy")
   locations   Location[]           @relation("OrganizationLocations")
   practitioners User[]             @relation("OrganizationPractitioners")
+  encounters   Encounter[]         @relation("OrganizationEncounters")
 
   @@index([parentId, active])
   @@index([active, name])
@@ -173,6 +174,9 @@ model Location {
   parent         Location?             @relation("LocationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
   children       Location[]            @relation("LocationHierarchy")
   practitioners  User[]                @relation("LocationPractitioners")
+  practitionerAssignments PractitionerLocationAssignment[] @relation("LocationPractitionerAssignments")
+  encounters     Encounter[]           @relation("LocationEncounters")
+  queueCounters  EncounterQueueCounter[] @relation("LocationQueueCounters")
 
   @@unique([organizationId, code])
   @@index([organizationId, active, name])
@@ -271,11 +275,24 @@ model User {
   updatedAt    DateTime    @updatedAt
   organization HealthcareOrganization? @relation("OrganizationPractitioners", fields: [organizationId], references: [id], onDelete: SetNull)
   location     Location?              @relation("LocationPractitioners", fields: [locationId], references: [id], onDelete: SetNull)
+  locationAssignments PractitionerLocationAssignment[] @relation("PractitionerLocationAssignments")
   encounters   Encounter[] @relation("DoctorEncounters")
+  encounterStatusHistory EncounterStatusHistory[] @relation("EncounterStatusActor")
 
   @@index([role, active, fullName])
   @@index([organizationId, active, fullName])
   @@index([locationId, active, fullName])
+}
+
+model PractitionerLocationAssignment {
+  practitionerId String
+  locationId     String
+  createdAt      DateTime @default(now())
+  practitioner   User     @relation("PractitionerLocationAssignments", fields: [practitionerId], references: [id], onDelete: Cascade)
+  location       Location @relation("LocationPractitionerAssignments", fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@id([practitionerId, locationId])
+  @@index([locationId, practitionerId])
 }
 
 model Patient {
@@ -429,17 +446,62 @@ model PatientRelationship {
 }
 
 model Encounter {
-  id                   String          @id @default(uuid())
-  patientId            String
-  doctorId             String
-  queueNumber          Int
-  status               EncounterStatus @default(WAITING)
-  satusehatEncounterId String?
-  patient              Patient         @relation(fields: [patientId], references: [id])
-  doctor               User            @relation("DoctorEncounters", fields: [doctorId], references: [id])
-  medicalRecord        MedicalRecord?
-  createdAt            DateTime        @default(now())
-  updatedAt            DateTime        @updatedAt
+  id              String                @id @default(uuid())
+  encounterNumber String                @unique @db.VarChar(32)
+  patientId       String
+  doctorId        String
+  organizationId  String
+  locationId      String
+  queueDate       DateTime              @db.Date
+  queueNumber     Int
+  status          EncounterStatus       @default(WAITING)
+  arrivedAt       DateTime              @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+  cancelledAt     DateTime?
+  version         Int                   @default(1)
+  patient         Patient               @relation(fields: [patientId], references: [id])
+  doctor          User                  @relation("DoctorEncounters", fields: [doctorId], references: [id])
+  organization    HealthcareOrganization @relation("OrganizationEncounters", fields: [organizationId], references: [id], onDelete: Restrict)
+  location        Location              @relation("LocationEncounters", fields: [locationId], references: [id], onDelete: Restrict)
+  statusHistory   EncounterStatusHistory[]
+  medicalRecord   MedicalRecord?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+
+  @@unique([locationId, queueDate, queueNumber])
+  @@index([queueDate, locationId, status])
+  @@index([patientId, locationId, queueDate, status])
+  @@index([doctorId, queueDate, status])
+}
+
+model EncounterStatusHistory {
+  id           String          @id @default(uuid())
+  encounterId  String
+  status       EncounterStatus
+  periodStart  DateTime
+  periodEnd    DateTime?
+  actorUserId  String?
+  actorUsername String        @db.VarChar(128)
+  actorRole    Role
+  createdAt    DateTime        @default(now())
+  encounter    Encounter       @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  actorUser    User?           @relation("EncounterStatusActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([encounterId, periodStart])
+  @@index([actorUserId, createdAt])
+}
+
+model EncounterQueueCounter {
+  id              String   @id @default(uuid())
+  locationId      String
+  queueDate       DateTime @db.Date
+  lastIssuedNumber Int     @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  location        Location @relation("LocationQueueCounters", fields: [locationId], references: [id], onDelete: Cascade)
+
+  @@unique([locationId, queueDate])
 }
 
 model MedicalRecord {

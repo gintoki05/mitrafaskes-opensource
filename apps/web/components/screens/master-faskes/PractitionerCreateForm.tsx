@@ -66,7 +66,7 @@ export function PractitionerCreateForm({
       sipNumber: form.sipNumber?.trim() || null,
       strNumber: form.strNumber?.trim() || null,
       organizationId: form.organizationId || null,
-      locationId: form.locationId || null,
+      locationIds: form.locationIds ?? [],
       active: form.active === 'true',
     };
 
