@@ -30,6 +30,9 @@ export function LocationFormContextStep({
   excludeId,
   setValue,
 }: LocationFormContextStepProps) {
+  const organizationOptions = organizations.filter(
+    (organization) => organization.active || organization.id === organizationId,
+  );
   const selectedLocationParents = locations.filter(
     (location) =>
       location.organizationId === organizationId && location.id !== excludeId,
@@ -59,7 +62,7 @@ export function LocationFormContextStep({
                 placeholder="Pilih organisasi"
                 aria-invalid={fieldState.invalid}
                 aria-describedby="location-organization-error"
-                options={organizations.map((organization) => ({
+                options={organizationOptions.map((organization) => ({
                   value: organization.id,
                   label: `${organization.code} - ${organization.name}`,
                 }))}

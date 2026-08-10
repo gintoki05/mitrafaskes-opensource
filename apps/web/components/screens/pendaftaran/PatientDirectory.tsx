@@ -10,6 +10,8 @@ import { PaginationControl } from '@/components/ui/pagination';
 import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import { maritalStatusDisplay } from './marital-status-display';
+import { PatientSyncReadinessNotice } from './PatientSyncReadinessNotice';
+import { getPatientSyncReadiness } from './patient-sync-readiness';
 
 type PatientDirectoryProps = {
   patients: Patient[];
@@ -116,7 +118,10 @@ export function PatientDirectory({
                   />
                 </td>
               </tr>
-            ) : patients.map((patient, index) => (
+            ) : patients.map((patient, index) => {
+              const syncReadiness = getPatientSyncReadiness(patient);
+
+              return (
               <tr key={patient.id} className="group transition-colors hover:bg-primary/[0.035]">
                 <td className="px-4 py-4 text-center font-mono text-xs text-muted-foreground">{firstItem + index}</td>
                 <td className="max-w-[18rem] px-4 py-4">
@@ -142,6 +147,7 @@ export function PatientDirectory({
                         Sync terakhir gagal{patient.satusehatSync.errorMessage ? `: ${patient.satusehatSync.errorMessage}` : ''}
                       </p>
                     ) : null}
+                    <PatientSyncReadinessNotice readiness={syncReadiness} compact />
                   </div>
                 </td>
                 <td className="w-48 px-4 py-4 align-middle text-right">
@@ -196,7 +202,8 @@ export function PatientDirectory({
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>

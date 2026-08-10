@@ -135,9 +135,14 @@ export function toSatusehatPatientPatch(
   patient: Patient,
 ): SatusehatPatientPatchOperation[] {
   const payload = toSatusehatPatientPayload(patient);
+  // SATUSEHAT's MPI Patient update validates the canonical full name. Sending
+  // local aliases/usual names in the same replacement can make that validation
+  // resolve the name element as empty, even when the official name is present.
+  const officialName =
+    payload.name.find((name) => name.use === 'official') ?? payload.name[0];
   const operations: SatusehatPatientPatchOperation[] = [
     { op: 'replace', path: '/identifier', value: payload.identifier },
-    { op: 'replace', path: '/name', value: payload.name },
+    { op: 'replace', path: '/name', value: officialName ? [officialName] : [] },
     { op: 'replace', path: '/gender', value: payload.gender },
     { op: 'replace', path: '/birthDate', value: payload.birthDate },
     { op: 'replace', path: '/address', value: payload.address ?? [] },
@@ -147,14 +152,6 @@ export function toSatusehatPatientPatch(
       value: payload.extension ?? [],
     },
   ];
-
-  if (payload.telecom && payload.telecom.length > 0) {
-    operations.splice(4, 0, {
-      op: 'replace',
-      path: '/telecom',
-      value: payload.telecom,
-    });
-  }
 
   if (payload.maritalStatus) {
     operations.push({

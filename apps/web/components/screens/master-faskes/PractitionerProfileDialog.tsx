@@ -80,6 +80,9 @@ function PractitionerProfileDialogContent({
   );
   const [active, setActive] = useState(practitioner.active ? 'true' : 'false');
   const [saving, setSaving] = useState(false);
+  const organizationOptions = organizations.filter(
+    (organization) => organization.active || organization.id === organizationId,
+  );
 
   const submit = async () => {
     if (!canWrite) return;
@@ -208,7 +211,7 @@ function PractitionerProfileDialogContent({
               disabled={!canWrite || saving}
             >
               <option value="">Belum ditetapkan</option>
-              {organizations.map((organization) => (
+              {organizationOptions.map((organization) => (
                 <option key={organization.id} value={organization.id}>
                   {organization.code} - {organization.name}
                 </option>

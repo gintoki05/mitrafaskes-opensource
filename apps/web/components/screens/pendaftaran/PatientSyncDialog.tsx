@@ -24,6 +24,11 @@ import { FieldLabel, SelectField } from '../master-faskes/FormField';
 import { formatSatusehatOperation, SatusehatPreviewSummary } from '../master-faskes/SatusehatPreviewSummary';
 import { isPatientPatchPayload, PatientPatchPreview } from './PatientPatchPreview';
 import { PatientSatusehatResult } from './PatientSatusehatResult';
+import { PatientSyncReadinessNotice } from './PatientSyncReadinessNotice';
+import {
+  getPatientSyncReadiness,
+  patientSyncReadinessMessage,
+} from './patient-sync-readiness';
 
 type PatientSyncDialogProps = {
   open: boolean;
@@ -102,6 +107,7 @@ export function PatientSyncDialog({
 
   const lookupIdentifier =
     lookupIdentifierType === 'NIK' ? patient.nik ?? '' : lookupIhsNumber;
+  const syncReadiness = getPatientSyncReadiness(patient);
   const lookupLabel = lookupIdentifierType === 'NIK' ? 'NIK' : 'Nomor IHS';
   const lookupValid =
     lookupIdentifierType === 'NIK'
@@ -143,6 +149,14 @@ export function PatientSyncDialog({
   };
 
   const sync = async () => {
+    if (!syncReadiness.ready) {
+      toast.error('Data pasien belum siap disinkronkan', {
+        description: patientSyncReadinessMessage(syncReadiness),
+        duration: 7000,
+      });
+      return;
+    }
+
     setSyncing(true);
     try {
       await syncSatusehat(patient.id);
@@ -183,7 +197,8 @@ export function PatientSyncDialog({
     }
   };
 
-  const disabled = state.loading || syncing || linking || !state.preview;
+  const disabled =
+    state.loading || syncing || linking || !state.preview || !syncReadiness.ready;
 
   return (
     <MasterFaskesDialog
@@ -249,6 +264,8 @@ export function PatientSyncDialog({
               )}
             </>
           ) : null}
+
+          <PatientSyncReadinessNotice readiness={syncReadiness} />
 
           <section className="space-y-3 rounded-[var(--radius-card)] border border-border bg-muted/20 p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">

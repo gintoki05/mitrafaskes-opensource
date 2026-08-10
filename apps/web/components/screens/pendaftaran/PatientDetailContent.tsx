@@ -17,6 +17,8 @@ import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGrou
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import { cn } from '@/lib/utils';
 import { maritalStatusDisplay } from './marital-status-display';
+import { PatientSyncReadinessNotice } from './PatientSyncReadinessNotice';
+import { getPatientSyncReadiness } from './patient-sync-readiness';
 
 const PATIENT_IHS_SYSTEM = 'https://fhir.kemkes.go.id/id/ihs-number';
 
@@ -92,6 +94,7 @@ export function PatientDetailContent({
   const telecoms = patient.telecoms ?? [];
   const addresses = patient.addresses ?? [];
   const relationships = patient.relationships ?? [];
+  const syncReadiness = getPatientSyncReadiness(patient);
 
   return (
     <>
@@ -348,6 +351,7 @@ export function PatientDetailContent({
             Tutup
           </Button>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+            <PatientSyncReadinessNotice readiness={syncReadiness} compact />
             {canWrite ? (
               <>
                 <SatusehatActionGroup

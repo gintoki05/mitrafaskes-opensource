@@ -22,6 +22,10 @@ export function PractitionerCreatePlacementFields({
   locations: LocationSummary[];
   updateField: PractitionerFormFieldUpdater;
 }) {
+  const activeOrganizations = organizations.filter(
+    (organization) => organization.active,
+  );
+
   return (
     <section className="space-y-4 border-t border-border pt-5">
       <div>
@@ -33,8 +37,8 @@ export function PractitionerCreatePlacementFields({
           tidak wajib untuk menyimpan profil lokal.
         </p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="min-w-0">
           <FieldLabel htmlFor="practitioner-create-organization">
             Organization
           </FieldLabel>
@@ -48,7 +52,7 @@ export function PractitionerCreatePlacementFields({
             disabled={disabled}
           >
             <option value="">Belum ditetapkan</option>
-            {organizations.map((organization) => (
+            {activeOrganizations.map((organization) => (
               <option key={organization.id} value={organization.id}>
                 {organization.code} - {organization.name}
               </option>

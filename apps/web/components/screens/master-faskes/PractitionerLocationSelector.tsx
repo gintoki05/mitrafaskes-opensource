@@ -30,9 +30,13 @@ export function PractitionerLocationSelector({
   const availableLocations = useMemo(
     () =>
       organizationId
-        ? locations.filter((location) => location.organizationId === organizationId)
+        ? locations.filter(
+            (location) =>
+              location.organizationId === organizationId &&
+              (location.active || value.includes(location.id)),
+          )
         : [],
-    [locations, organizationId],
+    [locations, organizationId, value],
   );
   const filteredLocations = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase('id-ID');

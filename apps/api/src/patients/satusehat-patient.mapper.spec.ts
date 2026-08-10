@@ -73,6 +73,60 @@ describe('SATUSEHAT Patient mapper', () => {
     );
   });
 
+  it('omits telecom replacement even when local telecom data exists', () => {
+    const patientWithTelecom = {
+      ...patient,
+      telecoms: [
+        {
+          id: 'patient-telecom-1',
+          system: 'PHONE' as const,
+          value: '081234567890',
+          normalizedValue: '081234567890',
+          use: 'MOBILE' as const,
+          rank: 1,
+          verificationStatus: 'VERIFIED' as const,
+          active: true,
+        },
+      ],
+    };
+
+    expect(toSatusehatPatientPatch(patientWithTelecom)).not.toContainEqual(
+      expect.objectContaining({ path: '/telecom' }),
+    );
+  });
+
+  it('sends only the canonical official name on Patient updates', () => {
+    const patientWithAlias = {
+      ...patient,
+      names: [
+        {
+          id: 'patient-name-official',
+          use: 'OFFICIAL' as const,
+          text: 'Siti Sehat',
+          family: '',
+          given: [],
+          prefix: [],
+          suffix: [],
+        },
+        {
+          id: 'patient-name-preferred',
+          use: 'PREFERRED' as const,
+          text: 'Siti',
+          family: '',
+          given: [],
+          prefix: [],
+          suffix: [],
+        },
+      ],
+    };
+
+    expect(toSatusehatPatientPatch(patientWithAlias)).toContainEqual({
+      op: 'replace',
+      path: '/name',
+      value: [{ use: 'official', text: 'Siti Sehat' }],
+    });
+  });
+
   it('maps administrative address codes to the SATUSEHAT address extension', () => {
     const patientWithAddress = {
       ...patient,
