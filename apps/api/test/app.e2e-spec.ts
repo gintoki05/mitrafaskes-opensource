@@ -35,9 +35,16 @@ class InMemoryPatientRepository {
   async findMany(input: PatientListQuery = {}): Promise<PatientListResponse> {
     const page = input.page ?? 1;
     const pageSize = Math.min(input.pageSize ?? 25, 100);
+    const filteredPatients = this.patients.filter(
+      (patient) => input.active === undefined || patient.active === input.active,
+    );
     return {
-      items: this.patients.slice((page - 1) * pageSize, page * pageSize),
-      meta: { page, pageSize, total: this.patients.length },
+      items: filteredPatients.slice((page - 1) * pageSize, page * pageSize),
+      meta: { page, pageSize, total: filteredPatients.length },
+      statusCounts: {
+        active: this.patients.filter((patient) => patient.active !== false).length,
+        inactive: this.patients.filter((patient) => patient.active === false).length,
+      },
     };
   }
 

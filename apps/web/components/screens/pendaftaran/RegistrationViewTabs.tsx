@@ -23,14 +23,14 @@ const viewTabs: readonly {
   {
     id: 'patients',
     label: 'Data pasien',
-    description: 'Database identitas pasien',
+    description: 'Pasien terdaftar',
     countNoun: 'pasien',
     icon: UsersRound,
   },
   {
     id: 'queue',
     label: 'Antrean hari ini',
-    description: 'Kunjungan yang sedang diproses',
+    description: 'Kunjungan hari ini',
     countNoun: 'antrean',
     icon: Clock3,
   },

@@ -111,7 +111,7 @@ export function PatientDetailContent({
               Verifikasi identitas
             </h2>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Pastikan data ini sesuai sebelum memasukkan pasien ke antrean.
+              Cek data utama sebelum masuk antrean.
             </p>
           </div>
         </div>
@@ -366,7 +366,13 @@ export function PatientDetailContent({
               </>
             ) : null}
             {canCreateQueue ? (
-              <Button type="button" size="sm" onClick={() => onQueue(patient)}>
+              <Button
+                type="button"
+                size="sm"
+                disabled={patient.active === false}
+                title={patient.active === false ? 'Pasien nonaktif tidak dapat masuk antrean' : undefined}
+                onClick={() => onQueue(patient)}
+              >
                 <ListPlus className="h-4 w-4" aria-hidden="true" />
                 Masukkan ke antrean
               </Button>

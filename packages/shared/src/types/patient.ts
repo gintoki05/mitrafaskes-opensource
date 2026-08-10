@@ -181,12 +181,21 @@ export interface Patient {
 }
 
 export type PatientListMeta = ListMeta;
-export type PatientListResponse = PaginatedListResponse<Patient>;
+
+export interface PatientStatusCounts {
+  active: number;
+  inactive: number;
+}
+
+export interface PatientListResponse extends PaginatedListResponse<Patient> {
+  statusCounts?: PatientStatusCounts;
+}
 
 export interface PatientListQuery {
   search?: string;
   page?: number;
   pageSize?: number;
+  active?: boolean;
 }
 
 export interface CreatePatientIdentifierDto {

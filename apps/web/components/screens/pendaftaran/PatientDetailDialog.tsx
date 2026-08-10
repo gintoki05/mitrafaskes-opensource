@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react';
 import type { MaritalStatusSummary, Patient } from '@mitrafaskes/shared';
 import { Eye, RefreshCw, X } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScreenState } from '@/components/ScreenState';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
 import { PatientDetailContent } from './PatientDetailContent';
+import { PatientStatusBadge } from './PatientStatusBadge';
 
 type PatientDetailDialogProps = {
   open: boolean;
@@ -86,7 +86,7 @@ export function PatientDetailDialog({
                 Detail pasien
               </CardTitle>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Verifikasi identitas sebelum memasukkan pasien ke antrean.
+                Cek identitas sebelum memasukkan pasien ke antrean.
               </p>
               {patient ? (
                 <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
@@ -99,15 +99,7 @@ export function PatientDetailDialog({
             <div className="flex w-full flex-wrap items-center justify-between gap-2 sm:w-auto sm:justify-end">
               {patient ? (
                 <>
-                  <Badge
-                    className={
-                      patient.active !== false
-                        ? 'clinical-status-success border text-[10px] font-bold'
-                        : 'clinical-status-error border text-[10px] font-bold'
-                    }
-                  >
-                    {patient.active !== false ? 'AKTIF' : 'NONAKTIF'}
-                  </Badge>
+                  <PatientStatusBadge active={patient.active} className="text-[10px]" />
                   <SatusehatLinkageBadge
                     linkage={patient.satusehat}
                     resourceName={patient.fullName}
@@ -168,7 +160,7 @@ export function PatientDetailDialog({
                 >
                   <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-destructive" aria-hidden="true" />
                   <p className="leading-relaxed">
-                    Sinkronisasi terakhir gagal. Linkage sukses sebelumnya tetap dipertahankan. Periksa pesan berikut sebelum mencoba sinkronisasi ulang.
+                    Sync terakhir gagal, tetapi linkage sebelumnya tetap ada.
                     {patient.satusehatSync.errorMessage ? ` ${patient.satusehatSync.errorMessage}` : ''}
                   </p>
                 </div>

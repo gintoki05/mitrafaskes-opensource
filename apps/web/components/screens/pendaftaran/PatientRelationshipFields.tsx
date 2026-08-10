@@ -1,6 +1,7 @@
 "use client";
 
-import { Plus } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, Plus } from "lucide-react";
 import {
   useFieldArray,
   type Control,
@@ -8,7 +9,6 @@ import {
   type UseFormRegister,
 } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   patientRelationshipFormDefaults,
   type PatientFormValues,
@@ -33,18 +33,27 @@ export function PatientRelationshipFields({
     control,
     name: "relationships",
   });
-
+  const [relationshipsOpen, setRelationshipsOpen] = useState(
+    () => fields.length > 0,
+  );
   return (
-    <Card>
-      <CardHeader className="border-b border-border pb-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <CardTitle className="text-sm font-bold">Relasi pasien</CardTitle>
-            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-              Tambahkan lebih dari satu relasi. Setiap baris bisa diedit atau
-              dihapus; relasi historis tetap tersimpan di riwayat pasien.
-            </p>
-          </div>
+    <details
+      className="group rounded-[var(--radius-card)] border border-border bg-card"
+      open={relationshipsOpen}
+      onToggle={(event) => setRelationshipsOpen(event.currentTarget.open)}
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-foreground">Relasi pasien</span>
+          <span className="mt-0.5 block text-xs text-muted-foreground">
+            {fields.length ? `${fields.length} relasi` : 'Opsional'}
+          </span>
+        </span>
+        <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-180" aria-hidden="true" />
+      </summary>
+      <div className="space-y-4 border-t border-border p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-xs text-muted-foreground">Tambahkan wali, orang tua, atau pendamping bila perlu.</p>
           <Button
             type="button"
             size="sm"
@@ -56,12 +65,9 @@ export function PatientRelationshipFields({
             Tambah relasi
           </Button>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4 pt-4">
         {fields.length === 0 ? (
-          <div className="rounded-[var(--radius-card)] border border-dashed border-border bg-muted/20 p-4 text-xs text-muted-foreground">
-            Belum ada relasi aktif. Tambahkan relasi bila pasien memiliki wali,
-            orang tua, anak, atau pendamping yang perlu dicatat.
+          <div className="rounded-[var(--radius-card)] border border-dashed border-border bg-muted/20 p-3 text-xs text-muted-foreground">
+            Belum ada relasi.
           </div>
         ) : (
           fields.map((field, index) => (
@@ -80,10 +86,9 @@ export function PatientRelationshipFields({
           ))
         )}
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Menghapus baris lalu menyimpan pasien akan mengakhiri relasi aktif
-          tersebut. Catatan historis tidak dihapus.
+          Relasi yang dihapus tidak menghapus riwayat pasien.
         </p>
-      </CardContent>
-    </Card>
+      </div>
+    </details>
   );
 }

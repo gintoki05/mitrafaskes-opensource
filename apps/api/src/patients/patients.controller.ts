@@ -23,6 +23,12 @@ const parsePositiveInteger = (value: string | undefined): number | undefined => 
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 };
 
+const parseOptionalBoolean = (value: string | undefined): boolean | undefined => {
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return undefined;
+};
+
 @Controller('api/patients')
 @UseGuards(SessionPermissionGuard)
 @ApiTags('Patients')
@@ -39,6 +45,7 @@ export class PatientsController {
       search: query.search,
       page: parsePositiveInteger(query.page),
       pageSize: parsePositiveInteger(query.pageSize),
+      active: parseOptionalBoolean(query.active),
     });
   }
 

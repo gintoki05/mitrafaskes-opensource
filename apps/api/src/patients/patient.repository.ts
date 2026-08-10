@@ -68,7 +68,7 @@ export class PatientRepository {
       MAX_PAGE_SIZE,
     );
     const normalizedSearch = input.search?.trim();
-    const where: Prisma.PatientWhereInput | undefined = normalizedSearch
+    const searchWhere: Prisma.PatientWhereInput | undefined = normalizedSearch
       ? {
           OR: [
             { nik: { contains: normalizedSearch } },
@@ -117,8 +117,20 @@ export class PatientRepository {
           ],
         }
       : undefined;
+    const where: Prisma.PatientWhereInput | undefined =
+      input.active === undefined
+        ? searchWhere
+        : { ...(searchWhere ?? {}), active: input.active };
+    const activeWhere: Prisma.PatientWhereInput = {
+      ...(searchWhere ?? {}),
+      active: true,
+    };
+    const inactiveWhere: Prisma.PatientWhereInput = {
+      ...(searchWhere ?? {}),
+      active: false,
+    };
 
-    const [records, total] = await Promise.all([
+    const [records, total, activeCount, inactiveCount] = await Promise.all([
       this.prisma.patient.findMany({
         where,
         include: patientInclude,
@@ -127,11 +139,14 @@ export class PatientRepository {
         take: pageSize,
       }),
       this.prisma.patient.count({ where }),
+      this.prisma.patient.count({ where: activeWhere }),
+      this.prisma.patient.count({ where: inactiveWhere }),
     ]);
 
     return {
       items: records.map(toPatient),
       meta: { page, pageSize, total },
+      statusCounts: { active: activeCount, inactive: inactiveCount },
     };
   }
 

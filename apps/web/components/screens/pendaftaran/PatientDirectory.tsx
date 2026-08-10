@@ -1,17 +1,25 @@
 'use client';
 
 import type { SubmitEventHandler } from 'react';
-import type { ListMeta, MaritalStatusSummary, Patient } from '@mitrafaskes/shared';
-import { Edit3, Eye, Filter, ListPlus, Search } from 'lucide-react';
+import type {
+  ListMeta,
+  MaritalStatusSummary,
+  Patient,
+  PatientStatusCounts,
+} from '@mitrafaskes/shared';
+import { Edit3, Eye, ListPlus, Search } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScreenState } from '@/components/ScreenState';
 import { PaginationControl } from '@/components/ui/pagination';
 import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
+import { cn } from '@/lib/utils';
 import { maritalStatusDisplay } from './marital-status-display';
 import { PatientSyncReadinessNotice } from './PatientSyncReadinessNotice';
 import { getPatientSyncReadiness } from './patient-sync-readiness';
+import { PatientStatusBadge } from './PatientStatusBadge';
 
 type PatientDirectoryProps = {
   patients: Patient[];
@@ -29,6 +37,9 @@ type PatientDirectoryProps = {
   onEditPatient: (patient: Patient) => void;
   onSyncPatient: (patient: Patient) => void;
   maritalStatuses: readonly MaritalStatusSummary[];
+  statusCounts: PatientStatusCounts;
+  statusFilter: boolean | undefined;
+  onStatusFilterChange: (active: boolean | undefined) => void;
 };
 
 export function PatientDirectory({
@@ -47,22 +58,33 @@ export function PatientDirectory({
   onEditPatient,
   onSyncPatient,
   maritalStatuses,
+  statusCounts,
+  statusFilter,
+  onStatusFilterChange,
 }: PatientDirectoryProps) {
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
   const firstItem = meta.total === 0 ? 0 : (meta.page - 1) * meta.pageSize + 1;
   const lastItem = Math.min(meta.total, meta.page * meta.pageSize);
+  const statusFilterLabel =
+    statusFilter === true ? 'aktif' : statusFilter === false ? 'nonaktif' : null;
+  const statusFilterOptions = [
+    { value: true, label: 'Aktif', count: statusCounts.active },
+    { value: false, label: 'Nonaktif', count: statusCounts.inactive },
+    { value: undefined, label: 'Semua', count: statusCounts.active + statusCounts.inactive },
+  ] as const;
 
   return (
     <section className="data-surface" aria-labelledby="patient-directory-title">
       <div className="flex flex-col gap-1 border-b border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <h2 id="patient-directory-title" className="text-base font-bold text-foreground">Data pasien terdaftar</h2>
+          <h2 id="patient-directory-title" className="text-base font-bold text-foreground">Pasien terdaftar</h2>
           <p className="mt-1 max-w-2xl text-xs leading-relaxed text-muted-foreground">
-            Database identitas pasien yang dapat dipakai untuk pendaftaran kunjungan.
+            Lihat detail, edit data, atau masukkan pasien ke antrean.
           </p>
         </div>
         <span className="shrink-0 text-xs font-semibold text-muted-foreground">
-          <strong className="font-mono text-foreground">{meta.total}</strong> pasien tampil
+          <strong className="font-mono text-foreground">{meta.total}</strong>{' '}
+          {statusFilterLabel ? `pasien ${statusFilterLabel}` : 'pasien tampil'}
         </span>
       </div>
       <div className="data-toolbar">
@@ -81,15 +103,37 @@ export function PatientDirectory({
           </div>
           <Button type="submit" size="sm" className="sm:h-10 sm:px-4">Cari data</Button>
         </form>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Filter className="h-4 w-4" aria-hidden="true" />
-          <span className="hidden sm:inline">Filter aktif:</span>
-          <strong className="font-mono text-foreground">{meta.total}</strong>
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter status pasien">
+          <span className="mr-1 text-xs font-semibold text-foreground">Status</span>
+          {statusFilterOptions.map((option) => {
+            const selected = statusFilter === option.value;
+
+            return (
+              <button
+                key={option.label}
+                type="button"
+                aria-pressed={selected}
+                disabled={patientsLoading}
+                onClick={() => onStatusFilterChange(option.value)}
+                className={cn(
+                  'inline-flex h-8 items-center gap-2 rounded-full border px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50',
+                  selected
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:bg-muted hover:text-foreground',
+                )}
+              >
+                <span>{option.label}</span>
+                <Badge variant={selected ? 'default' : 'outline'} className="h-5 min-w-5 px-1.5 text-[11px]">
+                  {option.count}
+                </Badge>
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1120px] border-collapse text-left">
+        <table className="w-full min-w-[1180px] border-collapse text-left">
           <caption className="sr-only">Daftar pasien terdaftar</caption>
           <thead className="bg-muted/60 text-[11px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
             <tr>
@@ -97,6 +141,7 @@ export function PatientDirectory({
               <th scope="col" className="border-b border-border px-4 py-3">Nama Pasien</th>
               <th scope="col" className="border-b border-border px-4 py-3">No. Rekam Medis</th>
               <th scope="col" className="border-b border-border px-4 py-3">Identitas</th>
+              <th scope="col" className="border-b border-border px-4 py-3">Status</th>
               <th scope="col" className="border-b border-border px-4 py-3">SATUSEHAT</th>
               <th scope="col" className="w-48 border-b border-border px-4 py-3 text-right">Aksi</th>
             </tr>
@@ -104,17 +149,22 @@ export function PatientDirectory({
           <tbody className="divide-y divide-border">
             {patientsLoading ? (
               <tr>
-                <td colSpan={6} className="p-4">
+                <td colSpan={7} className="p-4">
                   <ScreenState kind="loading" title="Memuat daftar pasien" description="Mohon tunggu sebentar." compact />
                 </td>
               </tr>
             ) : patients.length === 0 && !patientsError ? (
               <tr>
-                <td colSpan={6} className="p-4">
+                <td colSpan={7} className="p-4">
                   <ScreenState
                     kind="empty"
-                    title={search ? 'Pasien tidak ditemukan' : 'Belum ada pasien'}
-                    description={search ? 'Coba gunakan NIK, nomor rekam medis, atau nama lain.' : 'Daftar pasien akan tampil setelah data tersedia.'}
+                    title={search ? 'Pasien tidak ditemukan' : statusFilterLabel ? `Belum ada pasien ${statusFilterLabel}` : 'Belum ada pasien'}
+                    description={search ? 'Coba gunakan NIK, nomor rekam medis, atau nama lain.' : statusFilterLabel ? `Tidak ada pasien ${statusFilterLabel}.` : 'Daftar pasien akan tampil setelah data tersedia.'}
+                    action={!search && statusFilter !== undefined ? (
+                      <Button type="button" variant="outline" size="sm" onClick={() => onStatusFilterChange(undefined)}>
+                        Tampilkan semua
+                      </Button>
+                    ) : undefined}
                   />
                 </td>
               </tr>
@@ -135,6 +185,9 @@ export function PatientDirectory({
                 <td className="px-4 py-4">
                   <div className="font-mono text-xs text-foreground">{patient.nik ?? 'Belum diisi'}</div>
                   <div className="mt-1 text-[11px] text-muted-foreground">NIK terdaftar</div>
+                </td>
+                <td className="px-4 py-4">
+                  <PatientStatusBadge active={patient.active} />
                 </td>
                 <td className="px-4 py-4">
                   <div className="space-y-1">
@@ -191,9 +244,10 @@ export function PatientDirectory({
                         type="button"
                         variant="outline"
                         size="icon-xs"
+                        disabled={patient.active === false}
                         onClick={() => onQueuePatient(patient)}
                         aria-label={`Masukkan ${patient.fullName} ke antrean`}
-                        title={`Masukkan ${patient.fullName} ke antrean`}
+                        title={patient.active === false ? 'Pasien nonaktif tidak dapat masuk antrean' : `Masukkan ${patient.fullName} ke antrean`}
                         className="border-primary/35 bg-card text-primary hover:bg-primary/5"
                       >
                         <ListPlus className="h-3.5 w-3.5" aria-hidden="true" />
@@ -222,9 +276,7 @@ export function PatientDirectory({
             aria-label="Navigasi halaman daftar pasien"
             className="mx-0 w-auto"
           />
-        ) : (
-          <span>Gunakan kolom pencarian untuk menemukan data lebih cepat.</span>
-        )}
+        ) : null}
       </div>
     </section>
   );

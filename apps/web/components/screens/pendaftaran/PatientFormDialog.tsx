@@ -31,6 +31,7 @@ import {
   patientFormValuesToPayload,
 } from './patient-form-mappers';
 import type { MaritalStatusLookupState } from './useMaritalStatuses';
+import { PatientStatusField } from './PatientStatusField';
 
 type PatientFormDialogProps = {
   open: boolean;
@@ -156,17 +157,22 @@ export function PatientFormDialog({
       className="max-w-4xl"
     >
       <Card>
-        <CardHeader className="border-b border-border">
-          <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
-            <UserPlus className="h-5 w-5 text-primary" aria-hidden="true" />
-            {isEditing ? 'Edit data pasien lokal' : 'Daftarkan pasien baru'}
-          </CardTitle>
-          <p className="text-xs leading-relaxed text-muted-foreground">
-            Penyimpanan lokal tidak memanggil SATUSEHAT. Sinkronisasi dilakukan melalui aksi terpisah setelah data diperiksa.
-          </p>
+        <CardHeader className="border-b border-border px-4 py-4 sm:px-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+                <UserPlus className="h-5 w-5 text-primary" aria-hidden="true" />
+                {isEditing ? 'Edit data pasien' : 'Pasien baru'}
+              </CardTitle>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Isi kolom bertanda * terlebih dahulu. Data lain bisa dilengkapi nanti.
+              </p>
+            </div>
+            <PatientStatusField control={control} disabled={!canWrite || isSubmitting} />
+          </div>
         </CardHeader>
-        <CardContent className="pt-5">
-          <form onSubmit={submit} className="space-y-4" noValidate>
+        <CardContent className="px-4 pt-4 sm:px-6">
+          <form onSubmit={submit} className="space-y-3" noValidate>
             {!isEditing ? (
               <PatientSatusehatLookupPanel
                 nik={currentNik}

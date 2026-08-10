@@ -6,6 +6,7 @@ import type {
   UseFormRegister,
   UseFormSetValue,
 } from 'react-hook-form';
+import { ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -32,14 +33,15 @@ export function PatientContactFields({
 }: PatientContactFieldsProps) {
   return (
     <>
-      <Card>
-        <CardHeader className="border-b border-border pb-3">
-          <CardTitle className="text-sm font-bold">Identifier & SATUSEHAT</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Identifier lokal tetap dipisahkan dari ID resource SATUSEHAT.
-          </p>
-        </CardHeader>
-        <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">
+      <details className="group rounded-[var(--radius-card)] border border-border bg-card">
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 [&::-webkit-details-marker]:hidden">
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-foreground">Identifier & SATUSEHAT</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">Opsional</span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="grid gap-4 border-t border-border p-4 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="patient-passport">Paspor</FieldLabel>
             <Input
@@ -66,22 +68,20 @@ export function PatientContactFields({
               disabled={disabled}
               readOnly
               className="font-mono"
-              placeholder="Diisi dari hasil lookup atau linkage SATUSEHAT"
+              placeholder="Diisi dari lookup atau linkage"
               aria-invalid={Boolean(errors.satusehatId)}
             />
-            <p className="text-[11px] text-muted-foreground">
-              Diisi otomatis dari hasil lookup atau linkage SATUSEHAT.
-            </p>
+            <p className="text-[11px] text-muted-foreground">Terisi otomatis dari SATUSEHAT.</p>
             <FieldError errors={[errors.satusehatId]} />
           </Field>
-        </CardContent>
-      </Card>
+        </div>
+      </details>
 
       <Card>
         <CardHeader className="border-b border-border pb-3">
           <CardTitle className="text-sm font-bold">Kontak & alamat</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Alamat disimpan sebagai struktur terpisah tanpa menghilangkan teks display legacy.
+            Telepon, email, dan alamat pasien.
           </p>
         </CardHeader>
         <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">

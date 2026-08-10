@@ -7,6 +7,7 @@ import type {
   PractitionerSummary,
 } from '@mitrafaskes/shared';
 import { AlertTriangle, ClipboardPlus, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FieldDescription, FieldError } from '@/components/ui/field';
@@ -124,12 +125,13 @@ export function EncounterRegistrationDialog({
                 Daftarkan ke antrean
               </CardTitle>
               <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Pilih konteks pelayanan dan dokter yang ter-assign. Pendaftaran disimpan lokal terlebih dahulu.
+                Pilih poli dan dokter untuk membuat antrean lokal.
               </p>
-              <p className="mt-3 text-xs">
-                <span className="font-semibold text-foreground">{patient.fullName}</span>{' '}
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                <span className="font-semibold text-foreground">{patient.fullName}</span>
                 <span className="font-mono text-muted-foreground">RM {patient.medicalRecNo}</span>
-              </p>
+                <Badge className="clinical-status-warning border text-[10px] font-bold">MENUNGGU</Badge>
+              </div>
             </div>
             <Button
               type="button"
@@ -174,7 +176,7 @@ export function EncounterRegistrationDialog({
                   ))}
                 </SelectField>
                 <FieldDescription className="mt-1">
-                  Antrean dan assignment dokter mengikuti Location ini.
+                  Antrean mengikuti poli ini.
                 </FieldDescription>
               </div>
               <div>
@@ -202,7 +204,7 @@ export function EncounterRegistrationDialog({
                   ))}
                 </SelectField>
                 <FieldDescription className="mt-1">
-                  Hanya dokter aktif yang ditugaskan ke Location terpilih.
+                  Hanya dokter aktif di poli terpilih.
                 </FieldDescription>
                 {practitioners.error ? (
                   <FieldError className="mt-1">{practitioners.error}</FieldError>
@@ -226,7 +228,7 @@ export function EncounterRegistrationDialog({
                 Batal
               </Button>
               <Button type="submit" disabled={submitting || master.loading || !locationId || !doctorId}>
-                {submitting ? 'Menyimpan...' : 'Buat Encounter lokal'}
+                {submitting ? 'Mendaftarkan...' : 'Daftarkan ke antrean'}
               </Button>
             </div>
           </form>

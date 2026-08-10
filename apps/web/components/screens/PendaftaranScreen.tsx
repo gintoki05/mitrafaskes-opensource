@@ -31,6 +31,7 @@ import { useEncounterActions } from './pendaftaran/useEncounterActions';
 
 export default function PendaftaranPage() {
   const [search, setSearch] = useState('');
+  const [patientStatusFilter, setPatientStatusFilter] = useState<boolean | undefined>(true);
   const [activeView, setActiveView] = useState<RegistrationView>('patients');
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
@@ -51,6 +52,7 @@ export default function PendaftaranPage() {
   const {
     patients,
     patientsMeta,
+    patientsStatusCounts,
     encounters,
     encountersMeta,
     patientsLoading,
@@ -65,7 +67,12 @@ export default function PendaftaranPage() {
 
   const handleSearchSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void refreshPatients(search, 1);
+    void refreshPatients(search, 1, patientStatusFilter);
+  };
+
+  const handlePatientStatusFilterChange = (active: boolean | undefined) => {
+    setPatientStatusFilter(active);
+    void refreshPatients(search, 1, active);
   };
 
   const openNewPatient = () => {
@@ -83,7 +90,7 @@ export default function PendaftaranPage() {
   };
 
   const handlePatientSaved = async () => {
-    await refreshPatients(search, patientsMeta.page);
+    await refreshPatients(search, patientsMeta.page, patientStatusFilter);
   };
 
   const handleEditPatient = (patient: Patient) => {
@@ -98,6 +105,12 @@ export default function PendaftaranPage() {
   };
 
   const handleDaftarAntrean = (patient: Patient) => {
+    if (patient.active === false) {
+      toast.error('Pasien nonaktif tidak dapat masuk antrean.', {
+        description: 'Edit status pasien menjadi Aktif terlebih dahulu.',
+      });
+      return;
+    }
     setDetailPatientId(null);
     setRegistrationDialogKey((current) => current + 1);
     setRegistrationPatient(patient);
@@ -139,7 +152,7 @@ export default function PendaftaranPage() {
         <PageHeader
           icon={<UserCheck className="h-6 w-6" />}
           title="Pendaftaran"
-          description="Cari data pasien, buat data baru, lalu masukkan kunjungan hari ini ke antrean."
+          description="Kelola pasien dan antrean kunjungan."
           action={
             canWritePatient ? (
               <Button type="button" onClick={openNewPatient}>
@@ -178,7 +191,10 @@ export default function PendaftaranPage() {
               canWritePatient={canWritePatient}
               onSearchChange={setSearch}
               onSearchSubmit={handleSearchSubmit}
-              onPageChange={(page) => void refreshPatients(search, page)}
+              onPageChange={(page) => void refreshPatients(search, page, patientStatusFilter)}
+              statusCounts={patientsStatusCounts}
+              statusFilter={patientStatusFilter}
+              onStatusFilterChange={handlePatientStatusFilterChange}
               onQueuePatient={handleDaftarAntrean}
               onViewPatient={(patient) => setDetailPatientId(patient.id)}
               onEditPatient={handleEditPatient}

@@ -7,6 +7,7 @@ import type {
   PaginatedListResponse,
   Patient,
   PatientListResponse,
+  PatientStatusCounts,
 } from "@mitrafaskes/shared";
 import { apiFetch } from "@/lib/auth";
 import type { Encounter } from "@/lib/clinical-types";
@@ -16,6 +17,7 @@ const DEFAULT_PAGE_SIZE = 25;
 type RegistrationDataState = {
   patients: Patient[];
   patientsMeta: ListMeta;
+  patientsStatusCounts: PatientStatusCounts;
   encounters: Encounter[];
   encountersMeta: ListMeta;
   patientsLoading: boolean;
@@ -44,7 +46,31 @@ const emptyResponse = <T>(page = 1): { items: T[]; meta: ListMeta } => ({
   meta: { page, pageSize: DEFAULT_PAGE_SIZE, total: 0 },
 });
 
+const emptyPatientStatusCounts = (): PatientStatusCounts => ({
+  active: 0,
+  inactive: 0,
+});
+
+const emptyPatientResponse = (page = 1): PatientListResponse => ({
+  ...emptyResponse<Patient>(page),
+  statusCounts: emptyPatientStatusCounts(),
+});
+
 type ListPayload<T> = PaginatedListResponse<T> | T[];
+
+function countPatientStatuses(patients: readonly Patient[]): PatientStatusCounts {
+  return patients.reduce<PatientStatusCounts>(
+    (counts, patient) => {
+      if (patient.active === false) {
+        counts.inactive += 1;
+      } else {
+        counts.active += 1;
+      }
+      return counts;
+    },
+    emptyPatientStatusCounts(),
+  );
+}
 
 function normalizeListPayload<T>(
   payload: ListPayload<T>,
@@ -68,9 +94,29 @@ function normalizeListPayload<T>(
   return emptyResponse<T>(page);
 }
 
+function normalizePatientListPayload(
+  payload: PatientListResponse | Patient[],
+  page: number,
+): PatientListResponse {
+  if (Array.isArray(payload)) {
+    const response = normalizeListPayload(payload, page);
+    return { ...response, statusCounts: countPatientStatuses(response.items) };
+  }
+
+  if (payload && Array.isArray(payload.items) && payload.meta) {
+    return {
+      ...payload,
+      statusCounts: payload.statusCounts ?? countPatientStatuses(payload.items),
+    };
+  }
+
+  return emptyPatientResponse(page);
+}
+
 const initialState: RegistrationDataState = {
   patients: [],
-  patientsMeta: emptyResponse<Patient>().meta,
+  patientsMeta: emptyPatientResponse().meta,
+  patientsStatusCounts: emptyPatientStatusCounts(),
   encounters: [],
   encountersMeta: emptyResponse<Encounter>().meta,
   patientsLoading: true,
@@ -91,6 +137,8 @@ function registrationDataReducer(
         ...state,
         patients: action.response.items,
         patientsMeta: action.response.meta,
+        patientsStatusCounts:
+          action.response.statusCounts ?? countPatientStatuses(action.response.items),
         patientsLoading: false,
         patientsError: "",
       };
@@ -116,6 +164,8 @@ function registrationDataReducer(
       return {
         patients: action.patients.items,
         patientsMeta: action.patients.meta,
+        patientsStatusCounts:
+          action.patients.statusCounts ?? countPatientStatuses(action.patients.items),
         encounters: action.encounters.items,
         encountersMeta: action.encounters.meta,
         patientsLoading: false,
@@ -136,13 +186,15 @@ function listParams(page: number): URLSearchParams {
 async function requestPatients(
   query = "",
   page = 1,
+  active?: boolean,
 ): Promise<PatientListResponse> {
   const params = listParams(page);
   if (query.trim()) params.set("search", query.trim());
+  if (active !== undefined) params.set("active", String(active));
   const response = await apiFetch(`/api/patients?${params.toString()}`);
   if (!response.ok) throw new Error("Daftar pasien tidak dapat dimuat.");
-  const payload = (await response.json()) as ListPayload<Patient>;
-  return normalizeListPayload(payload, page) as PatientListResponse;
+  const payload = (await response.json()) as PatientListResponse | Patient[];
+  return normalizePatientListPayload(payload, page);
 }
 
 async function requestEncounters(page = 1): Promise<EncounterListResponse> {
@@ -165,7 +217,7 @@ export function useRegistrationData() {
 
     async function loadInitialData() {
       const [patientsResult, encountersResult] = await Promise.allSettled([
-        requestPatients(),
+        requestPatients("", 1, true),
         requestEncounters(),
       ]);
       if (!active) return;
@@ -175,7 +227,7 @@ export function useRegistrationData() {
         patients:
           patientsResult.status === "fulfilled"
             ? patientsResult.value
-            : emptyResponse<Patient>(),
+            : emptyPatientResponse(),
         encounters:
           encountersResult.status === "fulfilled"
             ? encountersResult.value
@@ -203,20 +255,23 @@ export function useRegistrationData() {
     };
   }, []);
 
-  const refreshPatients = useCallback(async (query = "", page = 1) => {
-    dispatch({ type: "patients-loading" });
-    try {
-      dispatch({
-        type: "patients-loaded",
-        response: await requestPatients(query, page),
-      });
-    } catch (error) {
-      dispatch({
-        type: "patients-failed",
-        error: messageFrom(error, "Daftar pasien tidak dapat dimuat."),
-      });
-    }
-  }, []);
+  const refreshPatients = useCallback(
+    async (query = "", page = 1, active?: boolean) => {
+      dispatch({ type: "patients-loading" });
+      try {
+        dispatch({
+          type: "patients-loaded",
+          response: await requestPatients(query, page, active),
+        });
+      } catch (error) {
+        dispatch({
+          type: "patients-failed",
+          error: messageFrom(error, "Daftar pasien tidak dapat dimuat."),
+        });
+      }
+    },
+    [],
+  );
 
   const refreshEncounters = useCallback(async (page = 1) => {
     dispatch({ type: "encounters-loading" });

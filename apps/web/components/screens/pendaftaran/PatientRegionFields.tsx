@@ -208,8 +208,7 @@ export function PatientRegionFields({
     <div className="space-y-3 sm:col-span-2">
       <div className="flex flex-wrap items-start justify-between gap-2 rounded-md border border-border/70 bg-muted/30 px-3 py-2">
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Pilih wilayah administratif dari Master Wilayah. Memilih parent akan
-          memuat pilihan child yang sesuai.
+          Pilih wilayah dari Master Wilayah.
         </p>
         {hasLookupError ? (
           <Button
