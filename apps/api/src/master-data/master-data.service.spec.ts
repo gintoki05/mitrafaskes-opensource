@@ -90,7 +90,11 @@ describe('MasterDataService list queries', () => {
       updatedAt: new Date('2026-01-01T00:00:00.000Z'),
     };
     const findMany = jest.fn().mockResolvedValue([organization]);
-    const count = jest.fn().mockResolvedValue(21);
+    const count = jest
+      .fn()
+      .mockResolvedValueOnce(21)
+      .mockResolvedValueOnce(12)
+      .mockResolvedValueOnce(9);
     const service = new MasterDataService({
       healthcareOrganization: { findMany, count },
       externalResourceLink: { findMany: jest.fn().mockResolvedValue([]) },
@@ -125,6 +129,7 @@ describe('MasterDataService list queries', () => {
         expect.objectContaining({ id: 'org-1', name: 'Klinik Mitra' }),
       ],
       meta: { page: 2, pageSize: 10, total: 21 },
+      statusCounts: { active: 12, inactive: 9 },
     });
   });
 

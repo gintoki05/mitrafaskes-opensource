@@ -108,23 +108,33 @@ export class PractitionersService {
       MAX_PAGE_SIZE,
     );
     const search = input.search?.trim();
-    const where: Prisma.UserWhereInput = {
+    const baseWhere: Prisma.UserWhereInput = {
       role: { in: PRACTITIONER_ROLES },
     };
 
-    if (input.active !== undefined) where.active = input.active;
-    if (input.organizationId) where.organizationId = input.organizationId;
+    if (input.organizationId) baseWhere.organizationId = input.organizationId;
     if (input.locationId) {
-      where.locationAssignments = { some: { locationId: input.locationId } };
+      baseWhere.locationAssignments = { some: { locationId: input.locationId } };
     }
-    if (input.role) where.role = input.role as Role;
+    if (input.role) baseWhere.role = input.role as Role;
     if (search) {
-      where.OR = [
+      baseWhere.OR = [
         { username: { contains: search, mode: 'insensitive' } },
         { fullName: { contains: search, mode: 'insensitive' } },
         { nik: { contains: search, mode: 'insensitive' } },
       ];
     }
+
+    const where: Prisma.UserWhereInput = { ...baseWhere };
+    if (input.active !== undefined) where.active = input.active;
+    const activeWhere: Prisma.UserWhereInput = {
+      ...baseWhere,
+      active: true,
+    };
+    const inactiveWhere: Prisma.UserWhereInput = {
+      ...baseWhere,
+      active: false,
+    };
 
     const orderDirection = input.direction ?? 'asc';
     const orderBy: Prisma.UserOrderByWithRelationInput[] =
@@ -134,7 +144,7 @@ export class PractitionersService {
           ? [{ active: orderDirection }, { fullName: 'asc' }]
           : [{ fullName: orderDirection }, { username: 'asc' }];
 
-    const [records, total] = await Promise.all([
+    const [records, total, activeCount, inactiveCount] = await Promise.all([
       this.prisma.user.findMany({
         where,
         orderBy,
@@ -143,6 +153,8 @@ export class PractitionersService {
         include: practitionerRelationInclude,
       }),
       this.prisma.user.count({ where }),
+      this.prisma.user.count({ where: activeWhere }),
+      this.prisma.user.count({ where: inactiveWhere }),
     ]);
 
     const ids = records.map((record) => record.id);
@@ -157,6 +169,7 @@ export class PractitionersService {
         ),
       ),
       meta: { page, pageSize, total },
+      statusCounts: { active: activeCount, inactive: inactiveCount },
     };
   }
 

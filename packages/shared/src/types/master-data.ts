@@ -138,7 +138,13 @@ export interface MasterDataListMeta {
   total: number;
 }
 
+export interface MasterDataStatusCounts {
+  active: number;
+  inactive: number;
+}
+
 export interface MasterDataListResponse<T> {
   items: T[];
   meta: MasterDataListMeta;
+  statusCounts?: MasterDataStatusCounts;
 }

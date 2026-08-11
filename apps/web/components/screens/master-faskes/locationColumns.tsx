@@ -4,14 +4,14 @@ import type {
   OrganizationSummary,
 } from "@mitrafaskes/shared";
 import { Edit3, Power, UserRoundPlus } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { ActiveStatusBadge } from "@/components/ActiveStatusBadge";
 import { Button } from "@/components/ui/button";
 import { SatusehatActionGroup } from "@/components/satusehat/SatusehatActionGroup";
 import {
   locationModes,
-  locationStatuses,
   locationTypes,
 } from "./constants";
+import { LocationOperationalStatusBadge } from "./LocationOperationalStatusBadge";
 import { SatusehatLinkageBadge } from "@/components/satusehat/SatusehatLinkageBadge";
 
 type LocationColumnOptions = {
@@ -80,33 +80,14 @@ export function getLocationColumns({
       header: "Status location",
       enableSorting: false,
       cell: ({ row }) => (
-        <Badge
-          variant="outline"
-          className={
-            row.original.status === "ACTIVE"
-              ? "border-success/35 text-success"
-              : row.original.status === "SUSPENDED"
-                ? "border-warning/35 text-warning"
-                : "border-destructive/35 text-destructive"
-          }
-        >
-          {labelFor(locationStatuses, row.original.status)}
-        </Badge>
+        <LocationOperationalStatusBadge status={row.original.status} />
       ),
     },
     {
       accessorKey: "active",
-      header: "Data",
+      header: "Status data",
       cell: ({ row }) => (
-        <Badge
-          className={
-            row.original.active
-              ? "clinical-status-success border text-[10px] font-bold"
-              : "clinical-status-error border text-[10px] font-bold"
-          }
-        >
-          {row.original.active ? "AKTIF" : "NONAKTIF"}
-        </Badge>
+        <ActiveStatusBadge active={row.original.active} />
       ),
     },
     {

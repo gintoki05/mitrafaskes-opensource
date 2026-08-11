@@ -15,6 +15,10 @@ import { PractitionerCreateIdentityFields } from './PractitionerCreateIdentityFi
 import { PractitionerCreatePlacementFields } from './PractitionerCreatePlacementFields';
 import { toPractitionerDraftPrefill } from './practitionerSatusehatPrefill';
 import {
+  useMasterFaskesDialogClose,
+  useMasterFaskesDialogGuard,
+} from './MasterFaskesDialog';
+import {
   initialPractitionerForm,
   type PractitionerCreateDialogProps,
   type PractitionerFormState,
@@ -32,6 +36,28 @@ export function PractitionerCreateForm({
     initialPractitionerForm,
   );
   const [saving, setSaving] = useState(false);
+  const requestClose = useMasterFaskesDialogClose(onClose);
+  const hasUnsavedChanges = (
+    Object.keys(initialPractitionerForm) as (keyof PractitionerFormState)[]
+  ).some((field) => {
+    if (field === 'locationIds') {
+      const currentLocationIds = form.locationIds ?? [];
+      const initialLocationIds = initialPractitionerForm.locationIds ?? [];
+      return (
+        currentLocationIds.length !== initialLocationIds.length ||
+        currentLocationIds.some(
+          (locationId, index) => locationId !== initialLocationIds[index],
+        )
+      );
+    }
+
+    return form[field] !== initialPractitionerForm[field];
+  });
+
+  useMasterFaskesDialogGuard({
+    hasUnsavedChanges: canWrite && hasUnsavedChanges,
+    isBusy: saving,
+  });
 
   const updateField = <K extends keyof PractitionerFormState>(
     field: K,
@@ -124,7 +150,7 @@ export function PractitionerCreateForm({
             <Button
               type="button"
               variant="outline"
-              onClick={onClose}
+              onClick={requestClose}
               disabled={saving}
             >
               Batal

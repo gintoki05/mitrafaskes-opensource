@@ -13,6 +13,10 @@ import {
   type FormStep,
   MasterFaskesFormShell,
 } from "./FormLayout";
+import {
+  useMasterFaskesDialogClose,
+  useMasterFaskesDialogGuard,
+} from "./MasterFaskesDialog";
 import { emptyLocation } from "./constants";
 import { locationFormSchema } from "./schemas";
 import { LocationFormContextStep } from "./LocationFormContextStep";
@@ -81,7 +85,7 @@ export function LocationForm({
 }: LocationFormProps) {
   const {
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isDirty, isSubmitting },
     register,
     reset,
     handleSubmit,
@@ -94,6 +98,13 @@ export function LocationForm({
   });
   const [currentStep, setCurrentStep] = useState(0);
   const organizationId = useWatch({ control, name: "organizationId" });
+  const requestClose = useMasterFaskesDialogClose(onCancel);
+  const formBusy = isSubmitting || submitting === "location";
+
+  useMasterFaskesDialogGuard({
+    hasUnsavedChanges: canWrite && isDirty,
+    isBusy: formBusy,
+  });
 
   const submit = handleSubmit(async (values) => {
     if (currentStep !== locationSteps.length - 1) return;
@@ -124,10 +135,10 @@ export function LocationForm({
           <FormActions
             currentStep={currentStep}
             stepCount={locationSteps.length}
-            onCancel={onCancel}
+            onCancel={onCancel ? requestClose : undefined}
             onBack={() => setCurrentStep((step) => Math.max(step - 1, 0))}
             onNext={() => void goToNextStep()}
-            isSubmitting={isSubmitting || submitting === "location"}
+            isSubmitting={formBusy}
             submitLabel={mode === "edit" ? "Simpan perubahan" : "Simpan Location"}
             submittingLabel="Menyimpan..."
           />

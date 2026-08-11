@@ -13,7 +13,11 @@ import { Input } from '@/components/ui/input';
 import { FieldLabel } from './FormField';
 import { LocationImportBulkPanel } from './LocationImportBulkPanel';
 import { LocationImportResults } from './LocationImportResults';
-import { MasterFaskesDialog } from './MasterFaskesDialog';
+import {
+  MasterFaskesDialog,
+  useMasterFaskesDialogClose,
+  useMasterFaskesDialogGuard,
+} from './MasterFaskesDialog';
 import { useLocationImportDialog } from './useLocationImportDialog';
 
 type LocationImportDialogProps = {
@@ -109,6 +113,28 @@ function LocationImportDialogContent({
     canWrite,
     onClose,
     onImported,
+  });
+  const requestClose = useMasterFaskesDialogClose(onClose);
+  const defaultOrganizationId =
+    activeOrganizations.find(
+      (organization) =>
+        organization.type === 'HEALTHCARE_FACILITY' &&
+        !organization.parentId,
+    )?.id ?? activeOrganizations[0]?.id ?? '';
+  const hasUnsavedChanges =
+    organizationId !== defaultOrganizationId ||
+    externalId.trim() !== '' ||
+    identifier.trim() !== '' ||
+    name.trim() !== '' ||
+    selectedIds.length > 0 ||
+    code.trim() !== '' ||
+    parentId !== '' ||
+    Object.values(bulkCodes).some((value) => value.trim() !== '') ||
+    Object.values(parentIds).some((value) => value.trim() !== '');
+
+  useMasterFaskesDialogGuard({
+    hasUnsavedChanges: canWrite && hasUnsavedChanges,
+    isBusy: importing,
   });
 
   return (
@@ -300,7 +326,7 @@ function LocationImportDialogContent({
         ) : null}
 
         <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={requestClose}>
             Tutup
           </Button>
           {canWrite ? (

@@ -18,6 +18,7 @@ import { useSession } from "@/hooks/useSession";
 import { MasterFaskesDialog } from "./master-faskes/MasterFaskesDialog";
 import { MasterFaskesSubnav } from "./master-faskes/MasterFaskesSubnav";
 import { MasterFaskesTable } from "./master-faskes/MasterFaskesTable";
+import { MasterFaskesStatusFilter } from "./master-faskes/MasterFaskesStatusFilter";
 import { OrganizationForm } from "./master-faskes/OrganizationForm";
 import { OrganizationSyncDialog } from "./master-faskes/OrganizationSyncDialog";
 import { OrganizationImportDialog } from "./master-faskes/OrganizationImportDialog";
@@ -41,7 +42,6 @@ const initialQuery: MasterDataListQuery = {
   direction: "asc",
 };
 
-type StatusFilter = "all" | "active" | "inactive";
 type TypeFilter = "ALL" | OrganizationSummary["type"];
 
 export default function OrganizationListScreen() {
@@ -52,7 +52,9 @@ export default function OrganizationListScreen() {
   );
   const [query, setQuery] = useState(initialQuery);
   const [searchDraft, setSearchDraft] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<boolean | undefined>(
+    undefined,
+  );
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<OrganizationSummary | null>(null);
@@ -76,6 +78,7 @@ export default function OrganizationListScreen() {
     loading: listLoading,
     error: listError,
     refresh: refreshList,
+    statusCounts,
   } = list;
   const {
     organizations,
@@ -98,10 +101,9 @@ export default function OrganizationListScreen() {
     setFilters({ search: searchDraft.trim() || undefined });
   };
 
-  const handleStatusFilter = (value: string) => {
-    const next = value as StatusFilter;
-    setStatusFilter(next);
-    setFilters({ active: next === "all" ? undefined : next === "active" });
+  const handleStatusFilter = (active: boolean | undefined) => {
+    setStatusFilter(active);
+    setFilters({ active });
   };
 
   const handleTypeFilter = (value: string) => {
@@ -112,7 +114,7 @@ export default function OrganizationListScreen() {
 
   const clearFilters = () => {
     setSearchDraft("");
-    setStatusFilter("all");
+    setStatusFilter(undefined);
     setTypeFilter("ALL");
     setQuery(initialQuery);
   };
@@ -279,18 +281,13 @@ export default function OrganizationListScreen() {
           onSearchSubmit={handleSearchSubmit}
           filters={
             <>
-              <SelectField
-                id="organization-filter-status"
-                aria-label="Filter status organisasi"
-                size="sm"
+              <MasterFaskesStatusFilter
+                ariaLabel="Filter status organisasi"
+                counts={statusCounts}
                 value={statusFilter}
                 onChange={handleStatusFilter}
-                className="w-auto min-w-32 text-xs"
-              >
-                <option value="all">Semua status</option>
-                <option value="active">Aktif</option>
-                <option value="inactive">Nonaktif</option>
-              </SelectField>
+                disabled={listLoading}
+              />
               <SelectField
                 id="organization-filter-type"
                 aria-label="Filter jenis organisasi"

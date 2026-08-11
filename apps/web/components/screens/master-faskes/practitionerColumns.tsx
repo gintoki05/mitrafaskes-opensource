@@ -1,7 +1,7 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import type { PractitionerSummary } from '@mitrafaskes/shared';
 import { Edit3 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { ActiveStatusBadge } from '@/components/ActiveStatusBadge';
 import { Button } from '@/components/ui/button';
 import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
@@ -105,15 +105,7 @@ export function getPractitionerColumns({
       accessorKey: 'active',
       header: 'Status',
       cell: ({ row }) => (
-        <Badge
-          className={
-            row.original.active
-              ? 'clinical-status-success border text-[10px] font-bold'
-              : 'clinical-status-error border text-[10px] font-bold'
-          }
-        >
-          {row.original.active ? 'AKTIF' : 'NONAKTIF'}
-        </Badge>
+        <ActiveStatusBadge active={row.original.active} />
       ),
     },
     {

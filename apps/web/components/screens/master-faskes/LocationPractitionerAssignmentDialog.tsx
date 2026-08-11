@@ -11,7 +11,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { usePractitioners } from '@/hooks/usePractitioners';
-import { MasterFaskesDialog } from './MasterFaskesDialog';
+import {
+  MasterFaskesDialog,
+  useMasterFaskesDialogClose,
+  useMasterFaskesDialogGuard,
+} from './MasterFaskesDialog';
 
 type LocationPractitionerAssignmentDialogProps = {
   open: boolean;
@@ -92,6 +96,17 @@ function LocationPractitionerAssignmentContent({
     visiblePractitioners.length > 0 && visiblePractitioners.every(isSelected);
   const someVisibleSelected =
     visiblePractitioners.some(isSelected) && !allVisibleSelected;
+  const requestClose = useMasterFaskesDialogClose(onClose);
+  const hasUnsavedChanges = items.some(
+    (practitioner) =>
+      isSelected(practitioner) !==
+      isAssignedToLocation(practitioner, location.id),
+  );
+
+  useMasterFaskesDialogGuard({
+    hasUnsavedChanges: canWrite && hasUnsavedChanges,
+    isBusy: saving,
+  });
 
   const toggleAllVisible = (checked: boolean) => {
     setDraft((current) => {
@@ -276,7 +291,7 @@ function LocationPractitionerAssignmentContent({
         )}
 
         <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="outline" onClick={requestClose} disabled={saving}>
             Batal
           </Button>
           {canWrite ? (

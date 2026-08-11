@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import type { LocationSummary } from '@mitrafaskes/shared';
 import { MapPin, Search } from 'lucide-react';
+import { ActiveStatusBadge } from '@/components/ActiveStatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -131,7 +132,10 @@ export function PractitionerLocationSelector({
                       </span>
                       <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 pl-5 text-[10px] text-muted-foreground">
                         <span className="font-mono">{location.code}</span>
-                        <span>{location.active ? 'Aktif' : 'Nonaktif'}</span>
+                        <ActiveStatusBadge
+                          active={location.active}
+                          className="text-[10px]"
+                        />
                       </span>
                     </span>
                   </label>

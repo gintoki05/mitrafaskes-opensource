@@ -1,6 +1,6 @@
 import { CheckCircle2, Link2 } from "lucide-react";
 import type { SatusehatOrganizationRemoteSummary } from "@mitrafaskes/shared";
-import { Badge } from "@/components/ui/badge";
+import { ActiveStatusBadge } from "@/components/ActiveStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,15 +55,7 @@ export function SatusehatOrganizationResult({
             <div className="flex flex-wrap items-center gap-2">
               <strong className="text-sm text-foreground">{item.name}</strong>
               <OrganizationHierarchyBadge isRoot={isRoot} />
-              <Badge
-                className={
-                  item.active
-                    ? "clinical-status-success border text-[10px]"
-                    : "clinical-status-error border text-[10px]"
-                }
-              >
-                {item.active ? "AKTIF" : "NONAKTIF"}
-              </Badge>
+              <ActiveStatusBadge active={item.active} className="text-[10px]" />
             </div>
             <div className="text-xs text-muted-foreground">
               {item.typeDisplay || item.typeCode || "Organisasi/faskes"}

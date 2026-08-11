@@ -8,6 +8,7 @@ import type {
   LocationSummary,
   OrganizationSummary,
 } from "@mitrafaskes/shared";
+import { ActiveStatusBadge } from "@/components/ActiveStatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScreenState } from "@/components/ScreenState";
@@ -63,9 +64,7 @@ function ResourceCard({
                   {item.name}
                 </span>
               </span>
-              <span className="shrink-0 text-[10px] text-muted-foreground">
-                {item.active ? "Aktif" : "Nonaktif"}
-              </span>
+              <ActiveStatusBadge active={item.active} className="text-[10px]" />
             </div>
           ))}
         </div>
@@ -117,15 +116,7 @@ function OrganizationStructureItem({
             </div>
           </div>
         </div>
-        <Badge
-          className={
-            organization.active
-              ? "clinical-status-success border text-[10px] font-bold"
-              : "clinical-status-error border text-[10px] font-bold"
-          }
-        >
-          {organization.active ? "AKTIF" : "NONAKTIF"}
-        </Badge>
+        <ActiveStatusBadge active={organization.active} className="text-[10px]" />
       </div>
       {childOrganizations.length > 0 ? (
         <div className="ml-12 space-y-1 border-l border-dashed border-border pl-4 text-xs text-muted-foreground">

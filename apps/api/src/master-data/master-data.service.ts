@@ -196,14 +196,26 @@ export class MasterDataService {
     input: MasterDataListQuery = {},
   ): Promise<MasterDataListResponse<OrganizationSummary>> {
     const query = normalizeListQuery(input);
-    const where: Prisma.HealthcareOrganizationWhereInput = {};
+    const baseWhere: Prisma.HealthcareOrganizationWhereInput = {};
     const search = searchOr(query.search, ['code', 'name', 'addressText']);
 
-    if (search) where.OR = search;
-    if (query.active !== undefined) where.active = query.active;
-    if (query.type) where.type = query.type as OrganizationType;
+    if (search) baseWhere.OR = search;
+    if (query.type) baseWhere.type = query.type as OrganizationType;
 
-    const [records, total] = await Promise.all([
+    const where: Prisma.HealthcareOrganizationWhereInput = {
+      ...baseWhere,
+    };
+    if (query.active !== undefined) where.active = query.active;
+    const activeWhere: Prisma.HealthcareOrganizationWhereInput = {
+      ...baseWhere,
+      active: true,
+    };
+    const inactiveWhere: Prisma.HealthcareOrganizationWhereInput = {
+      ...baseWhere,
+      active: false,
+    };
+
+    const [records, total, activeCount, inactiveCount] = await Promise.all([
       this.prisma.healthcareOrganization.findMany({
         where,
         orderBy: orderBy(query),
@@ -211,6 +223,8 @@ export class MasterDataService {
         take: query.pageSize,
       }),
       this.prisma.healthcareOrganization.count({ where }),
+      this.prisma.healthcareOrganization.count({ where: activeWhere }),
+      this.prisma.healthcareOrganization.count({ where: inactiveWhere }),
     ]);
     const linkages = await this.findSatusehatLinkages(
       ORGANIZATION_RESOURCE_TYPE,
@@ -223,6 +237,7 @@ export class MasterDataService {
         toOrganization(record, linkages.get(record.id)),
       ),
       meta: { page: query.page, pageSize: query.pageSize, total },
+      statusCounts: { active: activeCount, inactive: inactiveCount },
     };
   }
 
@@ -230,16 +245,26 @@ export class MasterDataService {
     input: MasterDataListQuery = {},
   ): Promise<MasterDataListResponse<LocationSummary>> {
     const query = normalizeListQuery(input);
-    const where: Prisma.LocationWhereInput = {};
+    const baseWhere: Prisma.LocationWhereInput = {};
     const search = searchOr(query.search, ['code', 'name', 'city']);
 
-    if (search) where.OR = search;
-    if (query.active !== undefined) where.active = query.active;
-    if (query.type) where.type = query.type as LocationType;
-    if (query.status) where.status = query.status as LocationStatus;
-    if (query.organizationId) where.organizationId = query.organizationId;
+    if (search) baseWhere.OR = search;
+    if (query.type) baseWhere.type = query.type as LocationType;
+    if (query.status) baseWhere.status = query.status as LocationStatus;
+    if (query.organizationId) baseWhere.organizationId = query.organizationId;
 
-    const [records, total] = await Promise.all([
+    const where: Prisma.LocationWhereInput = { ...baseWhere };
+    if (query.active !== undefined) where.active = query.active;
+    const activeWhere: Prisma.LocationWhereInput = {
+      ...baseWhere,
+      active: true,
+    };
+    const inactiveWhere: Prisma.LocationWhereInput = {
+      ...baseWhere,
+      active: false,
+    };
+
+    const [records, total, activeCount, inactiveCount] = await Promise.all([
       this.prisma.location.findMany({
         where,
         orderBy: orderBy(query),
@@ -247,6 +272,8 @@ export class MasterDataService {
         take: query.pageSize,
       }),
       this.prisma.location.count({ where }),
+      this.prisma.location.count({ where: activeWhere }),
+      this.prisma.location.count({ where: inactiveWhere }),
     ]);
     const linkages = await this.findSatusehatLinkages(
       LOCATION_RESOURCE_TYPE,
@@ -257,6 +284,7 @@ export class MasterDataService {
     return {
       items: records.map((record) => toLocation(record, linkages.get(record.id))),
       meta: { page: query.page, pageSize: query.pageSize, total },
+      statusCounts: { active: activeCount, inactive: inactiveCount },
     };
   }
 

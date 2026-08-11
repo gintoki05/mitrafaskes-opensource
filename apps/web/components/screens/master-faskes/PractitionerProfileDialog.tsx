@@ -13,7 +13,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { usePractitioners } from '@/hooks/usePractitioners';
 import { FieldLabel, SelectField } from './FormField';
-import { MasterFaskesDialog } from './MasterFaskesDialog';
+import {
+  MasterFaskesDialog,
+  useMasterFaskesDialogClose,
+  useMasterFaskesDialogGuard,
+} from './MasterFaskesDialog';
 import { PractitionerLocationSelector } from './PractitionerLocationSelector';
 
 type PractitionerProfileDialogProps = {
@@ -80,6 +84,26 @@ function PractitionerProfileDialogContent({
   );
   const [active, setActive] = useState(practitioner.active ? 'true' : 'false');
   const [saving, setSaving] = useState(false);
+  const requestClose = useMasterFaskesDialogClose(onClose);
+  const initialLocationIds =
+    practitioner.locations?.map((location) => location.id) ??
+    (practitioner.location?.id ? [practitioner.location.id] : []);
+  const hasUnsavedChanges =
+    canWrite &&
+    (nik !== (practitioner.nik ?? '') ||
+      birthDate !== (practitioner.birthDate ?? '') ||
+      gender !== (practitioner.gender ?? '') ||
+      organizationId !== (practitioner.organization?.id ?? '') ||
+      active !== (practitioner.active ? 'true' : 'false') ||
+      locationIds.length !== initialLocationIds.length ||
+      locationIds.some(
+        (locationId, index) => locationId !== initialLocationIds[index],
+      ));
+
+  useMasterFaskesDialogGuard({
+    hasUnsavedChanges,
+    isBusy: saving,
+  });
   const organizationOptions = organizations.filter(
     (organization) => organization.active || organization.id === organizationId,
   );
@@ -230,7 +254,7 @@ function PractitionerProfileDialogContent({
           </div>
         </div>
         <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="outline" onClick={requestClose} disabled={saving}>
             Batal
           </Button>
           {canWrite ? (

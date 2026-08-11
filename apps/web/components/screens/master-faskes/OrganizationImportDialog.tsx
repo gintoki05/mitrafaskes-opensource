@@ -16,7 +16,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSatusehatOrganizations } from "@/hooks/useSatusehatOrganizations";
-import { MasterFaskesDialog } from "./MasterFaskesDialog";
+import {
+  MasterFaskesDialog,
+  useMasterFaskesDialogClose,
+  useMasterFaskesDialogGuard,
+} from "./MasterFaskesDialog";
 import { OrganizationImportBulkPanel } from "./OrganizationImportBulkPanel";
 import { OrganizationImportLocalPanel } from "./OrganizationImportLocalPanel";
 import { OrganizationImportSearchPanel } from "./OrganizationImportSearchPanel";
@@ -88,6 +92,7 @@ function OrganizationImportDialogContent({
   const [bulkCodes, setBulkCodes] = useState<Record<string, string>>({});
   const [searching, setSearching] = useState(false);
   const [importing, setImporting] = useState(false);
+  const requestClose = useMasterFaskesDialogClose(onClose);
 
   const resetSelection = useCallback(() => {
     setSelected(null);
@@ -301,6 +306,7 @@ function OrganizationImportDialogContent({
           "Data berhasil disimpan ke Master Faskes dan dihubungkan ke SATUSEHAT.",
       });
       await onImported();
+      resetSelection();
     } catch (requestError) {
       toast.error("Data organisasi belum tersimpan", {
         description:
@@ -461,6 +467,20 @@ function OrganizationImportDialogContent({
     });
   };
 
+  const hasUnsavedChanges =
+    externalId.trim() !== '' ||
+    name.trim() !== '' ||
+    searchParentId !== defaultSearchParentId ||
+    localParentId !== '' ||
+    code.trim() !== '' ||
+    selectedIds.length > 0 ||
+    Object.values(bulkCodes).some((value) => value.trim() !== '');
+
+  useMasterFaskesDialogGuard({
+    hasUnsavedChanges: canWrite && hasUnsavedChanges,
+    isBusy: importing,
+  });
+
   const selectableItems = items.filter((item) => !item.linkedLocalResourceId);
   const selectedImportItems = items.filter((item) =>
     selectedIds.includes(item.externalResourceId),
@@ -578,7 +598,7 @@ function OrganizationImportDialogContent({
         ) : null}
 
         <div className="flex justify-end border-t border-border pt-4">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={requestClose}>
             Tutup
           </Button>
         </div>

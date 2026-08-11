@@ -16,8 +16,8 @@ import { usePractitioners } from '@/hooks/usePractitioners';
 import { can } from '@/lib/auth';
 import { MasterFaskesSubnav } from './master-faskes/MasterFaskesSubnav';
 import { MasterFaskesTable } from './master-faskes/MasterFaskesTable';
+import { MasterFaskesStatusFilter } from './master-faskes/MasterFaskesStatusFilter';
 import { PractitionerCreateDialog } from './master-faskes/PractitionerCreateDialog';
-import { SelectField } from './master-faskes/FormField';
 import { PractitionerLinkDialog } from './master-faskes/PractitionerLinkDialog';
 import { PractitionerProfileDialog } from './master-faskes/PractitionerProfileDialog';
 import { getPractitionerColumns } from './master-faskes/practitionerColumns';
@@ -29,8 +29,6 @@ const initialQuery: MasterDataListQuery = {
   direction: 'asc',
 };
 
-type StatusFilter = 'all' | 'active' | 'inactive';
-
 export default function PractitionerListScreen() {
   const session = useSession();
   const canWrite = can(
@@ -39,7 +37,9 @@ export default function PractitionerListScreen() {
   );
   const [query, setQuery] = useState(initialQuery);
   const [searchDraft, setSearchDraft] = useState('');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<boolean | undefined>(
+    undefined,
+  );
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [linkPractitioner, setLinkPractitioner] =
     useState<PractitionerSummary | null>(null);
@@ -52,6 +52,7 @@ export default function PractitionerListScreen() {
     loading,
     error,
     refresh,
+    statusCounts,
   } = usePractitioners(query);
   const { organizations, locations } = useMasterFaskesData();
 
@@ -64,15 +65,14 @@ export default function PractitionerListScreen() {
     setFilters({ search: searchDraft.trim() || undefined });
   };
 
-  const handleStatusFilter = (value: string) => {
-    const next = value as StatusFilter;
-    setStatusFilter(next);
-    setFilters({ active: next === 'all' ? undefined : next === 'active' });
+  const handleStatusFilter = (active: boolean | undefined) => {
+    setStatusFilter(active);
+    setFilters({ active });
   };
 
   const clearFilters = () => {
     setSearchDraft('');
-    setStatusFilter('all');
+    setStatusFilter(undefined);
     setQuery(initialQuery);
   };
 
@@ -129,18 +129,13 @@ export default function PractitionerListScreen() {
           onSearchChange={setSearchDraft}
           onSearchSubmit={handleSearchSubmit}
           filters={
-            <SelectField
-              id="practitioner-filter-status"
-              aria-label="Filter status Practitioner"
-              size="sm"
+            <MasterFaskesStatusFilter
+              ariaLabel="Filter status Practitioner"
+              counts={statusCounts}
               value={statusFilter}
               onChange={handleStatusFilter}
-              className="w-auto min-w-32 text-xs"
-            >
-              <option value="all">Semua status</option>
-              <option value="active">Aktif</option>
-              <option value="inactive">Nonaktif</option>
-            </SelectField>
+              disabled={loading}
+            />
           }
           hasActiveFilters={Boolean(query.search || query.active !== undefined)}
           onClearFilters={clearFilters}

@@ -19,6 +19,7 @@ import { useSession } from "@/hooks/useSession";
 import { MasterFaskesDialog } from "./master-faskes/MasterFaskesDialog";
 import { MasterFaskesSubnav } from "./master-faskes/MasterFaskesSubnav";
 import { MasterFaskesTable } from "./master-faskes/MasterFaskesTable";
+import { MasterFaskesStatusFilter } from "./master-faskes/MasterFaskesStatusFilter";
 import { SelectField } from "./master-faskes/FormField";
 import { LocationForm } from "./master-faskes/LocationForm";
 import { LocationImportDialog } from "./master-faskes/LocationImportDialog";
@@ -47,7 +48,6 @@ const initialQuery: MasterDataListQuery = {
   direction: "asc",
 };
 
-type ActiveFilter = "all" | "active" | "inactive";
 type TypeFilter = "ALL" | LocationSummary["type"];
 type LocationStatusFilter = "ALL" | LocationSummary["status"];
 
@@ -59,7 +59,9 @@ export default function LocationListScreen() {
   );
   const [query, setQuery] = useState(initialQuery);
   const [searchDraft, setSearchDraft] = useState("");
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
+  const [activeFilter, setActiveFilter] = useState<boolean | undefined>(
+    undefined,
+  );
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
   const [locationStatusFilter, setLocationStatusFilter] =
     useState<LocationStatusFilter>("ALL");
@@ -83,6 +85,7 @@ export default function LocationListScreen() {
     loading: listLoading,
     error: listError,
     refresh: refreshList,
+    statusCounts,
   } = list;
   const {
     organizations,
@@ -106,10 +109,9 @@ export default function LocationListScreen() {
     setFilters({ search: searchDraft.trim() || undefined });
   };
 
-  const handleActiveFilter = (value: string) => {
-    const next = value as ActiveFilter;
-    setActiveFilter(next);
-    setFilters({ active: next === "all" ? undefined : next === "active" });
+  const handleActiveFilter = (active: boolean | undefined) => {
+    setActiveFilter(active);
+    setFilters({ active });
   };
 
   const handleTypeFilter = (value: string) => {
@@ -131,7 +133,7 @@ export default function LocationListScreen() {
 
   const clearFilters = () => {
     setSearchDraft("");
-    setActiveFilter("all");
+    setActiveFilter(undefined);
     setTypeFilter("ALL");
     setLocationStatusFilter("ALL");
     setOrganizationFilter("ALL");
@@ -309,18 +311,13 @@ export default function LocationListScreen() {
           onSearchSubmit={handleSearchSubmit}
           filters={
             <>
-              <SelectField
-                id="location-filter-active"
-                aria-label="Filter status data location"
-                size="sm"
+              <MasterFaskesStatusFilter
+                ariaLabel="Filter status data location"
+                counts={statusCounts}
                 value={activeFilter}
                 onChange={handleActiveFilter}
-                className="w-auto min-w-32 text-xs"
-              >
-                <option value="all">Semua data</option>
-                <option value="active">Aktif</option>
-                <option value="inactive">Nonaktif</option>
-              </SelectField>
+                disabled={listLoading}
+              />
               <SelectField
                 id="location-filter-type"
                 aria-label="Filter jenis location"

@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { OrganizationSummary } from "@mitrafaskes/shared";
-import { Badge } from "@/components/ui/badge";
+import { ActiveStatusBadge } from "@/components/ActiveStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Edit3, Power } from "lucide-react";
 import { organizationTypes } from "./constants";
@@ -87,15 +87,7 @@ export function getOrganizationColumns({
       accessorKey: "active",
       header: "Status",
       cell: ({ row }) => (
-        <Badge
-          className={
-            row.original.active
-              ? "clinical-status-success border text-[10px] font-bold"
-              : "clinical-status-error border text-[10px] font-bold"
-          }
-        >
-          {row.original.active ? "AKTIF" : "NONAKTIF"}
-        </Badge>
+        <ActiveStatusBadge active={row.original.active} />
       ),
     },
     {

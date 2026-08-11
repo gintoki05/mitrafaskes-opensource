@@ -1,5 +1,4 @@
-import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { ActiveStatusBadge } from '@/components/ActiveStatusBadge';
 
 export function PatientStatusBadge({
   active,
@@ -8,18 +7,5 @@ export function PatientStatusBadge({
   active?: boolean;
   className?: string;
 }) {
-  const isActive = active !== false;
-
-  return (
-    <Badge
-      className={cn(
-        isActive
-          ? 'clinical-status-success border text-[11px] font-bold'
-          : 'clinical-status-error border text-[11px] font-bold',
-        className,
-      )}
-    >
-      {isActive ? 'AKTIF' : 'NONAKTIF'}
-    </Badge>
-  );
+  return <ActiveStatusBadge active={active} className={className} />;
 }
