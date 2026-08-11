@@ -95,40 +95,6 @@ describe('patient validation', () => {
     ).toBe('P-7');
   });
 
-  it('keeps the SATUSEHAT resource id separate from local identifiers', () => {
-    const patient = validatePatientInput({
-      fullName: 'Pasien SATUSEHAT',
-      birthDate: '1990-04-23',
-      gender: Gender.FEMALE,
-      satusehatId: 'P02478375538',
-    });
-
-    expect(patient.satusehatId).toBe('P02478375538');
-    expect(patient.identifiers).toEqual([]);
-  });
-
-  it('rejects a malformed SATUSEHAT resource id', () => {
-    expect.assertions(2);
-    try {
-      validatePatientInput({
-        fullName: 'Pasien SATUSEHAT',
-        birthDate: '1990-04-23',
-        gender: Gender.FEMALE,
-        satusehatId: 'not a valid id',
-      });
-    } catch (error) {
-      expect(error).toBeInstanceOf(PatientValidationError);
-      expect((error as PatientValidationError).issues).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            field: 'satusehatId',
-            code: 'INVALID_SATUSEHAT_ID',
-          }),
-        ]),
-      );
-    }
-  });
-
   it('supports history periods, multi-value demographics, and mother/guardian relationships', () => {
     const patient = validatePatientInput({
       fullName: 'Bayi Ny. Sari',

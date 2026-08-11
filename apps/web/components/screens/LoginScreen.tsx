@@ -106,7 +106,7 @@ export default function LoginPage() {
               Satu alur untuk setiap kunjungan.
             </h1>
             <p className="mt-5 max-w-md text-sm leading-7 text-sidebar-foreground/80">
-              Kelola pendaftaran, antrean, pemeriksaan dokter, dan sinkronisasi SATUSEHAT dari ruang kerja yang sama.
+              Kelola pendaftaran, antrean, pemeriksaan dokter, dan integrasi opsional dari ruang kerja yang sama.
             </p>
           </div>
         </div>

@@ -93,7 +93,9 @@ function syncLogsReducer(
 
 async function requestLogs(page = 1): Promise<SyncLogListResponse> {
   const params = new URLSearchParams({ page: String(page), pageSize: '25' });
-  const response = await apiFetch(`/api/satusehat/logs?${params.toString()}`);
+  const response = await apiFetch(
+    `/api/integrations/SATUSEHAT/logs?${params.toString()}`,
+  );
   if (!response.ok) throw new Error('Log sinkronisasi tidak dapat dimuat.');
   return response.json() as Promise<SyncLogListResponse>;
 }
@@ -102,10 +104,11 @@ function messageFrom(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
-export function useSyncLogs() {
+export function useSyncLogs(enabled = true) {
   const [state, dispatch] = useReducer(syncLogsReducer, initialState);
 
   useEffect(() => {
+    if (!enabled) return;
     let active = true;
 
     async function loadInitialLogs() {
@@ -126,9 +129,10 @@ export function useSyncLogs() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [enabled]);
 
   const refresh = useCallback(async (page = 1) => {
+    if (!enabled) return;
     dispatch({ type: 'load-start' });
     try {
       dispatch({ type: 'load-success', response: await requestLogs(page) });
@@ -138,13 +142,14 @@ export function useSyncLogs() {
         error: messageFrom(error, 'Log sinkronisasi tidak dapat dimuat.'),
       });
     }
-  }, []);
+  }, [enabled]);
 
   const retry = useCallback(async (logId: string, page = 1) => {
+    if (!enabled) return;
     dispatch({ type: 'retry-start', logId });
     try {
       const response = await apiFetch(
-        `/api/satusehat/sync/${logId}/retry`,
+        `/api/integrations/SATUSEHAT/logs/${logId}/retry`,
         { method: 'POST' },
       );
       if (!response.ok) {
@@ -160,7 +165,7 @@ export function useSyncLogs() {
         error: messageFrom(error, 'Retry sinkronisasi tidak dapat dijalankan.'),
       });
     }
-  }, []);
+  }, [enabled]);
 
   const selectLog = useCallback((log: SyncLog) => {
     dispatch({ type: 'select-log', log });

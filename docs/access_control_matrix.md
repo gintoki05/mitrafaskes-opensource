@@ -11,7 +11,7 @@ perilaku yang harus diterapkan oleh PRI-10.
 | --- | --- | --- | --- |
 | Petugas pendaftaran | `PERAWAT` | `/pendaftaran` | Identitas pasien, pendaftaran, dan antrean masuk |
 | Dokter | `DOKTER` | `/rme` | Memulai pemeriksaan, mengisi draft, dan finalisasi RME |
-| Admin | `ADMIN` | `/satusehat` | Operasi pendaftaran cadangan dan pengawasan sinkronisasi |
+| Admin | `ADMIN` | `/master-faskes` | Operasi master faskes dan pengawasan integrasi bila diaktifkan |
 
 `PERAWAT` adalah nama teknis legacy pada database dan kontrak API. Dalam fase
 awal nilainya diperlakukan sebagai **Petugas pendaftaran**. Penggantian nilai

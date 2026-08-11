@@ -21,7 +21,7 @@ test('login is public while protected permissions require a session', () => {
 test('every phase-one role has an explicit landing route', () => {
   assert.equal(DEFAULT_ROUTE_BY_ROLE[UserRole.PERAWAT], '/pendaftaran');
   assert.equal(DEFAULT_ROUTE_BY_ROLE[UserRole.DOKTER], '/rme');
-  assert.equal(DEFAULT_ROUTE_BY_ROLE[UserRole.ADMIN], '/satusehat');
+  assert.equal(DEFAULT_ROUTE_BY_ROLE[UserRole.ADMIN], '/master-faskes');
 });
 
 test('registration officer can manage registration and queue intake only', () => {

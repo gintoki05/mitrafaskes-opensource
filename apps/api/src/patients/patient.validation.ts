@@ -100,7 +100,6 @@ export interface ValidatedPatientInput {
   gender: Gender;
   address?: string;
   phone?: string;
-  satusehatId?: string;
   active: boolean;
   birthPlaceText?: string;
   multipleBirthOrder?: number;
@@ -178,32 +177,6 @@ const normalizePhone = (value: unknown): string | undefined => {
   if (!/^[+\d\s().-]+$/.test(trimmed)) return '';
 
   return trimmed.replace(/[\s().-]/g, '');
-};
-
-const normalizeSatusehatId = (
-  value: unknown,
-  issues: PatientValidationIssue[],
-): string | undefined => {
-  if (value === undefined || value === null || value === '') return undefined;
-  if (typeof value !== 'string') {
-    issues.push({
-      field: 'satusehatId',
-      code: 'INVALID_SATUSEHAT_ID',
-      message: 'ID SATUSEHAT harus berupa teks',
-    });
-    return undefined;
-  }
-
-  const normalized = value.trim();
-  if (!/^[A-Za-z0-9.-]{1,64}$/.test(normalized)) {
-    issues.push({
-      field: 'satusehatId',
-      code: 'INVALID_SATUSEHAT_ID',
-      message: 'ID SATUSEHAT harus berupa 1 sampai 64 karakter alfanumerik',
-    });
-    return undefined;
-  }
-  return normalized;
 };
 
 export const normalizeIdentifierValue = (
@@ -915,8 +888,6 @@ export const validatePatientInput = (
     });
   }
 
-  const satusehatId = normalizeSatusehatId(body.satusehatId, issues);
-
   const identifiers = validateIdentifiers(body.identifiers, issues);
   const names = validateNames(body.names, issues);
   const telecoms = validateTelecoms(body.telecoms, issues);
@@ -1091,7 +1062,6 @@ export const validatePatientInput = (
     gender: gender!,
     address,
     phone,
-    satusehatId,
     active,
     birthPlaceText,
     multipleBirthOrder,

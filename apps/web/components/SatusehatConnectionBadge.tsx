@@ -36,6 +36,11 @@ const statusPresentation: Record<
     icon: CircleX,
     iconClassName: 'text-destructive',
   },
+  DISABLED: {
+    label: 'SATUSEHAT nonaktif',
+    icon: CircleOff,
+    iconClassName: 'text-white/60',
+  },
 };
 
 export function SatusehatConnectionBadge() {

@@ -18,7 +18,6 @@ import {
 import { SessionPermissionGuard } from '../auth/session-permission.guard';
 import { RequirePermission } from '../auth/access-control.decorator';
 import { PractitionersService } from './practitioners.service';
-import { SatusehatPractitionerService } from './satusehat-practitioner.service';
 
 type PractitionerHttpQuery = Record<string, string | undefined>;
 
@@ -30,7 +29,6 @@ const listSorts: MasterDataListSort[] = ['name', 'active', 'createdAt'];
 export class PractitionersController {
   constructor(
     private readonly practitioners: PractitionersService,
-    private readonly satusehat: SatusehatPractitionerService,
   ) {}
 
   @Post()
@@ -45,18 +43,6 @@ export class PractitionersController {
     return this.practitioners.findMany(this.parseListQuery(query));
   }
 
-  @Get('satusehat/lookup')
-  @RequirePermission(AccessPermission.MASTER_DATA_READ)
-  lookupSatusehat(@Query() query: PractitionerHttpQuery) {
-    return this.satusehat.lookupForDraft(query);
-  }
-
-  @Get(':id/satusehat/search')
-  @RequirePermission(AccessPermission.MASTER_DATA_READ)
-  searchSatusehat(@Param('id') id: string) {
-    return this.satusehat.searchForLocal(id);
-  }
-
   @Get(':id')
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
   findById(@Param('id') id: string) {
@@ -67,12 +53,6 @@ export class PractitionersController {
   @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
   update(@Param('id') id: string, @Body() body: unknown) {
     return this.practitioners.update(id, body);
-  }
-
-  @Post(':id/satusehat/link')
-  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
-  linkSatusehat(@Param('id') id: string, @Body() body: unknown) {
-    return this.satusehat.linkExisting(id, body);
   }
 
   private parseListQuery(query: PractitionerHttpQuery): MasterDataListQuery {

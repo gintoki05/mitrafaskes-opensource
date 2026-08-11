@@ -64,13 +64,13 @@ GET /api/practitioners?search={nama|username|nik}&active=true
 Cari kandidat SATUSEHAT berdasarkan NIK User lokal:
 
 ```text
-GET /api/practitioners/:id/satusehat/search
+GET /api/integrations/SATUSEHAT/resources/Practitioner/search?localResourceId={local-id}
 ```
 
 Hubungkan kandidat yang dipilih:
 
 ```text
-POST /api/practitioners/:id/satusehat/link
+POST /api/integrations/SATUSEHAT/resources/Practitioner/:id/link
 {
   "externalResourceId": "{practitioner-ihs-number}"
 }
@@ -90,8 +90,10 @@ PATCH /api/practitioners/:id
 }
 ```
 
-Semua endpoint memerlukan sesi lokal dan permission `master-data.read` atau
-`master-data.write` sesuai tindakan.
+Semua endpoint integrasi memerlukan sesi lokal dan permission
+`sync.status-read` atau `sync.retry` sesuai tindakan. Aktifkan plugin dengan
+`INTEGRATION_SATUSEHAT_ENABLED=true`; tanpa flag tersebut provider
+mengembalikan `503 INTEGRATION_DISABLED`.
 
 ## Urutan penggunaan
 

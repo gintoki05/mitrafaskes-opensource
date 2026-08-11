@@ -71,7 +71,7 @@ function OrganizationSyncDialogContent({
     void (async () => {
       try {
         const response = await apiFetch(
-          `/api/master/organizations/${organization.id}/satusehat/preview`,
+          `/api/integrations/SATUSEHAT/resources/Organization/${organization.id}/preview`,
         );
         if (!response.ok) {
           throw await readApiError(
@@ -107,7 +107,7 @@ function OrganizationSyncDialogContent({
 
     try {
       const response = await apiFetch(
-        `/api/master/organizations/${organization.id}/satusehat/sync`,
+          `/api/integrations/SATUSEHAT/resources/Organization/${organization.id}/sync`,
         { method: "POST" },
       );
       if (!response.ok) {

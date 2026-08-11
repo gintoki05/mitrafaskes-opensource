@@ -74,8 +74,10 @@ namespace dan aturan masing-masing.
 ## Compatibility dan backfill
 
 Migration `20260731140000_structured_patient_demographics` bersifat additive.
-Kolom `nik`, `fullName`, `phone`, `address`, dan `satusehatId` tidak dihapus atau
-dipindahkan.
+Kolom `nik`, `fullName`, `phone`, `address`, dan `satusehatId` tidak dihapus dari
+database. Kolom legacy `satusehatId` tidak lagi dibaca atau ditulis oleh domain
+Patient; linkage provider disajikan melalui `integrations` dan disimpan di
+`ExternalResourceLink` oleh plugin integrasi.
 
 Backfill memetakan:
 
@@ -89,8 +91,9 @@ Backfill memetakan:
 Create API menulis row Patient legacy dan semua child record sebagai satu nested
 Prisma write yang atomik. Input legacy otomatis menghasilkan child record.
 Input terstruktur tetap mengisi kolom legacy NIK bila terdapat NIK aktif, dan
-menolak nilai legacy/structured yang tidak konsisten. Response mempertahankan
-semua field lama dan menambahkan array terstruktur secara optional.
+menolak nilai legacy/structured yang tidak konsisten. Response memakai kontrak
+core terbaru dengan array terstruktur dan `integrations`; `satusehatId` bukan
+lagi field response Patient.
 
 Rollback aplikasi dapat kembali membaca kolom legacy karena kolom tersebut
 tidak dihapus. Rollback database dilakukan dengan migration baru yang lebih
@@ -124,4 +127,4 @@ ibu, alias/nama lama/preferred name, multi-telecom, multi-address, relasi
 ibu-bayi, serta wali non-Patient.
 
 PRI-31 tidak melakukan network call, lookup MPI/IHS, patient merge, perubahan
-UI pencarian/registrasi, perubahan permission, atau pemindahan `satusehatId`.
+UI pencarian/registrasi, perubahan permission, atau migrasi `satusehatId`.

@@ -61,3 +61,19 @@ Sebelum menambahkan bagian besar ke screen yang sudah ada, AI harus:
   atau API browser.
 - Untuk perubahan visual, cek minimal default, hover, focus, open, disabled,
   loading, error, empty, dan konten panjang pada primitive yang terdampak.
+
+## Boundary integrasi opsional
+
+- Ambil capability integrasi setelah sesi tersedia melalui endpoint generic
+  `/api/integrations/capabilities`. Jangan memanggil endpoint auth provider
+  secara langsung dari shell aplikasi.
+- Menu, route, badge, linkage, action, dialog, dan field provider-specific
+  hanya boleh dirender ketika capability provider `enabled` dan statusnya
+  berhasil diketahui. Saat loading, error, atau disabled, sembunyikan fitur
+  integrasi dan biarkan workflow lokal tetap usable.
+- Gunakan kontrak `integrations: ResourceIntegrationSummary[]` pada resource
+  lokal. Jangan menambah kembali field legacy `satusehat`, `satusehatSync`, atau
+  `satusehatId` ke response core.
+- Semua operasi provider harus memakai gateway generic
+  `/api/integrations/:provider/...`; kegagalan capability tidak boleh membuat
+  halaman lokal error.

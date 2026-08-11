@@ -1,8 +1,7 @@
 import type { User } from '@prisma/client';
 import type {
   PractitionerSummary,
-  SatusehatLinkageSummary,
-  SatusehatSyncSummary,
+  ResourceIntegrationSummary,
 } from '@mitrafaskes/shared';
 
 type PractitionerUser = Pick<
@@ -57,8 +56,7 @@ function toLocationReference(location: {
 
 export function toPractitionerSummary(
   record: PractitionerUser,
-  satusehat?: SatusehatLinkageSummary,
-  satusehatSync?: SatusehatSyncSummary,
+  integrations: ResourceIntegrationSummary[] = [],
 ): PractitionerSummary {
   const locations =
     record.locationAssignments?.map((assignment) =>
@@ -87,8 +85,7 @@ export function toPractitionerSummary(
       : undefined,
     locations,
     active: record.active,
-    satusehat,
-    satusehatSync,
+    integrations,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };

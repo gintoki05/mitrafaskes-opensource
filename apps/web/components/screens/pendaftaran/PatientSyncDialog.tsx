@@ -25,6 +25,7 @@ import { formatSatusehatOperation, SatusehatPreviewSummary } from '../master-fas
 import { isPatientPatchPayload, PatientPatchPreview } from './PatientPatchPreview';
 import { PatientSatusehatResult } from './PatientSatusehatResult';
 import { PatientSyncReadinessNotice } from './PatientSyncReadinessNotice';
+import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 import {
   getPatientSyncReadiness,
   patientSyncReadinessMessage,
@@ -73,7 +74,7 @@ export function PatientSyncDialog({
   const [lookupIdentifierType, setLookupIdentifierType] =
     useState<SatusehatPatientLookupIdentifier>('NIK');
   const [lookupIhsNumber, setLookupIhsNumber] = useState(
-    () => patient?.satusehat?.externalResourceId ?? patient?.satusehatId ?? '',
+    () => getIntegrationLinkage(patient?.integrations, 'SATUSEHAT')?.externalResourceId ?? '',
   );
   const [selectedRemoteId, setSelectedRemoteId] = useState<string | null>(null);
   const [linking, setLinking] = useState(false);
@@ -225,14 +226,17 @@ export function PatientSyncDialog({
                 Status ini berasal dari ExternalResourceLink lokal, bukan dari state dialog.
               </p>
             </div>
-            <SatusehatLinkageBadge linkage={patient.satusehat} resourceName={patient.fullName} />
+            <SatusehatLinkageBadge
+              linkage={getIntegrationLinkage(patient.integrations, 'SATUSEHAT')}
+              resourceName={patient.fullName}
+            />
           </div>
 
-          {patient.satusehatSync?.status === 'FAILED' ? (
+          {getLatestIntegrationSync(patient.integrations, 'SATUSEHAT')?.status === 'FAILED' ? (
             <ScreenState
               kind="error"
               title="Percobaan terakhir gagal"
-              description={patient.satusehatSync.errorMessage ?? 'Remote SATUSEHAT menolak operasi terakhir. Periksa data lalu coba lagi.'}
+              description={getLatestIntegrationSync(patient.integrations, 'SATUSEHAT')?.errorMessage ?? 'Remote SATUSEHAT menolak operasi terakhir. Periksa data lalu coba lagi.'}
               compact
             />
           ) : null}

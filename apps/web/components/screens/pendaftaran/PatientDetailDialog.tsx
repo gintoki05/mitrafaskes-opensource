@@ -10,6 +10,8 @@ import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBa
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
 import { PatientDetailContent } from './PatientDetailContent';
 import { PatientStatusBadge } from './PatientStatusBadge';
+import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 
 type PatientDetailDialogProps = {
   open: boolean;
@@ -36,6 +38,7 @@ export function PatientDetailDialog({
   onSync,
   maritalStatuses,
 }: PatientDetailDialogProps) {
+  const satusehat = useIntegrationCapability('SATUSEHAT');
   const [patient, setPatient] = useState<Patient | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -100,10 +103,12 @@ export function PatientDetailDialog({
               {patient ? (
                 <>
                   <PatientStatusBadge active={patient.active} className="text-[10px]" />
-                  <SatusehatLinkageBadge
-                    linkage={patient.satusehat}
-                    resourceName={patient.fullName}
-                  />
+                  {satusehat.available ? (
+                    <SatusehatLinkageBadge
+                      linkage={getIntegrationLinkage(patient.integrations, 'SATUSEHAT')}
+                      resourceName={patient.fullName}
+                    />
+                  ) : null}
                 </>
               ) : null}
               <Button
@@ -153,7 +158,7 @@ export function PatientDetailDialog({
             />
           ) : patient ? (
             <>
-              {patient.satusehatSync?.status === 'FAILED' ? (
+              {satusehat.available && getLatestIntegrationSync(patient.integrations, 'SATUSEHAT')?.status === 'FAILED' ? (
                 <div
                   className="flex items-start gap-2 rounded-[var(--radius-card)] border border-destructive/25 bg-destructive/5 p-3 text-xs text-destructive"
                   role="alert"
@@ -161,7 +166,9 @@ export function PatientDetailDialog({
                   <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-destructive" aria-hidden="true" />
                   <p className="leading-relaxed">
                     Sync terakhir gagal, tetapi linkage sebelumnya tetap ada.
-                    {patient.satusehatSync.errorMessage ? ` ${patient.satusehatSync.errorMessage}` : ''}
+                    {getLatestIntegrationSync(patient.integrations, 'SATUSEHAT')?.errorMessage
+                      ? ` ${getLatestIntegrationSync(patient.integrations, 'SATUSEHAT')?.errorMessage}`
+                      : ''}
                   </p>
                 </div>
               ) : null}

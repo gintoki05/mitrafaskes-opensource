@@ -27,19 +27,19 @@ Referensi resmi:
 Preview payload tanpa memanggil SATUSEHAT:
 
 ```text
-GET /api/master/locations/:id/satusehat/preview
+GET /api/integrations/SATUSEHAT/resources/Location/:id/preview
 ```
 
 Sinkronisasi ke sandbox:
 
 ```text
-POST /api/master/locations/:id/satusehat/sync
+POST /api/integrations/SATUSEHAT/resources/Location/:id/sync
 ```
 
 Pencarian Location yang sudah tersedia di SATUSEHAT:
 
 ```text
-GET /api/master/locations/satusehat/search
+GET /api/integrations/SATUSEHAT/resources/Location/search
 ```
 
 Parameter pencarian yang didukung:
@@ -55,7 +55,7 @@ Parameter pencarian yang didukung:
 Import Location SATUSEHAT menjadi data lokal:
 
 ```text
-POST /api/master/locations/satusehat/import
+POST /api/integrations/SATUSEHAT/resources/Location/import
 ```
 
 Body menerima `externalResourceId`, `organizationId` opsional, `parentId`, dan
@@ -67,14 +67,14 @@ dipertahankan.
 Hubungkan Location lokal dengan data yang sudah ada di SATUSEHAT:
 
 ```text
-POST /api/master/locations/:id/satusehat/link
+POST /api/integrations/SATUSEHAT/resources/Location/:id/link
 ```
 
 Link memuat detail remote, lalu memvalidasi `managingOrganization` dan `partOf`
 sebelum menyimpan `ExternalResourceLink`.
 
-Preview membutuhkan `master-data.read`, sedangkan sync membutuhkan
-`master-data.write`.
+Preview membutuhkan `sync.status-read`, sedangkan sync, import, dan link
+membutuhkan `sync.retry`.
 
 ## Mapping payload
 

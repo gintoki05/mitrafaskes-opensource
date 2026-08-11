@@ -104,14 +104,6 @@ export class EncountersController {
     });
   }
 
-  @Get(':id/satusehat/preview')
-  @RequirePermission(AccessPermission.SYNC_STATUS_READ)
-  previewSatusehat(@Param('id') id: string) {
-    return this.encounters.previewSatusehat(id).catch((error) => {
-      this.throwHttpError(error);
-    });
-  }
-
   private throwHttpError(error: unknown): never {
     if (error instanceof EncounterValidationError) {
       throw new BadRequestException({

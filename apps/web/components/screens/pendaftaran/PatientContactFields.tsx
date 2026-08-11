@@ -10,6 +10,7 @@ import { ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 import type { PatientFormValues } from './patient-form-schema';
 import { PatientRegionFields } from './PatientRegionFields';
 import type { PatientWilayahLookupState } from './usePatientWilayahLookup';
@@ -31,12 +32,13 @@ export function PatientContactFields({
   disabled,
   wilayahLookup,
 }: PatientContactFieldsProps) {
+  const satusehat = useIntegrationCapability('SATUSEHAT');
   return (
     <>
       <details className="group rounded-[var(--radius-card)] border border-border bg-card">
         <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 [&::-webkit-details-marker]:hidden">
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold text-foreground">Identifier & SATUSEHAT</span>
+            <span className="block text-sm font-semibold text-foreground">Identifier{satusehat.available ? ' & SATUSEHAT' : ''}</span>
             <span className="mt-0.5 block text-xs text-muted-foreground">Opsional</span>
           </span>
           <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-180" aria-hidden="true" />
@@ -60,20 +62,22 @@ export function PatientContactFields({
               placeholder="Nomor KK"
             />
           </Field>
-          <Field className="sm:col-span-2" data-invalid={Boolean(errors.satusehatId)}>
-            <FieldLabel htmlFor="patient-satusehat-id">Nomor IHS / SATUSEHAT ID</FieldLabel>
-            <Input
-              id="patient-satusehat-id"
-              {...register('satusehatId')}
-              disabled={disabled}
-              readOnly
-              className="font-mono"
-              placeholder="Diisi dari lookup atau linkage"
-              aria-invalid={Boolean(errors.satusehatId)}
-            />
-            <p className="text-[11px] text-muted-foreground">Terisi otomatis dari SATUSEHAT.</p>
-            <FieldError errors={[errors.satusehatId]} />
-          </Field>
+          {satusehat.available ? (
+            <Field className="sm:col-span-2" data-invalid={Boolean(errors.satusehatId)}>
+              <FieldLabel htmlFor="patient-satusehat-id">Nomor IHS / SATUSEHAT ID</FieldLabel>
+              <Input
+                id="patient-satusehat-id"
+                {...register('satusehatId')}
+                disabled={disabled}
+                readOnly
+                className="font-mono"
+                placeholder="Diisi dari lookup atau linkage"
+                aria-invalid={Boolean(errors.satusehatId)}
+              />
+              <p className="text-[11px] text-muted-foreground">Terisi otomatis dari SATUSEHAT.</p>
+              <FieldError errors={[errors.satusehatId]} />
+            </Field>
+          ) : null}
         </div>
       </details>
 

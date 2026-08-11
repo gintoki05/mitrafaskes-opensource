@@ -51,7 +51,7 @@ export function toPatient(record: PatientRecord): Patient {
     address: record.address ?? undefined,
     phone: record.phone ?? undefined,
     medicalRecNo: record.medicalRecNo,
-    satusehatId: record.satusehatId ?? undefined,
+    integrations: [],
     active: record.active,
     birthPlaceText: record.birthPlaceText ?? undefined,
     multipleBirthOrder: record.multipleBirthOrder ?? undefined,

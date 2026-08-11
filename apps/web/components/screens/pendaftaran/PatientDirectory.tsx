@@ -16,10 +16,12 @@ import { PaginationControl } from '@/components/ui/pagination';
 import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import { cn } from '@/lib/utils';
+import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 import { maritalStatusDisplay } from './marital-status-display';
 import { PatientSyncReadinessNotice } from './PatientSyncReadinessNotice';
 import { getPatientSyncReadiness } from './patient-sync-readiness';
 import { PatientStatusBadge } from './PatientStatusBadge';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 
 type PatientDirectoryProps = {
   patients: Patient[];
@@ -62,6 +64,7 @@ export function PatientDirectory({
   statusFilter,
   onStatusFilterChange,
 }: PatientDirectoryProps) {
+  const satusehat = useIntegrationCapability('SATUSEHAT');
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
   const firstItem = meta.total === 0 ? 0 : (meta.page - 1) * meta.pageSize + 1;
   const lastItem = Math.min(meta.total, meta.page * meta.pageSize);
@@ -142,20 +145,22 @@ export function PatientDirectory({
               <th scope="col" className="border-b border-border px-4 py-3">No. Rekam Medis</th>
               <th scope="col" className="border-b border-border px-4 py-3">Identitas</th>
               <th scope="col" className="border-b border-border px-4 py-3">Status</th>
-              <th scope="col" className="border-b border-border px-4 py-3">SATUSEHAT</th>
+              {satusehat.available ? (
+                <th scope="col" className="border-b border-border px-4 py-3">SATUSEHAT</th>
+              ) : null}
               <th scope="col" className="w-48 border-b border-border px-4 py-3 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {patientsLoading ? (
               <tr>
-                <td colSpan={7} className="p-4">
+                <td colSpan={satusehat.available ? 7 : 6} className="p-4">
                   <ScreenState kind="loading" title="Memuat daftar pasien" description="Mohon tunggu sebentar." compact />
                 </td>
               </tr>
             ) : patients.length === 0 && !patientsError ? (
               <tr>
-                <td colSpan={7} className="p-4">
+                <td colSpan={satusehat.available ? 7 : 6} className="p-4">
                   <ScreenState
                     kind="empty"
                     title={search ? 'Pasien tidak ditemukan' : statusFilterLabel ? `Belum ada pasien ${statusFilterLabel}` : 'Belum ada pasien'}
@@ -189,20 +194,28 @@ export function PatientDirectory({
                 <td className="px-4 py-4">
                   <PatientStatusBadge active={patient.active} />
                 </td>
-                <td className="px-4 py-4">
-                  <div className="space-y-1">
-                    <SatusehatLinkageBadge
-                      linkage={patient.satusehat}
-                      resourceName={patient.fullName}
-                    />
-                    {patient.satusehatSync?.status === 'FAILED' ? (
-                      <p className="max-w-[14rem] text-[11px] text-destructive" title={patient.satusehatSync.errorMessage}>
-                        Sync terakhir gagal{patient.satusehatSync.errorMessage ? `: ${patient.satusehatSync.errorMessage}` : ''}
-                      </p>
-                    ) : null}
-                    <PatientSyncReadinessNotice readiness={syncReadiness} compact />
-                  </div>
-                </td>
+                {satusehat.available ? (
+                  <td className="px-4 py-4">
+                    <div className="space-y-1">
+                      <SatusehatLinkageBadge
+                        linkage={getIntegrationLinkage(patient.integrations, 'SATUSEHAT')}
+                        resourceName={patient.fullName}
+                      />
+                      {getLatestIntegrationSync(patient.integrations, 'SATUSEHAT')?.status === 'FAILED' ? (
+                        <p
+                          className="max-w-[14rem] text-[11px] text-destructive"
+                          title={getLatestIntegrationSync(patient.integrations, 'SATUSEHAT')?.errorMessage}
+                        >
+                          Sync terakhir gagal
+                          {getLatestIntegrationSync(patient.integrations, 'SATUSEHAT')?.errorMessage
+                            ? `: ${getLatestIntegrationSync(patient.integrations, 'SATUSEHAT')?.errorMessage}`
+                            : ''}
+                        </p>
+                      ) : null}
+                      <PatientSyncReadinessNotice readiness={syncReadiness} compact />
+                    </div>
+                  </td>
+                ) : null}
                 <td className="w-48 px-4 py-4 align-middle text-right">
                   <div
                     className="flex flex-wrap items-center justify-end gap-1"

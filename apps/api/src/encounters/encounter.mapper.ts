@@ -1,19 +1,14 @@
 import type {
   Encounter as SharedEncounter,
+  ResourceIntegrationSummary,
   EncounterStatus,
   UserRole,
 } from '@mitrafaskes/shared';
 import type { EncounterWithRelations } from './encounter.repository';
-import type {
-  EncounterSyncStatusRepository,
-} from './encounter-sync-status.repository';
 
 export function toEncounter(
   record: EncounterWithRelations,
-  syncStatus?: {
-    link?: ReturnType<EncounterSyncStatusRepository['toLinkage']>;
-    log?: ReturnType<EncounterSyncStatusRepository['toSyncSummary']>;
-  },
+  integrations: ResourceIntegrationSummary[] = [],
 ): SharedEncounter {
   return {
     id: record.id,
@@ -41,8 +36,7 @@ export function toEncounter(
     })),
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
-    satusehat: syncStatus?.link,
-    satusehatSync: syncStatus?.log,
+    integrations,
     patient: {
       nik: record.patient.nik ?? undefined,
       fullName: record.patient.fullName,

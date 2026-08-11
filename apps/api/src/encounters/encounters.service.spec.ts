@@ -59,9 +59,7 @@ function encounterRecord(status = EncounterStatus.WAITING) {
   };
 }
 
-function createService(options?: {
-  dependencyLink?: (resourceType: string, localResourceType: string, localResourceId: string) => unknown;
-}) {
+function createService() {
   const record = encounterRecord();
   const transaction = {
     patient: {
@@ -98,27 +96,17 @@ function createService(options?: {
   const prisma = {
     user: { findUnique: jest.fn().mockResolvedValue({ id: 'user-1' }) },
     encounter: { findUnique: jest.fn().mockResolvedValue(record) },
-    externalResourceLink: { create: jest.fn() },
-    satusehatSyncLog: { create: jest.fn() },
     $transaction: jest.fn(async (callback: (tx: typeof transaction) => unknown) =>
       callback(transaction),
     ),
   } as unknown as PrismaService;
-  const syncStatus = {
-    findDependencyLink: jest.fn(
-      options?.dependencyLink ?? (() => null),
-    ),
-    findForList: jest.fn(),
-    toLinkage: jest.fn(),
-    toSyncSummary: jest.fn(),
-  };
-  const service = new EncountersService(prisma, syncStatus as never);
-  return { service, prisma, transaction, syncStatus, record };
+  const service = new EncountersService(prisma);
+  return { service, prisma, transaction, record };
 }
 
 describe('EncountersService', () => {
   it('creates the local Encounter atomically without SATUSEHAT calls or logs', async () => {
-    const { service, transaction, syncStatus, prisma } = createService();
+    const { service, transaction } = createService();
 
     const result = await service.create(
       { patientId: 'patient-1', locationId: 'location-1', doctorId: 'doctor-1' },
@@ -135,61 +123,6 @@ describe('EncountersService', () => {
           queueNumber: 1,
           status: EncounterStatus.WAITING,
         }),
-      }),
-    );
-    expect(syncStatus.findDependencyLink).not.toHaveBeenCalled();
-    expect((prisma as any).externalResourceLink.create).not.toHaveBeenCalled();
-    expect((prisma as any).satusehatSyncLog.create).not.toHaveBeenCalled();
-  });
-
-  it('returns dependency blockers without dummy external identifiers', async () => {
-    const { service, syncStatus } = createService();
-
-    const preview = await service.previewSatusehat('enc-local-1');
-
-    expect(preview.ready).toBe(false);
-    expect(preview.payload).toBeUndefined();
-    expect(preview.blockers).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ code: 'PATIENT_NOT_LINKED' }),
-        expect.objectContaining({ code: 'PRACTITIONER_NOT_LINKED' }),
-        expect.objectContaining({ code: 'LOCATION_NOT_LINKED' }),
-        expect.objectContaining({ code: 'ORGANIZATION_NOT_LINKED' }),
-      ]),
-    );
-    expect(JSON.stringify(preview)).not.toContain('SATUSEHAT-');
-    expect(syncStatus.findDependencyLink).toHaveBeenCalledTimes(4);
-  });
-
-  it('builds the official Encounter preview from linked dependencies', async () => {
-    const { service } = createService({
-      dependencyLink: (_resourceType, _localType, localId) => ({
-        localResourceId: localId,
-        externalResourceId: `external-${localId}`,
-        lastSyncedAt: null,
-      }),
-    });
-
-    const preview = await service.previewSatusehat('enc-local-1');
-
-    expect(preview.ready).toBe(true);
-    expect(preview.blockers).toEqual([]);
-    expect(preview.payload).toEqual(
-      expect.objectContaining({
-        resourceType: 'Encounter',
-        status: 'arrived',
-        class: expect.objectContaining({ code: 'AMB' }),
-        identifier: [
-          expect.objectContaining({
-            system: 'http://sys-ids.kemkes.go.id/encounter/external-organization-1',
-            value: 'ENC-2026-000001',
-          }),
-        ],
-        subject: { reference: 'Patient/external-patient-1', display: 'Ahmad Supardi' },
-        serviceProvider: {
-          reference: 'Organization/external-organization-1',
-          display: 'Klinik Demo',
-        },
       }),
     );
   });

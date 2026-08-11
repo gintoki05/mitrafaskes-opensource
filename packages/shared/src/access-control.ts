@@ -39,7 +39,7 @@ export const ROLE_LABELS: Readonly<Record<UserRole, string>> = {
 export const DEFAULT_ROUTE_BY_ROLE: Readonly<Record<UserRole, string>> = {
   [UserRole.PERAWAT]: '/pendaftaran',
   [UserRole.DOKTER]: '/rme',
-  [UserRole.ADMIN]: '/satusehat',
+  [UserRole.ADMIN]: '/master-faskes',
 };
 
 const PUBLIC_PERMISSIONS = new Set<AccessPermission>([

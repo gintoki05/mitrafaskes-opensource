@@ -1,7 +1,7 @@
 # Fondasi Master Data local-first
 
 Master Data adalah domain lokal yang dipakai aplikasi untuk lookup operasional.
-SATUSEHAT hanya menjadi referensi standar dan provider refresh manual. Tidak ada
+SATUSEHAT hanya menjadi provider refresh manual yang opsional. Tidak ada
 read-through ke provider saat Patient atau form lain dibuka.
 
 ## Fase pertama
@@ -16,7 +16,10 @@ read-through ke provider saat Patient atau form lain dibuka.
 
 ## Refresh
 
-`POST /api/master-data/regions/refresh` hanya dapat dijalankan Admin. Adapter
+`POST /api/master-data/regions/refresh` hanya dapat dijalankan Admin. Saat
+plugin SATUSEHAT aktif, gateway provider juga menyediakan
+`POST /api/integrations/SATUSEHAT/master-data/WILAYAH/refresh`; saat plugin
+nonaktif, route tersebut mengembalikan `503 INTEGRATION_DISABLED`. Adapter
 SATUSEHAT memakai endpoint Master Data v1 dan dapat di-override dengan
 `SATUSEHAT_MASTER_DATA_BASE_URL`; jika kosong, endpoint sandbox/production
 dipilih dari `SATUSEHAT_ENVIRONMENT`.

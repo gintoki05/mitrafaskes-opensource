@@ -1,5 +1,4 @@
 import { HttpException } from '@nestjs/common';
-import { SatusehatAuthError } from '../satusehat/satusehat-auth.service';
 import { MasterDataProviderError } from './master-wilayah.provider';
 import { MasterRegionValidationError } from './master-wilayah.validation';
 
@@ -27,7 +26,7 @@ export function toMasterWilayahRefreshFailure(
     };
   }
 
-  if (error instanceof SatusehatAuthError) {
+  if (isProviderError(error)) {
     return {
       code: error.code,
       message: redactErrorMessage(error.message),
@@ -81,6 +80,17 @@ export function toMasterWilayahRefreshFailure(
     message: GENERIC_REFRESH_FAILURE,
     httpStatus: 500,
   };
+}
+
+function isProviderError(
+  error: unknown,
+): error is { code: string; message: string; httpStatus?: number } {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    typeof (error as { code?: unknown }).code === 'string' &&
+    typeof (error as { message?: unknown }).message === 'string'
+  );
 }
 
 export function toSafeMasterWilayahErrorMessage(

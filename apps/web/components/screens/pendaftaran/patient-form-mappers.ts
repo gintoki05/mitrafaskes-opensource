@@ -8,6 +8,7 @@ import {
   type CreatePatientDto,
   type Patient,
 } from "@mitrafaskes/shared";
+import { getIntegrationLinkage } from "@/lib/integrations";
 import {
   patientFormDefaults,
   type PatientFormValues,
@@ -73,8 +74,7 @@ export function patientFormValuesFromPatient(
           : String(relationship.contactPriority),
     }));
   const satusehatId =
-    patient.satusehat?.externalResourceId ??
-    patient.satusehatId ??
+    getIntegrationLinkage(patient.integrations, "SATUSEHAT")?.externalResourceId ??
     activeIdentifiers.find(
       (identifier) =>
         identifier.type === "OTHER" && identifier.system === PATIENT_IHS_SYSTEM,
@@ -302,11 +302,6 @@ export function patientFormValuesToPayload(
     birthPlaceText: values.birthPlaceText || undefined,
     maritalStatusCode: values.maritalStatusCode || undefined,
     citizenshipCode: values.citizenshipCode || undefined,
-    satusehatId:
-      values.satusehatId ||
-      existingPatient?.satusehat?.externalResourceId ||
-      existingPatient?.satusehatId ||
-      undefined,
     identifiers: [...identifiers, ...preservedOtherIdentifiers],
     names,
     telecoms,

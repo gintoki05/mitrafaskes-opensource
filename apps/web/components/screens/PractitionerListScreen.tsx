@@ -11,6 +11,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { RouteGuard } from '@/components/RouteGuard';
 import { Button } from '@/components/ui/button';
 import { useSession } from '@/hooks/useSession';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 import { useMasterFaskesData } from '@/hooks/useMasterFaskesData';
 import { usePractitioners } from '@/hooks/usePractitioners';
 import { can } from '@/lib/auth';
@@ -31,6 +32,7 @@ const initialQuery: MasterDataListQuery = {
 
 export default function PractitionerListScreen() {
   const session = useSession();
+  const satusehat = useIntegrationCapability('SATUSEHAT');
   const canWrite = can(
     session?.user ?? null,
     AccessPermission.MASTER_DATA_WRITE,
@@ -88,10 +90,11 @@ export default function PractitionerListScreen() {
     () =>
       getPractitionerColumns({
         canWrite,
+        integrationEnabled: satusehat.available,
         onLink: openLink,
         onEdit: openEdit,
       }),
-    [canWrite, openEdit, openLink],
+    [canWrite, openEdit, openLink, satusehat.available],
   );
 
   const refreshAfterMutation = async () => {
@@ -104,7 +107,7 @@ export default function PractitionerListScreen() {
         <PageHeader
           icon={<Stethoscope className="h-6 w-6" />}
           title="Practitioner / Tenaga Kesehatan"
-          description="Kelola profil dokter dan perawat secara lokal; sinkronisasi ke SATUSEHAT dapat dilakukan bila NIK dan resource remote tersedia."
+          description="Kelola profil dokter dan perawat secara lokal; sinkronisasi ke provider eksternal tersedia bila integrasi diaktifkan."
           action={
             canWrite ? (
               <Button type="button" onClick={() => setCreateDialogOpen(true)}>
@@ -148,12 +151,12 @@ export default function PractitionerListScreen() {
         {!canWrite ? (
           <div className="rounded-[var(--radius-card)] border border-info/20 bg-info/5 p-4 text-xs text-info">
             <strong>Akses baca saja.</strong> Admin perlu mengisi NIK dan
-            menghubungkan Practitioner ke SATUSEHAT.
+            menghubungkan Practitioner ke provider eksternal bila diperlukan.
           </div>
         ) : null}
       </div>
       <PractitionerLinkDialog
-        open={linkPractitioner !== null}
+        open={satusehat.configured && linkPractitioner !== null}
         practitioner={linkPractitioner}
         canWrite={canWrite}
         onClose={() => setLinkPractitioner(null)}

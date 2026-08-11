@@ -16,6 +16,8 @@ import { Button } from '@/components/ui/button';
 import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import { cn } from '@/lib/utils';
+import { getIntegrationLinkage } from '@/lib/integrations';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 import { maritalStatusDisplay } from './marital-status-display';
 import { PatientSyncReadinessNotice } from './PatientSyncReadinessNotice';
 import { getPatientSyncReadiness } from './patient-sync-readiness';
@@ -89,6 +91,8 @@ export function PatientDetailContent({
   onSync,
   maritalStatuses,
 }: PatientDetailContentProps) {
+  const satusehat = useIntegrationCapability('SATUSEHAT');
+  const linkage = getIntegrationLinkage(patient.integrations, 'SATUSEHAT');
   const identifiers = patient.identifiers ?? [];
   const names = patient.names ?? [];
   const telecoms = patient.telecoms ?? [];
@@ -155,34 +159,36 @@ export function PatientDetailContent({
           </dl>
         </PatientDetailDisclosure>
 
-        <PatientDetailDisclosure
-          title="SATUSEHAT"
-          meta={patient.satusehat ? 'Terhubung' : 'Belum tersinkron'}
-          icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
-                Status koneksi
-              </p>
-              <div className="mt-2">
-                <SatusehatLinkageBadge linkage={patient.satusehat} resourceName={patient.fullName} />
+        {satusehat.available ? (
+          <PatientDetailDisclosure
+            title="SATUSEHAT"
+            meta={linkage ? 'Terhubung' : 'Belum tersinkron'}
+            icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.06em] text-muted-foreground">
+                  Status koneksi
+                </p>
+                <div className="mt-2">
+                  <SatusehatLinkageBadge linkage={linkage} resourceName={patient.fullName} />
+                </div>
               </div>
+              <p className="max-w-sm text-right text-xs leading-relaxed text-muted-foreground">
+                Linkage tersimpan menjadi acuan status koneksi pasien.
+              </p>
             </div>
-            <p className="max-w-sm text-right text-xs leading-relaxed text-muted-foreground">
-              Linkage tersimpan menjadi acuan status koneksi pasien.
-            </p>
-          </div>
-          <dl className="mt-4 grid gap-x-5 gap-y-4 sm:grid-cols-2">
-            <DetailField
-              label="Nomor IHS / SATUSEHAT ID"
-              value={patient.satusehat?.externalResourceId ?? patient.satusehatId ?? 'Belum terhubung'}
-              mono
-              empty={!patient.satusehat && !patient.satusehatId}
-            />
-            <DetailField label="Versi lokal" value={String(patient.version ?? 1)} mono />
-          </dl>
-        </PatientDetailDisclosure>
+            <dl className="mt-4 grid gap-x-5 gap-y-4 sm:grid-cols-2">
+              <DetailField
+                label="Nomor IHS / SATUSEHAT ID"
+                value={linkage?.externalResourceId ?? 'Belum terhubung'}
+                mono
+                empty={!linkage}
+              />
+              <DetailField label="Versi lokal" value={String(patient.version ?? 1)} mono />
+            </dl>
+          </PatientDetailDisclosure>
+        ) : null}
 
         <PatientDetailDisclosure
           title="Identifier"

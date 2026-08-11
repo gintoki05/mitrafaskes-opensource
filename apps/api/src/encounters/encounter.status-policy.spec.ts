@@ -2,7 +2,6 @@ import { EncounterStatus } from '@mitrafaskes/shared';
 import {
   assertEncounterTransition,
   ENCOUNTER_TRANSITIONS,
-  toSatusehatEncounterStatus,
 } from './encounter.status-policy';
 import { EncounterTransitionError } from './encounter.errors';
 
@@ -46,10 +45,4 @@ describe('Encounter status policy', () => {
     });
   });
 
-  it('maps lifecycle statuses to the SATUSEHAT Encounter statuses', () => {
-    expect(toSatusehatEncounterStatus(EncounterStatus.WAITING)).toBe('arrived');
-    expect(toSatusehatEncounterStatus(EncounterStatus.IN_PROGRESS)).toBe('in-progress');
-    expect(toSatusehatEncounterStatus(EncounterStatus.COMPLETED)).toBe('finished');
-    expect(toSatusehatEncounterStatus(EncounterStatus.CANCELLED)).toBe('cancelled');
-  });
 });

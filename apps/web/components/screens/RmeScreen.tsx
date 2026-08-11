@@ -54,7 +54,7 @@ export default function RmePage() {
 
       if (response.ok) {
         toast.success('RME berhasil disimpan', {
-          description: 'Rekam medis tersimpan lokal dan Encounter diselesaikan. Sinkronisasi SATUSEHAT menunggu adapter/outbox PRI-23.',
+          description: 'Rekam medis tersimpan lokal dan Encounter diselesaikan. Integrasi eksternal tidak diperlukan untuk melanjutkan pekerjaan.',
         });
         void refreshEncounters(encountersMeta.page);
       } else {

@@ -12,6 +12,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { usePractitioners } from '@/hooks/usePractitioners';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
+import { getIntegrationLinkage } from '@/lib/integrations';
 import { FieldLabel, SelectField } from './FormField';
 import {
   MasterFaskesDialog,
@@ -72,6 +74,7 @@ function PractitionerProfileDialogContent({
   practitioner: PractitionerSummary;
 }) {
   const { update } = usePractitioners();
+  const satusehat = useIntegrationCapability('SATUSEHAT');
   const [nik, setNik] = useState(practitioner.nik ?? '');
   const [birthDate, setBirthDate] = useState(practitioner.birthDate ?? '');
   const [gender, setGender] = useState(practitioner.gender ?? '');
@@ -155,19 +158,21 @@ function PractitionerProfileDialogContent({
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <FieldLabel htmlFor="practitioner-profile-satusehat-id">
-              ID SATUSEHAT
-            </FieldLabel>
-            <Input
-              id="practitioner-profile-satusehat-id"
-              value={practitioner.satusehat?.externalResourceId ?? ''}
-              readOnly
-              className="font-mono"
-              placeholder="Belum terhubung"
-              disabled={!canWrite || saving}
-            />
-          </div>
+          {satusehat.available ? (
+            <div>
+              <FieldLabel htmlFor="practitioner-profile-satusehat-id">
+                ID SATUSEHAT
+              </FieldLabel>
+              <Input
+                id="practitioner-profile-satusehat-id"
+                value={getIntegrationLinkage(practitioner.integrations, 'SATUSEHAT')?.externalResourceId ?? ''}
+                readOnly
+                className="font-mono"
+                placeholder="Belum terhubung"
+                disabled={!canWrite || saving}
+              />
+            </div>
+          ) : null}
           <div>
             <FieldLabel htmlFor="practitioner-profile-nik" required>
               NIK

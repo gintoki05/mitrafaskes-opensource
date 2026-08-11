@@ -7,9 +7,11 @@ import { organizationTypes } from "./constants";
 import { OrganizationHierarchyBadge } from "./OrganizationHierarchyBadge";
 import { SatusehatLinkageBadge } from "@/components/satusehat/SatusehatLinkageBadge";
 import { SatusehatActionGroup } from "@/components/satusehat/SatusehatActionGroup";
+import { getIntegrationLinkage } from "@/lib/integrations";
 
 type OrganizationColumnOptions = {
   canWrite: boolean;
+  integrationEnabled: boolean;
   organizations: OrganizationSummary[];
   onPreview: (organization: OrganizationSummary) => void;
   onLink: (organization: OrganizationSummary) => void;
@@ -23,8 +25,21 @@ function labelForType(type: OrganizationSummary["type"]): string {
   );
 }
 
+const satusehatColumn: ColumnDef<OrganizationSummary> = {
+  id: "satusehat",
+  header: "SATUSEHAT",
+  enableSorting: false,
+  cell: ({ row }) => (
+    <SatusehatLinkageBadge
+      linkage={getIntegrationLinkage(row.original.integrations, "SATUSEHAT")}
+      resourceName={row.original.name}
+    />
+  ),
+};
+
 export function getOrganizationColumns({
   canWrite,
+  integrationEnabled,
   organizations,
   onPreview,
   onLink,
@@ -90,17 +105,7 @@ export function getOrganizationColumns({
         <ActiveStatusBadge active={row.original.active} />
       ),
     },
-    {
-      id: "satusehat",
-      header: "SATUSEHAT",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <SatusehatLinkageBadge
-          linkage={row.original.satusehat}
-          resourceName={row.original.name}
-        />
-      ),
-    },
+    ...(integrationEnabled ? [satusehatColumn] : []),
     {
       id: "actions",
       header: "Aksi",
@@ -112,7 +117,8 @@ export function getOrganizationColumns({
             onSync={() => onPreview(row.original)}
             className="flex-nowrap"
             onLink={
-              canWrite && !row.original.satusehat
+              canWrite &&
+              !getIntegrationLinkage(row.original.integrations, "SATUSEHAT")
                 ? () => onLink(row.original)
                 : undefined
             }

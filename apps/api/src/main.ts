@@ -10,7 +10,7 @@ async function bootstrap() {
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Mitra Faskes API')
     .setDescription(
-      'API Rekam Medis Elektronik Mitra Faskes dengan integrasi SATUSEHAT.',
+      'API Rekam Medis Elektronik Mitra Faskes dengan integrasi SATUSEHAT opsional.',
     )
     .setVersion('1.0')
     .addTag('General', 'Informasi umum layanan API.')
@@ -26,7 +26,7 @@ async function bootstrap() {
       'Pengaturan organisasi dan lokasi fasilitas kesehatan.',
     )
     .addTag('Medical Records', 'Pencatatan rekam medis elektronik (RME).')
-    .addTag('SATUSEHAT', 'Status dan sinkronisasi data ke SATUSEHAT.')
+    .addTag('Integrations', 'Capability dan operasi provider integrasi opsional.')
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig, {
     autoTagControllers: false,

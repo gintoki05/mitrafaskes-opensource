@@ -5,15 +5,37 @@ import { ActiveStatusBadge } from '@/components/ActiveStatusBadge';
 import { Button } from '@/components/ui/button';
 import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
+import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 
 type PractitionerColumnOptions = {
   canWrite: boolean;
+  integrationEnabled: boolean;
   onLink: (practitioner: PractitionerSummary) => void;
   onEdit: (practitioner: PractitionerSummary) => void;
 };
 
+const satusehatColumn: ColumnDef<PractitionerSummary> = {
+  id: 'satusehat',
+  header: 'SATUSEHAT',
+  enableSorting: false,
+  cell: ({ row }) => (
+    <div className="space-y-1">
+      <SatusehatLinkageBadge
+        linkage={getIntegrationLinkage(row.original.integrations, 'SATUSEHAT')}
+        resourceName={row.original.fullName}
+      />
+      {getLatestIntegrationSync(row.original.integrations, 'SATUSEHAT')?.status === 'FAILED' ? (
+        <p className="max-w-44 text-[10px] font-semibold text-destructive" title={getLatestIntegrationSync(row.original.integrations, 'SATUSEHAT')?.errorMessage}>
+          Sinkronisasi terakhir gagal
+        </p>
+      ) : null}
+    </div>
+  ),
+};
+
 export function getPractitionerColumns({
   canWrite,
+  integrationEnabled,
   onLink,
   onEdit,
 }: PractitionerColumnOptions): ColumnDef<PractitionerSummary>[] {
@@ -108,24 +130,7 @@ export function getPractitionerColumns({
         <ActiveStatusBadge active={row.original.active} />
       ),
     },
-    {
-      id: 'satusehat',
-      header: 'SATUSEHAT',
-      enableSorting: false,
-      cell: ({ row }) => (
-        <div className="space-y-1">
-          <SatusehatLinkageBadge
-            linkage={row.original.satusehat}
-            resourceName={row.original.fullName}
-          />
-          {row.original.satusehatSync?.status === 'FAILED' ? (
-            <p className="max-w-44 text-[10px] font-semibold text-destructive" title={row.original.satusehatSync.errorMessage}>
-              Sinkronisasi terakhir gagal
-            </p>
-          ) : null}
-        </div>
-      ),
-    },
+    ...(integrationEnabled ? [satusehatColumn] : []),
     {
       id: 'actions',
       header: 'Aksi',

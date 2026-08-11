@@ -3,62 +3,20 @@ import {
   Get,
   Post,
   Body,
-  Param,
   Query,
   UnauthorizedException,
-  NotFoundException,
-  Req,
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { MemoryStore } from './store/memory-store';
-import {
-  AccessPermission,
-  PaginatedListResponse,
-  evaluateAccess,
-} from '@mitrafaskes/shared';
+import { AccessPermission } from '@mitrafaskes/shared';
 import { Public, RequirePermission } from './auth/access-control.decorator';
-import {
-  AuthenticatedUser,
-  SessionPermissionGuard,
-} from './auth/session-permission.guard';
-import { SatusehatAuthService } from './satusehat/satusehat-auth.service';
+import { SessionPermissionGuard } from './auth/session-permission.guard';
 import { MasterIcd10Service } from './master-data/master-icd10.service';
-
-const DEFAULT_LIST_PAGE = 1;
-const DEFAULT_LIST_PAGE_SIZE = 25;
-const MAX_LIST_PAGE_SIZE = 100;
-
-const normalizePositiveInteger = (value: string | undefined, fallback: number) => {
-  const parsed = value ? Number(value) : NaN;
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-};
-
-const paginate = <T>(
-  items: readonly T[],
-  pageInput?: string,
-  pageSizeInput?: string,
-): PaginatedListResponse<T> => {
-  const page = normalizePositiveInteger(pageInput, DEFAULT_LIST_PAGE);
-  const pageSize = Math.min(
-    normalizePositiveInteger(pageSizeInput, DEFAULT_LIST_PAGE_SIZE),
-    MAX_LIST_PAGE_SIZE,
-  );
-  const total = items.length;
-
-  return {
-    items: items.slice((page - 1) * pageSize, page * pageSize),
-    meta: { page, pageSize, total },
-  };
-};
 
 @Controller('api')
 @UseGuards(SessionPermissionGuard)
 export class AppController {
-  constructor(
-    private readonly satusehatAuth: SatusehatAuthService,
-    private readonly icd10: MasterIcd10Service,
-  ) {}
+  constructor(private readonly icd10: MasterIcd10Service) {}
 
   @Get()
   @ApiTags('General')
@@ -119,50 +77,6 @@ export class AppController {
       nameIndo: nameIndo ?? display,
       nameEng,
     }));
-  }
-
-  // 3. SATUSEHAT Logs & Sync Retry
-  @Get('satusehat/logs')
-  @ApiTags('SATUSEHAT')
-  @RequirePermission(AccessPermission.SYNC_STATUS_READ)
-  getSatusehatLogs(
-    @Req() request: { user: AuthenticatedUser },
-    @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string,
-  ) {
-    const logs = this.can(request.user, AccessPermission.SYNC_PAYLOAD_READ)
-      ? MemoryStore.syncLogs
-      : MemoryStore.syncLogs.map(({ payload, ...log }) => log);
-    return paginate(logs, page, pageSize);
-  }
-
-  @Get('satusehat/auth/status')
-  @ApiTags('SATUSEHAT')
-  @RequirePermission(AccessPermission.SYNC_STATUS_READ)
-  getSatusehatAuthStatus() {
-    return this.satusehatAuth.getConnectionStatus();
-  }
-
-  @Post('satusehat/sync/:logId/retry')
-  @ApiTags('SATUSEHAT')
-  @RequirePermission(AccessPermission.SYNC_RETRY)
-  retrySync(@Param('logId') logId: string) {
-    const log = MemoryStore.syncLogs.find((l) => l.id === logId);
-    if (!log) {
-      throw new NotFoundException('Log sinkronisasi tidak ditemukan');
-    }
-    log.status = 'SUCCESS';
-    log.satusehatId = `${log.resourceType.substring(0, 3).toUpperCase()}-SATUSEHAT-${Date.now()}`;
-    log.errorMessage = undefined;
-    log.updatedAt = new Date().toISOString();
-    return {
-      message: 'Sinkronisasi Ulang ke SATUSEHAT Kemenkes Berhasil',
-      log,
-    };
-  }
-
-  private can(user: AuthenticatedUser, permission: AccessPermission): boolean {
-    return evaluateAccess(user.role, permission).allowed;
   }
 
 }

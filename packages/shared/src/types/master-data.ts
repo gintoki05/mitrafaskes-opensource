@@ -6,16 +6,7 @@ export type LocationStatus = 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
 
 export type LocationMode = 'INSTANCE' | 'KIND';
 
-export interface SatusehatLinkageSummary {
-  externalResourceId: string;
-  lastSyncedAt?: string;
-}
-
-export interface SatusehatSyncSummary {
-  status: 'PENDING' | 'SUCCESS' | 'FAILED';
-  errorMessage?: string;
-  updatedAt: string;
-}
+import type { ResourceIntegrationSummary } from './integrations';
 
 export interface OrganizationSummary {
   id: string;
@@ -26,7 +17,7 @@ export interface OrganizationSummary {
   addressText?: string;
   phone?: string;
   email?: string;
-  satusehat?: SatusehatLinkageSummary;
+  integrations: ResourceIntegrationSummary[];
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -47,7 +38,7 @@ export interface LocationSummary {
   city?: string;
   postalCode?: string;
   countryCode: string;
-  satusehat?: SatusehatLinkageSummary;
+  integrations: ResourceIntegrationSummary[];
   latitude?: number;
   longitude?: number;
   altitude?: number;
@@ -85,8 +76,7 @@ export interface PractitionerSummary {
   /** Complete assignment set for this practitioner. */
   locations: PractitionerLocationReference[];
   active: boolean;
-  satusehat?: SatusehatLinkageSummary;
-  satusehatSync?: SatusehatSyncSummary;
+  integrations: ResourceIntegrationSummary[];
   createdAt: string;
   updatedAt: string;
 }

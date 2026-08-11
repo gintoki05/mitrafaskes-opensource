@@ -23,7 +23,6 @@ const structuredRecord = {
   address: null,
   phone: null,
   medicalRecNo: 'RM-2026-000004',
-  satusehatId: null,
   active: true,
   birthPlaceText: null,
   multipleBirthOrder: null,

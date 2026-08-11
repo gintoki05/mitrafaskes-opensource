@@ -16,6 +16,7 @@ import { useMasterFaskesData } from "@/hooks/useMasterFaskesData";
 import { useMasterFaskesList } from "@/hooks/useMasterFaskesList";
 import { can } from "@/lib/auth";
 import { useSession } from "@/hooks/useSession";
+import { useIntegrationCapability } from "@/hooks/useIntegrationCapabilities";
 import { MasterFaskesDialog } from "./master-faskes/MasterFaskesDialog";
 import { MasterFaskesSubnav } from "./master-faskes/MasterFaskesSubnav";
 import { MasterFaskesTable } from "./master-faskes/MasterFaskesTable";
@@ -53,6 +54,7 @@ type LocationStatusFilter = "ALL" | LocationSummary["status"];
 
 export default function LocationListScreen() {
   const session = useSession();
+  const satusehat = useIntegrationCapability("SATUSEHAT");
   const canWrite = can(
     session?.user ?? null,
     AccessPermission.MASTER_DATA_WRITE,
@@ -243,6 +245,7 @@ export default function LocationListScreen() {
     () =>
       getLocationColumns({
         canWrite,
+        integrationEnabled: satusehat.available,
         organizations,
         onPreview: setSyncLocation,
         onLink: openLink,
@@ -257,6 +260,7 @@ export default function LocationListScreen() {
       openAssignDoctors,
       openStatusConfirmation,
       organizations,
+      satusehat.available,
     ],
   );
 
@@ -270,23 +274,26 @@ export default function LocationListScreen() {
           action={
             canWrite ? (
               <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={openImport}
-                  title="Ambil Location dari SATUSEHAT"
-                >
-                  <span className="flex h-5 w-5 overflow-hidden rounded bg-white" aria-hidden="true">
-                    <Image
-                      src="/satusehat.png"
-                      alt=""
-                      width={40}
-                      height={40}
-                      className="h-full w-full object-cover"
-                    />
-                  </span>
-                  Ambil dari SATUSEHAT
-                </Button>
+                  {satusehat.available ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={openImport}
+                      disabled={!satusehat.configured}
+                      title={satusehat.configured ? "Ambil Location dari SATUSEHAT" : "Kredensial SATUSEHAT belum dikonfigurasi"}
+                  >
+                    <span className="flex h-5 w-5 overflow-hidden rounded bg-white" aria-hidden="true">
+                      <Image
+                        src="/satusehat.png"
+                        alt=""
+                        width={40}
+                        height={40}
+                        className="h-full w-full object-cover"
+                      />
+                    </span>
+                    Ambil dari SATUSEHAT
+                  </Button>
+                ) : null}
                 <Button type="button" onClick={openCreate}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Tambah location
@@ -403,8 +410,8 @@ export default function LocationListScreen() {
           onCancel={closeForm}
         />
       </MasterFaskesDialog>
-      <LocationSyncDialog
-        open={syncLocation !== null}
+        <LocationSyncDialog
+          open={satusehat.configured && syncLocation !== null}
         location={syncLocation}
         canSync={canWrite}
         onClose={() => setSyncLocation(null)}
@@ -413,8 +420,8 @@ export default function LocationListScreen() {
           void refreshOptions();
         }}
       />
-      <LocationLinkDialog
-        open={linkLocation !== null}
+        <LocationLinkDialog
+          open={satusehat.configured && linkLocation !== null}
         location={linkLocation}
         canWrite={canWrite}
         onClose={() => setLinkLocation(null)}
@@ -440,8 +447,8 @@ export default function LocationListScreen() {
           if (statusLocation) void confirmToggleStatus(statusLocation);
         }}
       />
-      <LocationImportDialog
-        open={importDialogOpen}
+        <LocationImportDialog
+          open={satusehat.configured && importDialogOpen}
         organizations={organizations}
         locations={locations}
         canWrite={canWrite}

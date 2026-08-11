@@ -9,12 +9,11 @@ import type {
   Encounter as SharedEncounter,
   EncounterListQuery,
   EncounterStatus,
-  SatusehatEncounterPayload,
-  SatusehatEncounterPreview,
 } from '@mitrafaskes/shared';
 import { randomUUID } from 'node:crypto';
 import type { AuthenticatedUser } from '../auth/session-permission.guard';
 import { PrismaService } from '../database/prisma.service';
+import { IntegrationRegistry } from '../integrations/integration-registry';
 import {
   formatFacilityDate,
   parseFacilityDate,
@@ -32,8 +31,7 @@ import {
   encounterInclude,
   type EncounterWithRelations,
 } from './encounter.repository';
-import { EncounterSyncStatusRepository } from './encounter-sync-status.repository';
-import { assertEncounterTransition, toSatusehatEncounterStatus } from './encounter.status-policy';
+import { assertEncounterTransition } from './encounter.status-policy';
 import {
   validateCreateEncounter,
   validateStatusUpdate,
@@ -44,11 +42,6 @@ import {
 type EncounterActor = Pick<AuthenticatedUser, 'username' | 'role'> & {
   id?: string;
 };
-
-const PATIENT_RESOURCE_TYPE = 'Patient';
-const PRACTITIONER_RESOURCE_TYPE = 'Practitioner';
-const LOCATION_RESOURCE_TYPE = 'Location';
-const ORGANIZATION_RESOURCE_TYPE = 'Organization';
 
 const mapStatusToPrisma = (status: EncounterStatus): PrismaEncounterStatus =>
   status as PrismaEncounterStatus;
@@ -62,7 +55,7 @@ export class EncountersService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly syncStatus: EncounterSyncStatusRepository,
+    private readonly integrations?: IntegrationRegistry,
   ) {
     this.repository = new EncounterRepository(prisma);
   }
@@ -90,13 +83,15 @@ export class EncountersService {
       page,
       pageSize,
     );
-    const statuses = await this.syncStatus.findForList(records.map((record) => record.id));
+    const integrations = this.integrations
+      ? await this.integrations.findResourceSummaries(
+          'Encounter',
+          records.map((record) => record.id),
+        )
+      : new Map();
     return {
       items: records.map((record) =>
-        toEncounter(record, {
-          link: this.syncStatus.toLinkage(statuses.links.get(record.id)),
-          log: this.syncStatus.toSyncSummary(statuses.logs.get(record.id)),
-        }),
+        toEncounter(record, integrations.get(record.id) ?? []),
       ),
       meta: { page, pageSize, total },
     };
@@ -212,112 +207,6 @@ export class EncountersService {
       actor,
       actorUserId,
     );
-  }
-
-  async previewSatusehat(id: string): Promise<SatusehatEncounterPreview> {
-    const record = await this.repository.findById(id);
-    if (!record) throw new EncounterNotFoundError();
-
-    const dependencies = await Promise.all([
-      this.syncStatus.findDependencyLink(PATIENT_RESOURCE_TYPE, 'Patient', record.patientId),
-      this.syncStatus.findDependencyLink(PRACTITIONER_RESOURCE_TYPE, 'User', record.doctorId),
-      this.syncStatus.findDependencyLink(LOCATION_RESOURCE_TYPE, 'Location', record.locationId),
-      this.syncStatus.findDependencyLink(
-        ORGANIZATION_RESOURCE_TYPE,
-        'HealthcareOrganization',
-        record.organizationId,
-      ),
-    ]);
-    const dependencyDefinitions = [
-      ['Patient', record.patientId, dependencies[0]],
-      ['Practitioner', record.doctorId, dependencies[1]],
-      ['Location', record.locationId, dependencies[2]],
-      ['Organization', record.organizationId, dependencies[3]],
-    ] as const;
-    const blockers = dependencyDefinitions
-      .filter(([, , link]) => !link)
-      .map(([resourceType, localResourceId]) => ({
-        code: `${resourceType.toUpperCase()}_NOT_LINKED`,
-        resourceType,
-        localResourceId,
-        message: `${resourceType} belum terhubung ke SATUSEHAT`,
-      }));
-
-    const result: SatusehatEncounterPreview = {
-      encounterId: id,
-      ready: blockers.length === 0,
-      blockers,
-    };
-    if (blockers.length > 0) return result;
-
-    const patientLink = dependencies[0]!;
-    const practitionerLink = dependencies[1]!;
-    const locationLink = dependencies[2]!;
-    const organizationLink = dependencies[3]!;
-    const payload: SatusehatEncounterPayload = {
-      resourceType: 'Encounter',
-      identifier: [
-        {
-          use: 'official',
-          system: `http://sys-ids.kemkes.go.id/encounter/${organizationLink.externalResourceId}`,
-          value: record.encounterNumber,
-        },
-      ],
-      status: toSatusehatEncounterStatus(record.status as unknown as EncounterStatus),
-      statusHistory: record.statusHistory.map((entry) => ({
-        status: toSatusehatEncounterStatus(entry.status as unknown as EncounterStatus),
-        period: {
-          start: entry.periodStart.toISOString(),
-          end: entry.periodEnd?.toISOString(),
-        },
-      })),
-      class: {
-        system: 'http://terminology.hl7.org/CodeSystem/v3-ActCode',
-        code: 'AMB',
-        display: 'ambulatory',
-      },
-      subject: {
-        reference: `Patient/${patientLink.externalResourceId}`,
-        display: record.patient.fullName,
-      },
-      participant: [
-        {
-          type: [
-            {
-              coding: [
-                {
-                  system: 'http://terminology.hl7.org/CodeSystem/v3-ParticipationType',
-                  code: 'ATND',
-                  display: 'attender',
-                },
-              ],
-            },
-          ],
-          individual: {
-            reference: `Practitioner/${practitionerLink.externalResourceId}`,
-            display: record.doctor.fullName,
-          },
-        },
-      ],
-      period: {
-        start: record.arrivedAt.toISOString(),
-        end: (record.completedAt ?? record.cancelledAt)?.toISOString(),
-      },
-      location: [
-        {
-          location: {
-            reference: `Location/${locationLink.externalResourceId}`,
-            display: record.location.name,
-          },
-        },
-      ],
-      serviceProvider: {
-        reference: `Organization/${organizationLink.externalResourceId}`,
-        display: record.organization.name,
-      },
-    };
-    result.payload = payload;
-    return result;
   }
 
   private async readAndValidateContext(

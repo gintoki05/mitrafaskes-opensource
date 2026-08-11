@@ -154,3 +154,19 @@ resources.
 - Never stop, restart, or take ownership of a frontend or backend process that
   was already running before this task. After verification, stop only the
   temporary processes started by the agent and confirm their ports are closed.
+
+## Optional integration boundary
+
+- Core modules must not import provider-specific classes, types, controllers,
+  mappers, clients, or sync-log repositories. Provider code is registered only
+  from the composition root through the generic integration registry.
+- Local CRUD and local transactions must not call an external integration.
+  Outbox/domain-event contracts remain provider-neutral; FHIR mapping and
+  retry behavior belong to an integration plugin.
+- The application must build, start, and complete local workflows with every
+  integration disabled.
+- `ExternalResourceLink` remains generic. `SatusehatSyncLog` is private to the
+  SATUSEHAT plugin and must not be read by core domain services.
+- Every new integration requires an explicit feature flag, capability
+  descriptor, disabled-state test, and a review of the provider-removal
+  boundary before it is merged.

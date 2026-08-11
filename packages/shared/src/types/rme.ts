@@ -34,7 +34,6 @@ export interface MedicalRecord {
     id: string;
     icd10Code: string;
     isPrimary: boolean;
-    satusehatConditionId?: string;
     icd10?: MasterIcd10;
   }[];
   prescriptions: {

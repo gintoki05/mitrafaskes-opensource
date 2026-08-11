@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { randomBytes, scryptSync } from 'node:crypto';
 import { Prisma, Role } from '@prisma/client';
@@ -12,8 +13,8 @@ import type {
   PractitionerSummary,
 } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
+import { IntegrationRegistry } from '../integrations/integration-registry';
 import { toPractitionerSummary } from './practitioner.mapper';
-import { PractitionerSyncStatusRepository } from './practitioner-sync-status.repository';
 import {
   PractitionerValidationError,
   validatePractitionerCreate,
@@ -43,11 +44,10 @@ const practitionerRelationInclude = {
 
 @Injectable()
 export class PractitionersService {
-  private readonly syncStatus: PractitionerSyncStatusRepository;
-
-  constructor(private readonly prisma: PrismaService) {
-    this.syncStatus = new PractitionerSyncStatusRepository(prisma);
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly integrations?: IntegrationRegistry,
+  ) {}
 
   async create(input: unknown): Promise<PractitionerSummary> {
     let validated: ReturnType<typeof validatePractitionerCreate>;
@@ -78,7 +78,7 @@ export class PractitionersService {
         },
         include: practitionerRelationInclude,
       });
-      return toPractitionerSummary(record);
+      return this.toSummary(record);
     } catch (error) {
       const conflictField = this.readUniqueConflictField(error);
       if (conflictField === 'nik') {
@@ -158,15 +158,13 @@ export class PractitionersService {
     ]);
 
     const ids = records.map((record) => record.id);
-    const { links, logs } = await this.syncStatus.findForList(ids);
+    const integrations = this.integrations
+      ? await this.integrations.findResourceSummaries('Practitioner', ids)
+      : new Map();
 
     return {
       items: records.map((record) =>
-        toPractitionerSummary(
-          record,
-          this.syncStatus.toLinkage(links.get(record.id)),
-          this.syncStatus.toSyncSummary(logs.get(record.id)),
-        ),
+        toPractitionerSummary(record, integrations.get(record.id) ?? []),
       ),
       meta: { page, pageSize, total },
       statusCounts: { active: activeCount, inactive: inactiveCount },
@@ -175,12 +173,7 @@ export class PractitionersService {
 
   async findById(id: string): Promise<PractitionerSummary> {
     const record = await this.getPractitionerRecord(id);
-    const { link, log } = await this.syncStatus.findForRecord(id);
-    return toPractitionerSummary(
-      record,
-      this.syncStatus.toLinkage(link),
-      this.syncStatus.toSyncSummary(log),
-    );
+    return this.toSummary(record);
   }
 
   async update(id: string, input: unknown): Promise<PractitionerSummary> {
@@ -317,26 +310,15 @@ export class PractitionersService {
     }
   }
 
-  async getPractitionerForSatusehat(id: string) {
-    const record = await this.getPractitionerRecord(id);
-    if (!record.nik) {
-      throw new ConflictException({
-        code: 'SATUSEHAT_PRACTITIONER_NIK_REQUIRED',
-        message:
-          'NIK tenaga kesehatan wajib diisi sebelum mencari Practitioner SATUSEHAT.',
-      });
-    }
-    return record;
+  async getPractitionerForExternalIntegration(id: string) {
+    return this.getPractitionerRecord(id);
   }
 
-  async findLinkageByExternalId(
-    externalResourceId: string,
-    environment: string,
-  ) {
-    return this.syncStatus.findLinkageByExternalId(
-      externalResourceId,
-      environment,
-    );
+  private async toSummary(record: Awaited<ReturnType<PractitionersService['getPractitionerRecord']>>) {
+    const integrations = this.integrations
+      ? await this.integrations.findResourceSummaries('Practitioner', [record.id])
+      : new Map();
+    return toPractitionerSummary(record, integrations.get(record.id) ?? []);
   }
 
   private normalizePositiveInteger(

@@ -5,7 +5,6 @@ import type {
   CreateEncounterDto,
   Encounter,
   EncounterStatus,
-  SatusehatEncounterPreview,
   UpdateEncounterStatusDto,
 } from '@mitrafaskes/shared';
 import { apiFetch } from '@/lib/auth';
@@ -86,13 +85,5 @@ export function useEncounterActions() {
     [],
   );
 
-  const previewSatusehat = useCallback((id: string) => {
-    return requestJson<SatusehatEncounterPreview>(
-      `/api/encounters/${id}/satusehat/preview`,
-      {},
-      'Preview Encounter SATUSEHAT belum dapat dimuat.',
-    );
-  }, []);
-
-  return { create, updateStatus, previewSatusehat };
+  return { create, updateStatus };
 }

@@ -15,8 +15,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
-import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
-import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import type { EncounterApiError } from './useEncounterActions';
 
 type QueuePanelProps = {
@@ -26,11 +24,9 @@ type QueuePanelProps = {
   encountersError: string;
   onPageChange: (page: number) => void;
   onStatusChange: (encounter: Encounter, status: EncounterStatus) => Promise<void>;
-  onPreviewSatusehat: (encounter: Encounter) => void;
   canStart: boolean;
   canCancel: boolean;
   canComplete: boolean;
-  canReadSyncStatus: boolean;
 };
 
 const statusLabels: Record<EncounterStatus, string> = {
@@ -70,11 +66,9 @@ export function QueuePanel({
   encountersError,
   onPageChange,
   onStatusChange,
-  onPreviewSatusehat,
   canStart,
   canCancel,
   canComplete,
-  canReadSyncStatus,
 }: QueuePanelProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
@@ -164,26 +158,6 @@ export function QueuePanel({
                 <Badge className={statusClass(encounter.status)}>
                   {statusLabels[encounter.status]}
                 </Badge>
-                {canReadSyncStatus ? (
-                  <div className="flex items-center gap-1.5">
-                    <SatusehatLinkageBadge
-                      linkage={encounter.satusehat}
-                      resourceName={encounter.encounterNumber}
-                    />
-                    <SatusehatActionGroup
-                      resourceName={encounter.encounterNumber}
-                      onSync={() => onPreviewSatusehat(encounter)}
-                    />
-                  </div>
-                ) : null}
-                {canReadSyncStatus && encounter.satusehatSync?.status === 'FAILED' ? (
-                  <span
-                    className="max-w-[12rem] text-[11px] text-destructive"
-                    title={encounter.satusehatSync.errorMessage}
-                  >
-                    Sync terakhir gagal
-                  </span>
-                ) : null}
                 <div className="flex items-center gap-1" role="group" aria-label={`Aksi lifecycle ${encounter.encounterNumber}`}>
                   {canStartThis ? (
                     <Button
@@ -247,11 +221,6 @@ export function QueuePanel({
             className="mx-0 w-auto"
           />
         </div>
-      ) : null}
-      {canReadSyncStatus && encounters.length > 0 ? (
-        <p className="border-t border-border px-4 py-3 text-[11px] text-muted-foreground sm:px-5">
-          Status SATUSEHAT berasal dari linkage lokal. Aksi SATUSEHAT pada tahap ini hanya membuka preflight/preview.
-        </p>
       ) : null}
     </section>
   );

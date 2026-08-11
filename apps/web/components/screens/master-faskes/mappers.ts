@@ -3,6 +3,7 @@ import type {
   OrganizationSummary,
 } from "@mitrafaskes/shared";
 import type { LocationForm, OrganizationForm } from "./types";
+import { getIntegrationLinkage } from "@/lib/integrations";
 
 export function organizationToForm(
   organization: OrganizationSummary,
@@ -10,7 +11,7 @@ export function organizationToForm(
   return {
     code: organization.code,
     name: organization.name,
-    satusehatId: organization.satusehat?.externalResourceId ?? "",
+    satusehatId: getIntegrationLinkage(organization.integrations, "SATUSEHAT")?.externalResourceId ?? "",
     type: organization.type,
     parentId: organization.parentId ?? "",
     addressText: organization.addressText ?? "",
@@ -26,7 +27,7 @@ export function locationToForm(location: LocationSummary): LocationForm {
     parentId: location.parentId ?? "",
     code: location.code,
     name: location.name,
-    satusehatId: location.satusehat?.externalResourceId ?? "",
+    satusehatId: getIntegrationLinkage(location.integrations, "SATUSEHAT")?.externalResourceId ?? "",
     type: location.type,
     description: location.description ?? "",
     status: location.status,

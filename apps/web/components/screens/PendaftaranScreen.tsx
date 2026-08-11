@@ -23,11 +23,11 @@ import { PatientFormDialog } from './pendaftaran/PatientFormDialog';
 import { PatientSyncDialog } from './pendaftaran/PatientSyncDialog';
 import { QueuePanel } from './pendaftaran/QueuePanel';
 import { EncounterRegistrationDialog } from './pendaftaran/EncounterRegistrationDialog';
-import { EncounterSatusehatPreviewDialog } from './pendaftaran/EncounterSatusehatPreviewDialog';
 import { RegistrationViewTabs, type RegistrationView } from './pendaftaran/RegistrationViewTabs';
 import { usePatientActions } from './pendaftaran/usePatientActions';
 import { useMaritalStatuses } from './pendaftaran/useMaritalStatuses';
 import { useEncounterActions } from './pendaftaran/useEncounterActions';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 
 export default function PendaftaranPage() {
   const [search, setSearch] = useState('');
@@ -39,8 +39,8 @@ export default function PendaftaranPage() {
   const [syncingPatient, setSyncingPatient] = useState<Patient | null>(null);
   const [registrationPatient, setRegistrationPatient] = useState<Patient | null>(null);
   const [registrationDialogKey, setRegistrationDialogKey] = useState(0);
-  const [previewEncounter, setPreviewEncounter] = useState<Encounter | null>(null);
   const session = useSession();
+  const satusehat = useIntegrationCapability('SATUSEHAT');
   const currentUser = session?.user ?? null;
   const maritalStatusLookup = useMaritalStatuses();
   const canWritePatient = can(currentUser, AccessPermission.PATIENT_WRITE);
@@ -48,7 +48,6 @@ export default function PendaftaranPage() {
   const canStartEncounter = can(currentUser, AccessPermission.QUEUE_START);
   const canCancelEncounter = can(currentUser, AccessPermission.QUEUE_CANCEL);
   const canCompleteEncounter = can(currentUser, AccessPermission.RME_FINALIZE);
-  const canReadSyncStatus = can(currentUser, AccessPermission.SYNC_STATUS_READ);
   const {
     patients,
     patientsMeta,
@@ -211,11 +210,9 @@ export default function PendaftaranPage() {
               encountersError={encountersError}
               onPageChange={(page) => void refreshEncounters(page)}
               onStatusChange={handleStatusChange}
-              onPreviewSatusehat={setPreviewEncounter}
               canStart={canStartEncounter}
               canCancel={canCancelEncounter}
               canComplete={canCompleteEncounter}
-              canReadSyncStatus={canReadSyncStatus}
             />
           </div>
         )}
@@ -236,12 +233,6 @@ export default function PendaftaranPage() {
           onClose={() => setRegistrationPatient(null)}
           onSubmit={handleCreateEncounter}
         />
-        <EncounterSatusehatPreviewDialog
-          open={Boolean(previewEncounter)}
-          encounter={previewEncounter}
-          loadPreview={encounterActions.previewSatusehat}
-          onClose={() => setPreviewEncounter(null)}
-        />
         <PatientDetailDialog
           key={detailPatientId ?? 'patient-detail-closed'}
           open={Boolean(detailPatientId)}
@@ -255,9 +246,9 @@ export default function PendaftaranPage() {
           onSync={handleSyncPatient}
           maritalStatuses={maritalStatusLookup.statuses}
         />
-        <PatientSyncDialog
-          key={syncingPatient?.id ?? 'patient-sync-closed'}
-          open={Boolean(syncingPatient)}
+          <PatientSyncDialog
+            key={syncingPatient?.id ?? 'patient-sync-closed'}
+            open={satusehat.configured && Boolean(syncingPatient)}
           patient={syncingPatient}
           canSync={canWritePatient}
           previewSatusehat={patientActions.previewSatusehat}

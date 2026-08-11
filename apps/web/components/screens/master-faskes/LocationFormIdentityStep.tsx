@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { FormSection } from "./FormLayout";
 import { SelectField } from "./FormField";
 import { locationModes, locationStatuses, locationTypes } from "./constants";
+import { useIntegrationCapability } from "@/hooks/useIntegrationCapabilities";
 
 type LocationFormIdentityStepProps = {
   control: Control<LocationFormValues>;
@@ -22,6 +23,7 @@ export function LocationFormIdentityStep({
   errors,
   register,
 }: LocationFormIdentityStepProps) {
+  const satusehat = useIntegrationCapability("SATUSEHAT");
   return (
     <FormSection
       title="Identitas & status"
@@ -58,21 +60,23 @@ export function LocationFormIdentityStep({
             <FieldError id="location-name-error" errors={[errors.name]} />
           </Field>
 
-          <Field>
-            <FieldLabel htmlFor="location-satusehat-id">
-              ID SATUSEHAT
-            </FieldLabel>
-            <Input
-              {...register("satusehatId")}
-              id="location-satusehat-id"
-              readOnly
-              className="font-mono"
-              placeholder="Belum terhubung"
-            />
-            <FieldDescription>
-              Diisi dari hasil ambil/linkage SATUSEHAT; bukan kode lokasi lokal.
-            </FieldDescription>
-          </Field>
+          {satusehat.available ? (
+            <Field>
+              <FieldLabel htmlFor="location-satusehat-id">
+                ID SATUSEHAT
+              </FieldLabel>
+              <Input
+                {...register("satusehatId")}
+                id="location-satusehat-id"
+                readOnly
+                className="font-mono"
+                placeholder="Belum terhubung"
+              />
+              <FieldDescription>
+                Diisi dari hasil ambil/linkage SATUSEHAT; bukan kode lokasi lokal.
+              </FieldDescription>
+            </Field>
+          ) : null}
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

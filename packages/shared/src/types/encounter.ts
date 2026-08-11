@@ -1,6 +1,6 @@
 import type { PaginatedListResponse } from './pagination';
-import type { SatusehatEncounterPayload } from './satusehat';
 import type { UserRole } from './auth';
+import type { ResourceIntegrationSummary } from './integrations';
 
 export enum EncounterStatus {
   WAITING = "WAITING",
@@ -17,17 +17,6 @@ export interface EncounterStatusHistory {
   actorUserId?: string;
   actorUsername: string;
   actorRole: UserRole;
-}
-
-export interface EncounterLinkageSummary {
-  externalResourceId: string;
-  lastSyncedAt?: string;
-}
-
-export interface EncounterSyncSummary {
-  status: 'PENDING' | 'SUCCESS' | 'FAILED';
-  errorMessage?: string;
-  updatedAt: string;
 }
 
 export interface Encounter {
@@ -48,8 +37,7 @@ export interface Encounter {
   statusHistory: EncounterStatusHistory[];
   createdAt: string;
   updatedAt: string;
-  satusehat?: EncounterLinkageSummary;
-  satusehatSync?: EncounterSyncSummary;
+  integrations: ResourceIntegrationSummary[];
   patient?: {
     nik?: string;
     fullName: string;
@@ -88,18 +76,6 @@ export interface EncounterListQuery {
   queueDate?: string;
   locationId?: string;
   status?: EncounterStatus;
-}
-
-export interface SatusehatEncounterPreview {
-  encounterId: string;
-  ready: boolean;
-  blockers: Array<{
-    code: string;
-    resourceType: string;
-    localResourceId: string;
-    message: string;
-  }>;
-  payload?: SatusehatEncounterPayload;
 }
 
 export type EncounterListResponse = PaginatedListResponse<Encounter>;

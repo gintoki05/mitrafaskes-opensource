@@ -1,14 +1,9 @@
 export const ENCOUNTER_RESOURCE_TYPE = 'Encounter';
 export const LOCAL_ENCOUNTER_RESOURCE_TYPE = 'Encounter';
-export const SATUSEHAT_PROVIDER = 'SATUSEHAT';
-export const DEFAULT_SATUSEHAT_ENVIRONMENT = 'sandbox';
 export const DEFAULT_FACILITY_TIMEZONE = 'Asia/Jakarta';
 
 export const readFacilityTimezone = (): string =>
   process.env.FACILITY_TIMEZONE?.trim() || DEFAULT_FACILITY_TIMEZONE;
-
-export const readSatusehatEnvironment = (): string =>
-  process.env.SATUSEHAT_ENVIRONMENT?.trim() || DEFAULT_SATUSEHAT_ENVIRONMENT;
 
 export const formatFacilityDate = (
   value: Date,

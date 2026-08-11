@@ -22,7 +22,6 @@ import {
 } from './../src/patients/patient.repository';
 import { ValidatedPatientInput } from './../src/patients/patient.validation';
 import { PatientAddressRegionValidator } from './../src/patients/patient-address-region.validator';
-import { PatientSyncStatusRepository } from './../src/patients/patient-sync-status.repository';
 import { EncountersService } from './../src/encounters/encounters.service';
 import { RmeService } from './../src/rme/rme.service';
 
@@ -70,6 +69,7 @@ class InMemoryPatientRepository {
       address: input.address,
       phone: input.phone,
       medicalRecNo: `RM-2026-${String(this.sequence).padStart(6, '0')}`,
+      integrations: [],
       active: input.active,
       birthPlaceText: input.birthPlaceText,
       multipleBirthOrder: input.multipleBirthOrder,
@@ -144,15 +144,6 @@ describe('Access control (e2e)', () => {
       .useValue({
         canonicalize: jest.fn(async (addresses: unknown[]) => addresses),
       })
-      .overrideProvider(PatientSyncStatusRepository)
-      .useValue({
-        findForList: jest.fn().mockResolvedValue({
-          links: new Map(),
-          logs: new Map(),
-        }),
-        toLinkage: jest.fn(),
-        toSyncSummary: jest.fn(),
-      })
       .overrideProvider(EncountersService)
       .useValue({
         findMany: jest.fn().mockResolvedValue({
@@ -218,13 +209,28 @@ describe('Access control (e2e)', () => {
     expect(patients.body.meta).toEqual({ page: 1, pageSize: 1, total: 0 });
     expect(patients.body.items).toEqual([]);
 
-    const logs = await request(app.getHttpServer())
-      .get('/api/satusehat/logs?page=1&pageSize=1')
+    const capabilities = await request(app.getHttpServer())
+      .get('/api/integrations/capabilities')
       .set(bearer('mock-jwt-token-admin'))
       .expect(200);
 
-    expect(logs.body.meta).toEqual({ page: 1, pageSize: 1, total: 1 });
-    expect(logs.body.items).toHaveLength(1);
+    expect(capabilities.body.integrations).toEqual([
+      expect.objectContaining({ provider: 'SATUSEHAT', enabled: false, status: 'DISABLED' }),
+    ]);
+
+    const logs = await request(app.getHttpServer())
+      .get('/api/integrations/SATUSEHAT/logs?page=1&pageSize=1')
+      .set(bearer('mock-jwt-token-admin'))
+      .expect(503);
+
+    expect(logs.body.code).toBe('INTEGRATION_DISABLED');
+
+    const connection = await request(app.getHttpServer())
+      .get('/api/integrations/SATUSEHAT/connection')
+      .set(bearer('mock-jwt-token-admin'))
+      .expect(503);
+
+    expect(connection.body.code).toBe('INTEGRATION_DISABLED');
   });
 
   it('returns 403 when an authenticated role bypasses the UI', async () => {
@@ -448,17 +454,12 @@ describe('Access control (e2e)', () => {
     );
   });
 
-  it('keeps raw SATUSEHAT payloads restricted to admins', async () => {
-    const registrationResponse = await request(app.getHttpServer())
-      .get('/api/satusehat/logs')
-      .set(bearer('mock-jwt-token-perawat_ani'))
-      .expect(200);
-    expect(registrationResponse.body.items[0].payload).toBeUndefined();
-
-    const adminResponse = await request(app.getHttpServer())
-      .get('/api/satusehat/logs')
+  it('returns a disabled response for direct SATUSEHAT access when the plugin is off', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/integrations/SATUSEHAT/logs')
       .set(bearer('mock-jwt-token-admin'))
-      .expect(200);
-    expect(adminResponse.body.items[0].payload).toBeDefined();
+      .expect(503);
+
+    expect(response.body.code).toBe('INTEGRATION_DISABLED');
   });
 });

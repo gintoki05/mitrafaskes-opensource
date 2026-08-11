@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Check, Copy } from 'lucide-react';
-import type { SatusehatLinkageSummary } from '@mitrafaskes/shared';
+import type { ResourceIntegrationLinkage } from '@mitrafaskes/shared';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 
 type SatusehatLinkageBadgeProps = {
-  linkage?: SatusehatLinkageSummary;
+  linkage?: ResourceIntegrationLinkage;
   resourceName: string;
 };
 
@@ -16,7 +17,10 @@ export function SatusehatLinkageBadge({
   linkage,
   resourceName,
 }: SatusehatLinkageBadgeProps) {
+  const { available } = useIntegrationCapability('SATUSEHAT');
   const [copied, setCopied] = useState(false);
+
+  if (!available) return null;
 
   if (!linkage) {
     return (

@@ -10,6 +10,7 @@ import {
   PatientListQuery,
   PatientListResponse,
 } from '@mitrafaskes/shared';
+import { IntegrationRegistry } from '../integrations/integration-registry';
 import {
   PatientIdentityConflictError,
   PatientRepository,
@@ -19,7 +20,6 @@ import {
   PatientAddressRegionValidationError,
   PatientAddressRegionValidator,
 } from './patient-address-region.validator';
-import { PatientSyncStatusRepository } from './patient-sync-status.repository';
 import {
   PatientValidationError,
   validatePatientInput,
@@ -30,24 +30,24 @@ export class PatientsService {
   constructor(
     private readonly repository: PatientRepository,
     private readonly addressRegions: PatientAddressRegionValidator,
-    @Optional() private readonly syncStatus?: PatientSyncStatusRepository,
+    @Optional() private readonly integrations?: IntegrationRegistry,
   ) {}
 
   async findMany(input: PatientListQuery = {}): Promise<PatientListResponse> {
     const result = await this.repository.findMany(input);
     return {
       ...result,
-      items: await this.attachSyncStatus(result.items),
+      items: await this.attachIntegrations(result.items),
     };
   }
 
   async findById(id: string): Promise<Patient | null> {
     const patient = await this.repository.findById(id);
     if (!patient) return null;
-    return (await this.attachSyncStatus([patient]))[0];
+    return (await this.attachIntegrations([patient]))[0];
   }
 
-  async getPatientForSatusehat(id: string): Promise<Patient> {
+  async getPatientForExternalIntegration(id: string): Promise<Patient> {
     const patient = await this.repository.findById(id);
     if (!patient) throw new NotFoundException('Pasien tidak ditemukan');
     return patient;
@@ -66,7 +66,7 @@ export class PatientsService {
         validated.addresses,
         { mode: 'CREATE' },
       );
-      return await this.attachSyncStatus([
+      return await this.attachIntegrations([
         await this.repository.create({ ...validated, addresses: canonical }),
       ]).then(([patient]) => patient);
     } catch (error) {
@@ -124,7 +124,7 @@ export class PatientsService {
         validated.addresses,
         { mode: 'UPDATE', previousAddresses: current.addresses },
       );
-      return await this.attachSyncStatus([
+      return await this.attachIntegrations([
         await this.repository.update(id, { ...validated, addresses: canonical }),
       ]).then(([patient]) => patient);
     } catch (error) {
@@ -166,16 +166,17 @@ export class PatientsService {
     }
   }
 
-  private async attachSyncStatus(patients: Patient[]): Promise<Patient[]> {
-    const syncStatus = this.syncStatus;
-    if (patients.length === 0 || !syncStatus) return patients;
-    const status = await syncStatus.findForList(
-      patients.map((patient) => patient.id),
-    );
+  private async attachIntegrations(patients: Patient[]): Promise<Patient[]> {
+    if (patients.length === 0) return patients;
+    const summaries = this.integrations
+      ? await this.integrations.findResourceSummaries(
+          'Patient',
+          patients.map((patient) => patient.id),
+        )
+      : new Map();
     return patients.map((patient) => ({
       ...patient,
-      satusehat: syncStatus.toLinkage(status.links.get(patient.id)),
-      satusehatSync: syncStatus.toSyncSummary(status.logs.get(patient.id)),
+      integrations: summaries.get(patient.id) ?? [],
     }));
   }
 }

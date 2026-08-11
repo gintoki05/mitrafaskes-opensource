@@ -4,12 +4,6 @@ import type {
   PractitionerSummary,
 } from './master-data';
 
-export enum SyncStatus {
-  PENDING = 'PENDING',
-  SUCCESS = 'SUCCESS',
-  FAILED = 'FAILED',
-}
-
 export type SatusehatAuthConnectionState =
   | 'NOT_CONFIGURED'
   | 'CONNECTED'
@@ -79,25 +73,6 @@ export interface SatusehatOrganizationMutationResponse {
   localResourceId: string;
   externalResourceId: string;
   organization: OrganizationSummary;
-}
-
-export interface SatusehatSyncLog {
-  id: string;
-  resourceType:
-    | 'Organization'
-    | 'Location'
-    | 'Practitioner'
-    | 'Patient'
-    | 'Encounter'
-    | 'Condition'
-    | 'Observation'
-    | 'MedicationRequest';
-  resourceId: string;
-  status: SyncStatus;
-  payload: any;
-  satusehatId?: string;
-  errorMessage?: string;
-  updatedAt: string;
 }
 
 export interface SatusehatPatientIdentifier {
@@ -427,88 +402,4 @@ export interface SatusehatLocationContext {
   parentExternalId?: string;
   parentDisplay?: string;
   externalResourceId?: string;
-}
-
-export interface SatusehatEncounterPayload {
-  resourceType: 'Encounter';
-  identifier: {
-    use: 'official';
-    system: string;
-    value: string;
-  }[];
-  status: 'arrived' | 'in-progress' | 'finished' | 'cancelled';
-  statusHistory: {
-    status: 'arrived' | 'in-progress' | 'finished' | 'cancelled';
-    period: {
-      start: string;
-      end?: string;
-    };
-  }[];
-  class: {
-    system: string;
-    code: string;
-    display: string;
-  };
-  subject: {
-    reference: string; // Patient/SATUSEHAT_ID
-    display: string;
-  };
-  participant: {
-    type: {
-      coding: {
-        system: string;
-        code: 'ATND';
-        display: 'attender';
-      }[];
-    }[];
-    individual: {
-      reference: string; // Practitioner/SIP_ID
-      display: string;
-    };
-  }[];
-  period: {
-    start: string;
-    end?: string;
-  };
-  location?: {
-    location: {
-      reference: string;
-      display: string;
-    };
-  }[];
-  serviceProvider: {
-    reference: string;
-    display: string;
-  };
-}
-
-export interface SatusehatConditionPayload {
-  resourceType: 'Condition';
-  clinicalStatus: {
-    coding: {
-      system: string;
-      code: string;
-    }[];
-  };
-  category: {
-    coding: {
-      system: string;
-      code: string;
-      display: string;
-    }[];
-  }[];
-  code: {
-    coding: {
-      system: string; // http://hl7.org/fhir/sid/icd-10
-      code: string;
-      display: string;
-    }[];
-  };
-  subject: {
-    reference: string;
-    display: string;
-  };
-  encounter: {
-    reference: string;
-  };
 }

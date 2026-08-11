@@ -158,7 +158,7 @@ describe('MasterDataService list queries', () => {
     );
   });
 
-  it('includes the SATUSEHAT linkage on organization and location summaries', async () => {
+  it('includes generic integration summaries on organization and location summaries', async () => {
     const organization = {
       id: 'org-1',
       code: 'KLINIK-1',
@@ -196,39 +196,70 @@ describe('MasterDataService list queries', () => {
     };
     const organizationFindMany = jest.fn().mockResolvedValue([organization]);
     const locationFindMany = jest.fn().mockResolvedValue([location]);
-    const linkFindMany = jest
-      .fn()
-      .mockResolvedValueOnce([
-        {
-          localResourceId: 'org-1',
-          externalResourceId: 'sat-org-1',
-          lastSyncedAt: new Date('2026-01-02T00:00:00.000Z'),
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          localResourceId: 'location-1',
-          externalResourceId: 'sat-location-1',
-          lastSyncedAt: new Date('2026-01-03T00:00:00.000Z'),
-        },
-      ]);
+    const integrations = {
+      findResourceSummaries: jest
+        .fn()
+        .mockResolvedValueOnce(
+          new Map([
+            [
+              'org-1',
+              [
+                {
+                  provider: 'SATUSEHAT',
+                  environment: 'sandbox',
+                  linkage: {
+                    externalResourceId: 'sat-org-1',
+                    lastSyncedAt: '2026-01-02T00:00:00.000Z',
+                  },
+                },
+              ],
+            ],
+          ]),
+        )
+        .mockResolvedValueOnce(
+          new Map([
+            [
+              'location-1',
+              [
+                {
+                  provider: 'SATUSEHAT',
+                  environment: 'sandbox',
+                  linkage: {
+                    externalResourceId: 'sat-location-1',
+                    lastSyncedAt: '2026-01-03T00:00:00.000Z',
+                  },
+                },
+              ],
+            ],
+          ]),
+        ),
+    };
     const service = new MasterDataService({
       healthcareOrganization: {
         findMany: organizationFindMany,
       },
       location: { findMany: locationFindMany },
-      externalResourceLink: { findMany: linkFindMany },
-    } as never);
+    } as never, integrations as never);
 
     const result = await service.findAll();
 
-    expect(result.organizations[0].satusehat).toEqual({
-      externalResourceId: 'sat-org-1',
-      lastSyncedAt: '2026-01-02T00:00:00.000Z',
-    });
-    expect(result.locations[0].satusehat).toEqual({
-      externalResourceId: 'sat-location-1',
-      lastSyncedAt: '2026-01-03T00:00:00.000Z',
-    });
+    expect(result.organizations[0].integrations).toEqual([
+      expect.objectContaining({
+        provider: 'SATUSEHAT',
+        linkage: {
+          externalResourceId: 'sat-org-1',
+          lastSyncedAt: '2026-01-02T00:00:00.000Z',
+        },
+      }),
+    ]);
+    expect(result.locations[0].integrations).toEqual([
+      expect.objectContaining({
+        provider: 'SATUSEHAT',
+        linkage: {
+          externalResourceId: 'sat-location-1',
+          lastSyncedAt: '2026-01-03T00:00:00.000Z',
+        },
+      }),
+    ]);
   });
 });

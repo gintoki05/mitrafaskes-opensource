@@ -132,7 +132,7 @@ export class MasterWilayahService {
     const run = await this.prisma.masterDataImportRun.create({
       data: {
         domain: WILAYAH_DOMAIN,
-        source: 'SATUSEHAT',
+        source: 'REMOTE_PROVIDER',
         status: MasterDataImportStatus.PENDING,
         attemptedAt: new Date(),
       },

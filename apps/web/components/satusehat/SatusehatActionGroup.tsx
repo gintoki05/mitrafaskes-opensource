@@ -3,6 +3,7 @@
 import { Link2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 
 type SatusehatActionGroupProps = {
   resourceName: string;
@@ -27,7 +28,13 @@ export function SatusehatActionGroup({
   showLabels = false,
   className,
 }: SatusehatActionGroupProps) {
+  const { available, capability } = useIntegrationCapability('SATUSEHAT');
   if (!onSync && !onLink) return null;
+  if (!available) return null;
+
+  const notConfigured = capability?.status !== 'CONNECTED';
+  const effectiveSyncDisabled = syncDisabled || notConfigured;
+  const effectiveLinkDisabled = linkDisabled || notConfigured;
 
   const size = showLabels ? 'sm' : 'icon-xs';
 
@@ -39,9 +46,9 @@ export function SatusehatActionGroup({
           variant="outline"
           size={size}
           onClick={onSync}
-          disabled={syncDisabled}
+          disabled={effectiveSyncDisabled}
           aria-label={`Sinkronkan SATUSEHAT untuk ${resourceName}`}
-          title={syncDisabled ? syncDisabledReason ?? 'Sinkronisasi belum tersedia' : 'Sinkronkan SATUSEHAT'}
+          title={effectiveSyncDisabled ? syncDisabledReason ?? 'Kredensial SATUSEHAT belum dikonfigurasi' : 'Sinkronkan SATUSEHAT'}
         >
           <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
           {showLabels ? 'Sinkronkan SATUSEHAT' : null}
@@ -53,9 +60,9 @@ export function SatusehatActionGroup({
           variant="outline"
           size={size}
           onClick={onLink}
-          disabled={linkDisabled}
+          disabled={effectiveLinkDisabled}
           aria-label={`Hubungkan SATUSEHAT untuk ${resourceName}`}
-          title={linkDisabled ? linkDisabledReason ?? 'Hubungkan SATUSEHAT belum tersedia' : 'Hubungkan SATUSEHAT'}
+          title={effectiveLinkDisabled ? linkDisabledReason ?? 'Kredensial SATUSEHAT belum dikonfigurasi' : 'Hubungkan SATUSEHAT'}
         >
           <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
           {showLabels ? 'Hubungkan SATUSEHAT' : null}

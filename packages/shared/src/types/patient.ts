@@ -1,7 +1,4 @@
-import type {
-  SatusehatLinkageSummary,
-  SatusehatSyncSummary,
-} from "./master-data";
+import type { ResourceIntegrationSummary } from './integrations';
 import type { ListMeta, PaginatedListResponse } from "./pagination";
 
 export enum Gender {
@@ -161,9 +158,7 @@ export interface Patient {
   address?: string;
   phone?: string;
   medicalRecNo: string;
-  satusehatId?: string;
-  satusehat?: SatusehatLinkageSummary;
-  satusehatSync?: SatusehatSyncSummary;
+  integrations: ResourceIntegrationSummary[];
   active?: boolean;
   birthPlaceText?: string;
   multipleBirthOrder?: number;
@@ -281,11 +276,6 @@ export interface CreatePatientDto {
   gender: Gender;
   address?: string;
   phone?: string;
-  /**
-   * The SATUSEHAT resource id known from a remote lookup. This is kept as a
-   * compatibility/display field; a successful linkage remains authoritative.
-   */
-  satusehatId?: string;
   active?: boolean;
   birthPlaceText?: string;
   multipleBirthOrder?: number;

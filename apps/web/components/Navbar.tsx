@@ -20,6 +20,7 @@ import {
 import { AccessPermission, ROLE_LABELS } from '@mitrafaskes/shared';
 import { can, clearSession, defaultRoute } from '@/lib/auth';
 import { useSession } from '@/hooks/useSession';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import { SatusehatConnectionBadge } from '@/components/SatusehatConnectionBadge';
 
@@ -29,6 +30,7 @@ type NavigationItem = {
   shortLabel: string;
   permission: AccessPermission;
   icon: LucideIcon;
+  provider?: string;
   children?: readonly { href: string; label: string }[];
 };
 
@@ -78,6 +80,7 @@ const navigationItems: readonly NavigationItem[] = [
     shortLabel: 'SATUSEHAT',
     permission: AccessPermission.SYNC_STATUS_READ,
     icon: RefreshCw,
+    provider: 'SATUSEHAT',
   },
 ];
 
@@ -85,6 +88,7 @@ export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const session = useSession();
+  const satusehat = useIntegrationCapability('SATUSEHAT');
   const user = session?.user ?? null;
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === 'collapsed';
@@ -97,7 +101,11 @@ export function Navbar() {
 
   if (pathname === '/login') return null;
 
-  const availableNavigation = navigationItems.filter((item) => can(user, item.permission));
+  const availableNavigation = navigationItems.filter(
+    (item) =>
+      can(user, item.permission) &&
+      (!item.provider || satusehat.available),
+  );
 
   return (
     <>
@@ -120,7 +128,7 @@ export function Navbar() {
             <span className={`min-w-0 ${collapsed ? 'sr-only' : ''}`}>
               <span className="block truncate text-base font-bold tracking-tight text-white">Mitra Faskes</span>
               <span className="block truncate text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-muted">
-                RME &amp; SATUSEHAT
+                RME
               </span>
             </span>
           </Link>
@@ -270,7 +278,9 @@ export function Navbar() {
         </div>
 
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-          {can(user, AccessPermission.SYNC_STATUS_READ) ? <SatusehatConnectionBadge /> : null}
+          {can(user, AccessPermission.SYNC_STATUS_READ) && satusehat.available ? (
+            <SatusehatConnectionBadge />
+          ) : null}
           {user ? (
             <div className="hidden min-w-0 items-center gap-2 sm:flex">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-bold text-primary">

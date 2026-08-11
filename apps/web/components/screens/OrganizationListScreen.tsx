@@ -15,6 +15,7 @@ import { useMasterFaskesData } from "@/hooks/useMasterFaskesData";
 import { useMasterFaskesList } from "@/hooks/useMasterFaskesList";
 import { can } from "@/lib/auth";
 import { useSession } from "@/hooks/useSession";
+import { useIntegrationCapability } from "@/hooks/useIntegrationCapabilities";
 import { MasterFaskesDialog } from "./master-faskes/MasterFaskesDialog";
 import { MasterFaskesSubnav } from "./master-faskes/MasterFaskesSubnav";
 import { MasterFaskesTable } from "./master-faskes/MasterFaskesTable";
@@ -46,6 +47,7 @@ type TypeFilter = "ALL" | OrganizationSummary["type"];
 
 export default function OrganizationListScreen() {
   const session = useSession();
+  const satusehat = useIntegrationCapability("SATUSEHAT");
   const canWrite = can(
     session?.user ?? null,
     AccessPermission.MASTER_DATA_WRITE,
@@ -221,13 +223,14 @@ export default function OrganizationListScreen() {
     () =>
       getOrganizationColumns({
         canWrite,
+        integrationEnabled: satusehat.available,
         organizations,
         onPreview: setSyncOrganization,
         onLink: openLink,
         onEdit: openEdit,
         onToggleStatus: openStatusConfirmation,
       }),
-    [canWrite, openEdit, openLink, openStatusConfirmation, organizations],
+    [canWrite, openEdit, openLink, openStatusConfirmation, organizations, satusehat.available],
   );
 
   return (
@@ -240,23 +243,26 @@ export default function OrganizationListScreen() {
           action={
             canWrite ? (
               <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={openImport}
-                  title="Ambil organisasi dari SATUSEHAT"
-                >
-                  <span className="flex h-5 w-5 overflow-hidden rounded bg-white" aria-hidden="true">
-                    <Image
-                      src="/satusehat.png"
-                      alt=""
-                      width={40}
-                      height={40}
-                      className="h-full w-full object-cover"
-                    />
-                  </span>
-                  Ambil dari SATUSEHAT
-                </Button>
+                  {satusehat.available ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={openImport}
+                      disabled={!satusehat.configured}
+                      title={satusehat.configured ? "Ambil organisasi dari SATUSEHAT" : "Kredensial SATUSEHAT belum dikonfigurasi"}
+                  >
+                    <span className="flex h-5 w-5 overflow-hidden rounded bg-white" aria-hidden="true">
+                      <Image
+                        src="/satusehat.png"
+                        alt=""
+                        width={40}
+                        height={40}
+                        className="h-full w-full object-cover"
+                      />
+                    </span>
+                    Ambil dari SATUSEHAT
+                  </Button>
+                ) : null}
                 <Button type="button" onClick={openCreate}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Tambah organisasi
@@ -335,8 +341,8 @@ export default function OrganizationListScreen() {
           onCancel={closeForm}
         />
       </MasterFaskesDialog>
-      <OrganizationSyncDialog
-        open={syncOrganization !== null}
+        <OrganizationSyncDialog
+          open={satusehat.configured && syncOrganization !== null}
         organization={syncOrganization}
         canSync={canWrite}
         onClose={() => setSyncOrganization(null)}
@@ -345,8 +351,8 @@ export default function OrganizationListScreen() {
           void refreshOptions();
         }}
       />
-      <OrganizationLinkDialog
-        open={linkOrganization !== null}
+        <OrganizationLinkDialog
+          open={satusehat.configured && linkOrganization !== null}
         organization={linkOrganization}
         canWrite={canWrite}
         onClose={() => setLinkOrganization(null)}
@@ -355,8 +361,8 @@ export default function OrganizationListScreen() {
           await refreshOptions();
         }}
       />
-      <OrganizationImportDialog
-        open={importDialogOpen}
+        <OrganizationImportDialog
+          open={satusehat.configured && importDialogOpen}
         organizations={organizations}
         canWrite={canWrite}
         onClose={() => setImportDialogOpen(false)}

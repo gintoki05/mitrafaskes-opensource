@@ -13,9 +13,11 @@ import {
 } from "./constants";
 import { LocationOperationalStatusBadge } from "./LocationOperationalStatusBadge";
 import { SatusehatLinkageBadge } from "@/components/satusehat/SatusehatLinkageBadge";
+import { getIntegrationLinkage } from "@/lib/integrations";
 
 type LocationColumnOptions = {
   canWrite: boolean;
+  integrationEnabled: boolean;
   organizations: OrganizationSummary[];
   onPreview: (location: LocationSummary) => void;
   onLink: (location: LocationSummary) => void;
@@ -31,8 +33,21 @@ function labelFor<T extends string>(
   return options.find((option) => option.value === value)?.label ?? value;
 }
 
+const satusehatColumn: ColumnDef<LocationSummary> = {
+  id: "satusehat",
+  header: "SATUSEHAT",
+  enableSorting: false,
+  cell: ({ row }) => (
+    <SatusehatLinkageBadge
+      linkage={getIntegrationLinkage(row.original.integrations, "SATUSEHAT")}
+      resourceName={row.original.name}
+    />
+  ),
+};
+
 export function getLocationColumns({
   canWrite,
+  integrationEnabled,
   organizations,
   onPreview,
   onLink,
@@ -90,17 +105,7 @@ export function getLocationColumns({
         <ActiveStatusBadge active={row.original.active} />
       ),
     },
-    {
-      id: "satusehat",
-      header: "SATUSEHAT",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <SatusehatLinkageBadge
-          linkage={row.original.satusehat}
-          resourceName={row.original.name}
-        />
-      ),
-    },
+    ...(integrationEnabled ? [satusehatColumn] : []),
     {
       id: "actions",
       header: "Aksi",
@@ -111,7 +116,7 @@ export function getLocationColumns({
             resourceName={row.original.name}
             onSync={() => onPreview(row.original)}
             onLink={
-              canWrite && !row.original.satusehat
+              canWrite && !getIntegrationLinkage(row.original.integrations, "SATUSEHAT")
                 ? () => onLink(row.original)
                 : undefined
             }

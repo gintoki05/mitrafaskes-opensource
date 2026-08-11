@@ -33,18 +33,3 @@ export function assertEncounterTransition(
     );
   }
 }
-
-export const toSatusehatEncounterStatus = (
-  status: EncounterStatus,
-): 'arrived' | 'in-progress' | 'finished' | 'cancelled' => {
-  switch (status) {
-    case EncounterStatus.WAITING:
-      return 'arrived';
-    case EncounterStatus.IN_PROGRESS:
-      return 'in-progress';
-    case EncounterStatus.COMPLETED:
-      return 'finished';
-    case EncounterStatus.CANCELLED:
-      return 'cancelled';
-  }
-};

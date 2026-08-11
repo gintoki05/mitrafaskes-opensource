@@ -33,6 +33,7 @@ import {
 } from "./patient-form-mappers";
 import type { MaritalStatusLookupState } from "./useMaritalStatuses";
 import { PatientStatusField } from "./PatientStatusField";
+import { useIntegrationCapability } from "@/hooks/useIntegrationCapabilities";
 
 type PatientFormDialogProps = {
   open: boolean;
@@ -60,6 +61,7 @@ export function PatientFormDialog({
   maritalStatusLookup,
   lookupSatusehat,
 }: PatientFormDialogProps) {
+  const satusehat = useIntegrationCapability("SATUSEHAT");
   const [showDiscardConfirm, setShowDiscardConfirm] = useState(false);
   const form = useForm<PatientFormValues>({
     resolver: zodResolver(patientFormSchema),
@@ -234,7 +236,7 @@ export function PatientFormDialog({
           </CardHeader>
           <CardContent className="px-4 pt-4 sm:px-6">
             <form onSubmit={submit} className="space-y-3" noValidate>
-              {!isEditing ? (
+              {!isEditing && satusehat.configured ? (
                 <PatientSatusehatLookupPanel
                   nik={currentNik}
                   disabled={!canWrite || isSubmitting}

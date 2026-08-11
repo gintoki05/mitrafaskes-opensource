@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { FormSection } from "./FormLayout";
 import { SelectField } from "./FormField";
 import { organizationTypes } from "./constants";
+import { useIntegrationCapability } from "@/hooks/useIntegrationCapabilities";
 import type {
   OrganizationForm as OrganizationFormValues,
 } from "./types";
@@ -32,6 +33,7 @@ export function OrganizationFormIdentityStep({
   organizations,
   excludeId,
 }: OrganizationFormIdentityStepProps) {
+  const satusehat = useIntegrationCapability("SATUSEHAT");
   return (
     <FormSection
       title="Identitas wajib"
@@ -93,21 +95,23 @@ export function OrganizationFormIdentityStep({
           <FieldError id="organization-name-error" errors={[errors.name]} />
         </Field>
 
-        <Field>
-          <FieldLabel htmlFor="organization-satusehat-id">
-            ID SATUSEHAT
-          </FieldLabel>
-          <Input
-            {...register("satusehatId")}
-            id="organization-satusehat-id"
-            readOnly
-            className="font-mono"
-            placeholder="Belum terhubung"
-          />
-          <FieldDescription>
-            Diisi dari hasil ambil/linkage SATUSEHAT; bukan kode master lokal.
-          </FieldDescription>
-        </Field>
+        {satusehat.available ? (
+          <Field>
+            <FieldLabel htmlFor="organization-satusehat-id">
+              ID SATUSEHAT
+            </FieldLabel>
+            <Input
+              {...register("satusehatId")}
+              id="organization-satusehat-id"
+              readOnly
+              className="font-mono"
+              placeholder="Belum terhubung"
+            />
+            <FieldDescription>
+              Diisi dari hasil ambil/linkage SATUSEHAT; bukan kode master lokal.
+            </FieldDescription>
+          </Field>
+        ) : null}
 
         <Controller
           name="parentId"
