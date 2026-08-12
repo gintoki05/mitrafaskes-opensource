@@ -408,11 +408,7 @@ export class SatusehatPatientService {
       return error;
     }
     if (error instanceof SatusehatFhirError) {
-      return new BadGatewayException({
-        code: error.code,
-        message: error.message,
-        httpStatus: error.httpStatus,
-      });
+      return new BadGatewayException(error.toContract());
     }
     return new BadGatewayException({
       code: fallbackCode,

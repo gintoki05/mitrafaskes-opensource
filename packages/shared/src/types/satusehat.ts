@@ -403,3 +403,61 @@ export interface SatusehatLocationContext {
   parentDisplay?: string;
   externalResourceId?: string;
 }
+
+export type SatusehatEncounterStatus =
+  'arrived' | 'in-progress' | 'finished' | 'cancelled';
+
+export interface SatusehatEncounterPeriod {
+  start: string;
+  end?: string;
+}
+
+export interface SatusehatEncounterCoding {
+  system: string;
+  code: string;
+  display: string;
+}
+
+export interface SatusehatEncounterReference {
+  reference: string;
+  display?: string;
+}
+
+export interface SatusehatEncounterPayload {
+  resourceType: 'Encounter';
+  id?: string;
+  identifier: {
+    use: 'official';
+    system: string;
+    value: string;
+  }[];
+  status: SatusehatEncounterStatus;
+  statusHistory: {
+    status: SatusehatEncounterStatus;
+    period: SatusehatEncounterPeriod;
+  }[];
+  class: SatusehatEncounterCoding;
+  classHistory: {
+    class: SatusehatEncounterCoding;
+    period: SatusehatEncounterPeriod;
+  }[];
+  subject: SatusehatEncounterReference;
+  participant: {
+    type: { coding: SatusehatEncounterCoding[] }[];
+    individual: SatusehatEncounterReference;
+  }[];
+  period: SatusehatEncounterPeriod;
+  location: {
+    location: SatusehatEncounterReference;
+  }[];
+  serviceProvider: SatusehatEncounterReference;
+}
+
+export type SatusehatEncounterOperation = 'CREATE' | 'UPDATE';
+
+export interface SatusehatEncounterPreview {
+  localResourceId: string;
+  operation: SatusehatEncounterOperation;
+  externalResourceId?: string;
+  payload: SatusehatEncounterPayload;
+}

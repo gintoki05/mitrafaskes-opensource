@@ -1,0 +1,30 @@
+{
+  "resourceType": "OperationOutcome",
+  "issue": [
+    {
+      "severity": "warning",
+      "code": "business-rule",
+      "details": {
+        "coding": [],
+        "text": "The encounter period should be reviewed"
+      },
+      "expression": ["Encounter.period"]
+    },
+    {
+      "severity": "error",
+      "code": "required",
+      "details": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/operation-outcome",
+            "code": "MSG_REQUIRED",
+            "display": "Required element missing"
+          }
+        ],
+        "text": "Encounter.location is required"
+      },
+      "diagnostics": "No linked Location reference was supplied",
+      "location": ["Encounter.location"]
+    }
+  ]
+}

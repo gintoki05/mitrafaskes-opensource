@@ -383,11 +383,7 @@ export class SatusehatOrganizationImportService {
     if (error instanceof NotFoundException) return error;
     if (error instanceof ServiceUnavailableException) return error;
     if (error instanceof SatusehatFhirError) {
-      return new BadGatewayException({
-        code: error.code,
-        message: error.message,
-        httpStatus: error.httpStatus,
-      });
+      return new BadGatewayException(error.toContract());
     }
     return new BadGatewayException({
       code: 'SATUSEHAT_ORGANIZATION_IMPORT_FAILED',

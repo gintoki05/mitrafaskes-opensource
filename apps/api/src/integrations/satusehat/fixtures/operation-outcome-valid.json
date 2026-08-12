@@ -1,0 +1,22 @@
+{
+  "resourceType": "OperationOutcome",
+  "issue": [
+    {
+      "severity": "error",
+      "code": "invalid",
+      "details": {
+        "coding": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/operation-outcome",
+            "code": "MSG_PARAM_INVALID",
+            "display": "Parameter invalid"
+          }
+        ],
+        "text": "Encounter.subject reference is required"
+      },
+      "diagnostics": "The subject reference could not be resolved",
+      "expression": ["Encounter.subject.reference"],
+      "location": ["Encounter.subject"]
+    }
+  ]
+}

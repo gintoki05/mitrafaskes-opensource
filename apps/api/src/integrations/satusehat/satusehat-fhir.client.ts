@@ -1,5 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { SatusehatAuthService } from './satusehat-auth.service';
+import {
+  getSatusehatOperationOutcomeMessage,
+  parseSatusehatOperationOutcome,
+  type SatusehatOperationOutcome,
+} from './satusehat-operation-outcome';
+import {
+  classifySatusehatFhirFailure,
+  type SatusehatFhirErrorClassification,
+} from './satusehat-fhir-error-classification';
 
 const DEFAULT_HTTP_TIMEOUT_MS = 10_000;
 const DEFAULT_MAX_PAGINATION_PAGES = 100;
@@ -7,14 +16,56 @@ const DEFAULT_MAX_PAGINATION_PAGES = 100;
 type FhirRequestMethod = 'GET' | 'POST' | 'PUT' | 'PATCH';
 type FhirQuery = Record<string, string | undefined>;
 
-export class SatusehatFhirError extends Error {
+export type SatusehatFhirErrorCode =
+  | 'SATUSEHAT_FHIR_TIMEOUT'
+  | 'SATUSEHAT_FHIR_NETWORK_ERROR'
+  | 'SATUSEHAT_FHIR_REQUEST_FAILED'
+  | 'SATUSEHAT_FHIR_PAGINATION_LIMIT'
+  | 'SATUSEHAT_FHIR_PAGINATION_LOOP'
+  | 'SATUSEHAT_FHIR_PAGINATION_RESPONSE_INVALID'
+  | 'SATUSEHAT_FHIR_PAGINATION_URL_INVALID'
+  | 'SATUSEHAT_FHIR_BASE_URL_MISSING'
+  | 'SATUSEHAT_FHIR_URL_INVALID';
+
+export interface SatusehatFhirErrorContract {
+  code: SatusehatFhirErrorCode;
+  message: string;
+  classification: SatusehatFhirErrorClassification;
+  httpStatus?: number;
+  operationOutcome?: SatusehatOperationOutcome;
+}
+
+export class SatusehatFhirError
+  extends Error
+  implements SatusehatFhirErrorContract
+{
+  readonly classification: SatusehatFhirErrorClassification;
+
   constructor(
-    public readonly code: string,
+    public readonly code: SatusehatFhirErrorCode,
     message: string,
     public readonly httpStatus?: number,
+    public readonly operationOutcome?: SatusehatOperationOutcome,
   ) {
     super(message);
     this.name = 'SatusehatFhirError';
+    this.classification = classifySatusehatFhirFailure({
+      code,
+      httpStatus,
+      operationOutcome,
+    });
+  }
+
+  toContract(): SatusehatFhirErrorContract {
+    return {
+      code: this.code,
+      message: this.message,
+      classification: this.classification,
+      ...(this.httpStatus === undefined ? {} : { httpStatus: this.httpStatus }),
+      ...(this.operationOutcome
+        ? { operationOutcome: this.operationOutcome }
+        : {}),
+    };
   }
 }
 
@@ -63,12 +114,7 @@ export class SatusehatFhirClient {
   }
 
   async searchPatients(query: FhirQuery): Promise<unknown> {
-    const firstPage = await this.request(
-      'GET',
-      ['Patient'],
-      undefined,
-      query,
-    );
+    const firstPage = await this.request('GET', ['Patient'], undefined, query);
     return this.mergeSearchPages(firstPage);
   }
 
@@ -93,12 +139,7 @@ export class SatusehatFhirClient {
   }
 
   async searchLocations(query: FhirQuery): Promise<unknown> {
-    const firstPage = await this.request(
-      'GET',
-      ['Location'],
-      undefined,
-      query,
-    );
+    const firstPage = await this.request('GET', ['Location'], undefined, query);
     return this.mergeSearchPages(firstPage);
   }
 
@@ -160,10 +201,12 @@ export class SatusehatFhirClient {
 
     const responseBody = await this.readResponseBody(response);
     if (!response.ok) {
+      const operationOutcome = parseSatusehatOperationOutcome(responseBody);
       throw new SatusehatFhirError(
         'SATUSEHAT_FHIR_REQUEST_FAILED',
-        this.getResponseErrorMessage(responseBody, response.status),
+        getSatusehatOperationOutcomeMessage(operationOutcome, response.status),
         response.status,
+        operationOutcome,
       );
     }
 
@@ -314,17 +357,6 @@ export class SatusehatFhirClient {
     } catch {
       return rawBody;
     }
-  }
-
-  private getResponseErrorMessage(body: unknown, status: number): string {
-    if (this.isRecord(body)) {
-      const issue = this.isUnknownArray(body.issue) ? body.issue[0] : undefined;
-      if (this.isRecord(issue) && this.isRecord(issue.details)) {
-        const text = issue.details.text;
-        if (typeof text === 'string' && text.trim()) return text;
-      }
-    }
-    return `Request FHIR SATUSEHAT gagal (HTTP ${status})`;
   }
 
   private readPositiveInteger(

@@ -408,11 +408,7 @@ export class SatusehatOrganizationService {
       });
     }
     if (error instanceof SatusehatFhirError) {
-      return new BadGatewayException({
-        code: error.code,
-        message: error.message,
-        httpStatus: error.httpStatus,
-      });
+      return new BadGatewayException(error.toContract());
     }
     return new BadGatewayException({
       code: 'SATUSEHAT_ORGANIZATION_SYNC_FAILED',

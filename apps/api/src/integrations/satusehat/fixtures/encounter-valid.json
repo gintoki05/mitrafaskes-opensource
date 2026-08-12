@@ -1,0 +1,91 @@
+{
+  "resourceType": "Encounter",
+  "identifier": [
+    {
+      "use": "official",
+      "system": "http://sys-ids.kemkes.go.id/encounter/10000004",
+      "value": "ENC-2026-000042"
+    }
+  ],
+  "status": "finished",
+  "statusHistory": [
+    {
+      "status": "arrived",
+      "period": {
+        "start": "2026-08-12T01:00:00.000Z",
+        "end": "2026-08-12T01:15:00.000Z"
+      }
+    },
+    {
+      "status": "in-progress",
+      "period": {
+        "start": "2026-08-12T01:15:00.000Z",
+        "end": "2026-08-12T02:00:00.000Z"
+      }
+    },
+    {
+      "status": "finished",
+      "period": {
+        "start": "2026-08-12T02:00:00.000Z",
+        "end": "2026-08-12T02:00:00.000Z"
+      }
+    }
+  ],
+  "class": {
+    "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+    "code": "AMB",
+    "display": "ambulatory"
+  },
+  "classHistory": [
+    {
+      "class": {
+        "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+        "code": "AMB",
+        "display": "ambulatory"
+      },
+      "period": {
+        "start": "2026-08-12T01:00:00.000Z",
+        "end": "2026-08-12T02:00:00.000Z"
+      }
+    }
+  ],
+  "subject": {
+    "reference": "Patient/100000030009",
+    "display": "Budi Santoso"
+  },
+  "participant": [
+    {
+      "type": [
+        {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+              "code": "ATND",
+              "display": "attender"
+            }
+          ]
+        }
+      ],
+      "individual": {
+        "reference": "Practitioner/N10000001",
+        "display": "dr. Bronsig"
+      }
+    }
+  ],
+  "period": {
+    "start": "2026-08-12T01:00:00.000Z",
+    "end": "2026-08-12T02:00:00.000Z"
+  },
+  "location": [
+    {
+      "location": {
+        "reference": "Location/408ba28c-3115-4df5-85c6-60f15b44e7fa",
+        "display": "Poli Umum"
+      }
+    }
+  ],
+  "serviceProvider": {
+    "reference": "Organization/10000004",
+    "display": "Klinik Mitra Sehat"
+  }
+}

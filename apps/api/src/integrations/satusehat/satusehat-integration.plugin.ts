@@ -18,6 +18,7 @@ import { SatusehatOrganizationService } from './satusehat-organization.service';
 import { SatusehatAuthService } from './satusehat-auth.service';
 import { SatusehatPatientService } from './satusehat-patient.service';
 import { SatusehatPractitionerService } from './satusehat-practitioner.service';
+import { SatusehatEncounterService } from './satusehat-encounter.service';
 import { MemoryStore } from './memory-store';
 import { IntegrationRegistry } from '../integration-registry';
 import type {
@@ -34,9 +35,10 @@ const localResourceTypes: Record<string, string> = {
   Location: 'Location',
   Practitioner: 'User',
   Patient: 'Patient',
+  Encounter: 'Encounter',
 };
 
-const resources = ['Organization', 'Location', 'Practitioner', 'Patient'];
+const resources = ['Organization', 'Location', 'Practitioner', 'Patient', 'Encounter'];
 const operations = ['search', 'import', 'preview', 'sync', 'link', 'logs'];
 
 @Injectable()
@@ -67,6 +69,7 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
     private readonly satusehatLocations: SatusehatLocationService,
     private readonly satusehatLocationImport: SatusehatLocationImportService,
     private readonly satusehatLocationLink: SatusehatLocationLinkService,
+    private readonly satusehatEncounters: SatusehatEncounterService,
     private readonly masterWilayah: SatusehatMasterWilayahAdapter,
   ) {
     this.handlers = new Map([
@@ -110,6 +113,13 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
           preview: (id) => this.satusehatLocations.previewLocation(id),
           sync: (id) => this.satusehatLocations.syncLocation(id),
           link: (id, input) => this.satusehatLocationLink.linkExistingLocation(id, input),
+        },
+      ],
+      [
+        'Encounter',
+        {
+          resourceType: 'Encounter',
+          preview: (id) => this.satusehatEncounters.previewEncounter(id),
         },
       ],
     ]);

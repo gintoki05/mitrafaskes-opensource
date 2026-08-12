@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { EncountersModule } from '../../encounters/encounters.module';
 import { MasterDataModule } from '../../master-data/master-data.module';
 import { PatientsModule } from '../../patients/patients.module';
 import { PractitionersModule } from '../../practitioners/practitioners.module';
@@ -14,9 +15,11 @@ import { SatusehatLocationLinkService } from './satusehat-location-link.service'
 import { SatusehatLocationService } from './satusehat-location.service';
 import { SatusehatMasterWilayahAdapter } from './satusehat-master-wilayah.adapter';
 import { SatusehatIntegrationPlugin } from './satusehat-integration.plugin';
+import { SatusehatEncounterService } from './satusehat-encounter.service';
+import { SatusehatTerminologyRegistry } from './satusehat-terminology.registry';
 
 @Module({
-  imports: [PatientsModule, PractitionersModule, MasterDataModule],
+  imports: [PatientsModule, PractitionersModule, MasterDataModule, EncountersModule],
   providers: [
     SatusehatAuthService,
     SatusehatFhirClient,
@@ -29,6 +32,8 @@ import { SatusehatIntegrationPlugin } from './satusehat-integration.plugin';
     SatusehatLocationImportService,
     SatusehatLocationLinkService,
     SatusehatMasterWilayahAdapter,
+    SatusehatEncounterService,
+    SatusehatTerminologyRegistry,
     SatusehatIntegrationPlugin,
   ],
 })

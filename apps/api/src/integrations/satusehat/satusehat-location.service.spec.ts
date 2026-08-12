@@ -232,7 +232,15 @@ describe('SatusehatLocationService', () => {
     prisma.satusehatSyncLog.create.mockResolvedValue({ id: 'sync-failed' });
     const fhir = createFhirMock();
     fhir.createLocation.mockRejectedValue(
-      new SatusehatFhirError('SATUSEHAT_FHIR_REQUEST_FAILED', 'Remote gagal', 422),
+      new SatusehatFhirError(
+        'SATUSEHAT_FHIR_REQUEST_FAILED',
+        'Remote gagal',
+        422,
+        {
+          resourceType: 'OperationOutcome',
+          issues: [{ severity: 'error', code: 'invalid' }],
+        },
+      ),
     );
     const service = new SatusehatLocationService(
       prisma as unknown as PrismaService,
@@ -242,6 +250,10 @@ describe('SatusehatLocationService', () => {
     await expect(service.syncLocation('location-1')).rejects.toMatchObject({
       response: expect.objectContaining({
         code: 'SATUSEHAT_FHIR_REQUEST_FAILED',
+        operationOutcome: {
+          resourceType: 'OperationOutcome',
+          issues: [{ severity: 'error', code: 'invalid' }],
+        },
       }),
     });
     expect(prisma.satusehatSyncLog.update).toHaveBeenCalledWith(
