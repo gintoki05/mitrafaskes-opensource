@@ -24,16 +24,28 @@ export class RmeController {
 
   @Get('encounter/:encounterId')
   @RequirePermission(AccessPermission.RME_READ)
-  findByEncounter(@Param('encounterId') encounterId: string) {
-    return this.rme.findByEncounterId(encounterId);
+  findByEncounter(
+    @Param('encounterId') encounterId: string,
+    @Req() request: { user: AuthenticatedUser },
+  ) {
+    return this.rme.findByEncounterId(encounterId, request.user);
   }
 
-  @Post()
-  @RequirePermission(AccessPermission.RME_FINALIZE)
-  save(
+  @Post('draft')
+  @RequirePermission(AccessPermission.RME_WRITE_DRAFT)
+  saveDraft(
     @Body() body: unknown,
     @Req() request: { user: AuthenticatedUser },
   ) {
-    return this.rme.save(body, request.user);
+    return this.rme.saveDraft(body, request.user);
+  }
+
+  @Post('finalize')
+  @RequirePermission(AccessPermission.RME_FINALIZE)
+  finalize(
+    @Body() body: unknown,
+    @Req() request: { user: AuthenticatedUser },
+  ) {
+    return this.rme.finalize(body, request.user);
   }
 }

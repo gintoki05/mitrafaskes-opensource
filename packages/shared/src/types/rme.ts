@@ -20,9 +20,24 @@ export interface PrescriptionDto {
   instructions?: string;
 }
 
+export enum MedicalRecordStatus {
+  DRAFT = 'DRAFT',
+  FINAL = 'FINAL',
+}
+
+export const OUTPATIENT_GENERAL_VALIDATION_PROFILE =
+  'OUTPATIENT_GENERAL_V1' as const;
+
 export interface MedicalRecord {
   id: string;
   encounterId: string;
+  status: MedicalRecordStatus;
+  version: number;
+  authoredBy?: string;
+  authoredAt?: string;
+  finalizedBy?: string;
+  finalizedAt?: string;
+  validationProfile: string;
   anamnesis?: string;
   systolic?: number;
   diastolic?: number;
@@ -46,10 +61,12 @@ export interface MedicalRecord {
     instructions?: string;
   }[];
   createdAt: string;
+  updatedAt: string;
 }
 
-export interface SaveMedicalRecordDto {
+export interface SaveMedicalRecordDraftDto {
   encounterId: string;
+  expectedVersion: number;
   anamnesis?: string;
   systolic?: number;
   diastolic?: number;
@@ -59,4 +76,9 @@ export interface SaveMedicalRecordDto {
   height?: number;
   diagnoses: DiagnosisDto[];
   prescriptions: PrescriptionDto[];
+}
+
+export interface FinalizeMedicalRecordDto {
+  encounterId: string;
+  expectedVersion: number;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, Thermometer } from 'lucide-react';
+import { Plus, Thermometer, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,9 +33,18 @@ export function RmePrescriptionSection({
       <CardContent className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] font-semibold uppercase text-muted-foreground">Preset Cepat Dokter:</span>
-          <Button type="button" size="sm" variant="outline" onClick={() => onApplyPresetBundle('ISPA')} className="border-primary/30 text-[11px] text-primary">âš¡ Paket ISPA / Flu</Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => onApplyPresetBundle('GASTRITIS')} className="border-warning/30 text-[11px] text-warning">âš¡ Paket Gastritis / Maag</Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => onApplyPresetBundle('HYPERTENSION')} className="border-destructive/30 text-[11px] text-destructive">âš¡ Paket Hipertensi</Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => onApplyPresetBundle('ISPA')} className="border-primary/30 text-[11px] text-primary">
+            <Zap aria-hidden="true" className="h-3.5 w-3.5" />
+            Paket ISPA / Flu
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => onApplyPresetBundle('GASTRITIS')} className="border-warning/30 text-[11px] text-warning">
+            <Zap aria-hidden="true" className="h-3.5 w-3.5" />
+            Paket Gastritis / Maag
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => onApplyPresetBundle('HYPERTENSION')} className="border-destructive/30 text-[11px] text-destructive">
+            <Zap aria-hidden="true" className="h-3.5 w-3.5" />
+            Paket Hipertensi
+          </Button>
         </div>
 
         <div className="space-y-3">
@@ -78,4 +87,3 @@ export function RmePrescriptionSection({
     </Card>
   );
 }
-

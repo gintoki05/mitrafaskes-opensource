@@ -2,6 +2,7 @@ import { Role, LocationStatus } from '@prisma/client';
 import { EncounterStatus } from '@mitrafaskes/shared';
 import type { PrismaService } from '../database/prisma.service';
 import { EncountersService } from './encounters.service';
+import { EncounterRepository } from './encounter.repository';
 
 const now = new Date('2026-08-10T02:00:00.000Z');
 
@@ -135,7 +136,12 @@ describe('EncountersService', () => {
     };
     const transaction = {
       $queryRaw: jest.fn().mockResolvedValue([
-        { id: current.id, status: EncounterStatus.WAITING, version: 1 },
+        {
+          id: current.id,
+          status: EncounterStatus.WAITING,
+          version: 1,
+          doctorId: current.doctorId,
+        },
       ]),
       encounter: {
         update: jest.fn(),
@@ -202,7 +208,12 @@ describe('EncountersService', () => {
   it('rejects a stale version before mutating status or history', async () => {
     const transaction = {
       $queryRaw: jest.fn().mockResolvedValue([
-        { id: 'enc-local-1', status: EncounterStatus.WAITING, version: 2 },
+        {
+          id: 'enc-local-1',
+          status: EncounterStatus.WAITING,
+          version: 2,
+          doctorId: 'doctor-1',
+        },
       ]),
       encounter: { update: jest.fn() },
       encounterStatusHistory: {
@@ -231,5 +242,82 @@ describe('EncountersService', () => {
     ).rejects.toMatchObject({ code: 'ENCOUNTER_VERSION_CONFLICT' });
     expect(transaction.encounter.update).not.toHaveBeenCalled();
     expect(transaction.encounterStatusHistory.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects generic completion because only RME finalization may complete an Encounter', async () => {
+    const { service, prisma } = createService();
+
+    await expect(
+      service.updateStatus(
+        'enc-local-1',
+        { status: EncounterStatus.COMPLETED, expectedVersion: 1 },
+        { id: 'doctor-1', username: 'dr_budi', role: 'DOKTER' },
+      ),
+    ).rejects.toMatchObject({
+      code: 'ENCOUNTER_COMPLETION_REQUIRES_RME_FINALIZATION',
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects a doctor from transitioning an Encounter assigned to another doctor', async () => {
+    const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([
+        {
+          id: 'enc-local-1',
+          status: EncounterStatus.WAITING,
+          version: 1,
+          doctorId: 'doctor-other',
+        },
+      ]),
+      encounter: { update: jest.fn() },
+      encounterStatusHistory: {
+        findFirst: jest.fn(),
+        update: jest.fn(),
+        create: jest.fn(),
+      },
+    };
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'doctor-1' }) },
+      $transaction: jest.fn(async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+      ),
+    } as unknown as PrismaService;
+    const service = new EncountersService(prisma, { findForList: jest.fn() } as never);
+
+    await expect(
+      service.updateStatus(
+        'enc-local-1',
+        { status: EncounterStatus.IN_PROGRESS, expectedVersion: 1 },
+        { id: 'session-user-1', username: 'dr_budi', role: 'DOKTER' },
+      ),
+    ).rejects.toMatchObject({
+      response: { code: 'ENCOUNTER_NOT_ASSIGNED_TO_DOCTOR' },
+    });
+    expect(transaction.encounter.update).not.toHaveBeenCalled();
+    expect(transaction.encounterStatusHistory.create).not.toHaveBeenCalled();
+  });
+
+  it('limits the doctor queue to Encounters assigned to the logged-in doctor', async () => {
+    const findMany = jest
+      .spyOn(EncounterRepository.prototype, 'findMany')
+      .mockResolvedValue({ records: [], total: 0 });
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'doctor-1' }) },
+    } as unknown as PrismaService;
+    const service = new EncountersService(prisma);
+
+    try {
+      await service.findMany(
+        { queueDate: '2026-08-13', status: EncounterStatus.WAITING },
+        { id: 'session-user-1', username: 'dr_budi', role: 'DOKTER' },
+      );
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ doctorId: 'doctor-1' }),
+        1,
+        25,
+      );
+    } finally {
+      findMany.mockRestore();
+    }
   });
 });

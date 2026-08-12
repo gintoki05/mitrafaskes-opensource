@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const rmeFormSchema = z.object({
-  anamnesis: z.string().trim().min(1, "Anamnesis wajib diisi."),
+  anamnesis: z.string(),
   systolic: z.string(),
   diastolic: z.string(),
   heartRate: z.string(),
@@ -24,3 +24,15 @@ export const rmeFormSchema = z.object({
 });
 
 export type RmeFormValues = z.infer<typeof rmeFormSchema>;
+
+export function emptyRmeFormValues(): RmeFormValues {
+  return {
+    anamnesis: '',
+    systolic: '',
+    diastolic: '',
+    heartRate: '',
+    temperature: '',
+    diagnoses: [],
+    prescriptions: [],
+  };
+}

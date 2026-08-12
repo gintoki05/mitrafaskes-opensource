@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="3200" height="1800" viewBox="0 0 3200 1800" role="img" aria-labelledby="title desc">
+  <title id="title">Blueprint RME Rawat Jalan Mitra Faskes</title>
+  <desc id="desc">Papan journey pasien, wireframe pendaftaran, workspace RME, finalisasi, monitor integrasi, dan batas arsitektur local-first.</desc>
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#16313A" flood-opacity="0.10"/>
+    </filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#0B7285"/>
+    </marker>
+    <style>
+      .font { font-family: Inter, "Segoe UI", Arial, sans-serif; fill: #16313A; }
+      .muted { fill: #607A84; }
+      .white { fill: #FFFFFF; }
+      .title { font-size: 42px; font-weight: 700; }
+      .h1 { font-size: 28px; font-weight: 700; }
+      .h2 { font-size: 22px; font-weight: 700; }
+      .body { font-size: 17px; }
+      .small { font-size: 14px; }
+      .tiny { font-size: 12px; }
+      .label { font-size: 13px; font-weight: 700; letter-spacing: .7px; }
+      .card { fill: #FFFFFF; stroke: #D7E5EA; stroke-width: 2; }
+      .input { fill: #FFFFFF; stroke: #B8CED6; stroke-width: 2; }
+      .divider { stroke: #D7E5EA; stroke-width: 2; }
+      .dash { stroke: #90AAB3; stroke-width: 2; stroke-dasharray: 8 8; }
+      .primary { fill: #0B7285; }
+      .primary-stroke { stroke: #0B7285; stroke-width: 3; fill: none; }
+      .success { fill: #E6F4EF; stroke: #2D826E; stroke-width: 2; }
+      .warning { fill: #FFF4DD; stroke: #B0711F; stroke-width: 2; }
+      .danger { fill: #FBECEC; stroke: #B95656; stroke-width: 2; }
+      .info { fill: #EBF2FA; stroke: #3F6F9A; stroke-width: 2; }
+    </style>
+  </defs>
+
+  <rect width="3200" height="1800" fill="#F5FAFC"/>
+
+  <g id="Page-00-Prinsip">
+    <rect x="0" y="0" width="3200" height="160" fill="#143B4A"/>
+    <rect x="58" y="46" width="56" height="56" rx="16" fill="#0B7285"/>
+    <path d="M76 74h20M86 64v20" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+    <text x="138" y="82" class="font white title">Blueprint RME Rawat Jalan</text>
+    <text x="140" y="118" class="font white body" opacity="0.78">Mitra Faskes · local-first · SATUSEHAT-aligned · draft 12 Agustus 2026</text>
+    <rect x="2460" y="45" width="660" height="70" rx="18" fill="#FFFFFF" opacity="0.10"/>
+    <text x="2492" y="75" class="font white label">KEPUTUSAN PRODUK</text>
+    <text x="2492" y="102" class="font white body">RME lokal ≠ schema FHIR; adapter bersifat opsional</text>
+  </g>
+
+  <g id="Page-01-Journey">
+    <text x="60" y="215" class="font h1">01 · Journey satu kunjungan</text>
+    <text x="60" y="247" class="font body muted">Satu Encounter mengikat konteks dan lifecycle; MedicalRecord mengikat isi klinis.</text>
+
+    <g id="Journey-Registration" filter="url(#shadow)">
+      <rect x="60" y="280" width="430" height="140" rx="22" class="card"/>
+      <circle cx="108" cy="326" r="25" fill="#E1F2F4"/>
+      <text x="100" y="334" class="font h2" fill="#0B7285">1</text>
+      <text x="146" y="319" class="font h2">Identifikasi pasien</text>
+      <text x="146" y="349" class="font small muted">Cari NIK / MRN / demografi</text>
+      <text x="85" y="391" class="font small">Patient lokal menjadi sumber pelayanan</text>
+    </g>
+    <path d="M500 350 H540" class="primary-stroke" marker-end="url(#arrow)"/>
+
+    <g id="Journey-Encounter" filter="url(#shadow)">
+      <rect x="550" y="280" width="430" height="140" rx="22" class="card"/>
+      <circle cx="598" cy="326" r="25" fill="#E1F2F4"/>
+      <text x="590" y="334" class="font h2" fill="#0B7285">2</text>
+      <text x="636" y="319" class="font h2">Buat Encounter</text>
+      <text x="636" y="349" class="font small muted">Unit, dokter, waktu, antrean</text>
+      <rect x="575" y="370" width="105" height="30" rx="15" class="info"/>
+      <text x="594" y="391" class="font tiny" fill="#3F6F9A">WAITING</text>
+    </g>
+    <path d="M990 350 H1030" class="primary-stroke" marker-end="url(#arrow)"/>
+
+    <g id="Journey-Consultation" filter="url(#shadow)">
+      <rect x="1040" y="280" width="430" height="140" rx="22" class="card"/>
+      <circle cx="1088" cy="326" r="25" fill="#E1F2F4"/>
+      <text x="1080" y="334" class="font h2" fill="#0B7285">3</text>
+      <text x="1126" y="319" class="font h2">Mulai konsultasi</text>
+      <text x="1126" y="349" class="font small muted">Patient context tetap terlihat</text>
+      <rect x="1065" y="370" width="138" height="30" rx="15" class="warning"/>
+      <text x="1081" y="391" class="font tiny" fill="#8B5614">IN_PROGRESS</text>
+    </g>
+    <path d="M1480 350 H1520" class="primary-stroke" marker-end="url(#arrow)"/>
+
+    <g id="Journey-Draft" filter="url(#shadow)">
+      <rect x="1530" y="280" width="430" height="140" rx="22" class="card"/>
+      <circle cx="1578" cy="326" r="25" fill="#E1F2F4"/>
+      <text x="1570" y="334" class="font h2" fill="#0B7285">4</text>
+      <text x="1616" y="319" class="font h2">Isi dan simpan</text>
+      <text x="1616" y="349" class="font small muted">Draft parsial, versioned, aman</text>
+      <rect x="1555" y="370" width="82" height="30" rx="15" class="info"/>
+      <text x="1574" y="391" class="font tiny" fill="#3F6F9A">DRAFT</text>
+    </g>
+    <path d="M1970 350 H2010" class="primary-stroke" marker-end="url(#arrow)"/>
+
+    <g id="Journey-Finalize" filter="url(#shadow)">
+      <rect x="2020" y="280" width="430" height="140" rx="22" class="card"/>
+      <circle cx="2068" cy="326" r="25" fill="#E1F2F4"/>
+      <text x="2060" y="334" class="font h2" fill="#0B7285">5</text>
+      <text x="2106" y="319" class="font h2">Preflight &amp; finalisasi</text>
+      <text x="2106" y="349" class="font small muted">Validasi + audit + transaksi</text>
+      <rect x="2045" y="370" width="76" height="30" rx="15" class="success"/>
+      <text x="2063" y="391" class="font tiny" fill="#2D826E">FINAL</text>
+    </g>
+    <path d="M2460 350 H2500" class="primary-stroke" marker-end="url(#arrow)"/>
+
+    <g id="Journey-Complete" filter="url(#shadow)">
+      <rect x="2510" y="280" width="630" height="140" rx="22" class="card"/>
+      <circle cx="2558" cy="326" r="25" fill="#E1F2F4"/>
+      <text x="2550" y="334" class="font h2" fill="#0B7285">6</text>
+      <text x="2596" y="319" class="font h2">Encounter selesai</text>
+      <text x="2596" y="349" class="font small muted">Ringkasan lokal siap; sync berjalan setelah commit</text>
+      <rect x="2535" y="370" width="116" height="30" rx="15" class="success"/>
+      <text x="2552" y="391" class="font tiny" fill="#2D826E">COMPLETED</text>
+      <text x="2680" y="391" class="font tiny muted">Remote gagal ≠ pelayanan lokal gagal</text>
+    </g>
+  </g>
+
+  <g id="Page-03-Registration-Queue">
+    <rect x="60" y="490" width="700" height="850" rx="28" class="card" filter="url(#shadow)"/>
+    <rect x="60" y="490" width="700" height="70" rx="28" fill="#143B4A"/>
+    <rect x="60" y="535" width="700" height="25" fill="#143B4A"/>
+    <circle cx="100" cy="525" r="12" fill="#0B7285"/>
+    <text x="128" y="533" class="font white h2">Pendaftaran &amp; Antrean</text>
+    <text x="86" y="605" class="font label">CARI PASIEN</text>
+    <rect x="86" y="623" width="648" height="54" rx="12" class="input"/>
+    <text x="108" y="657" class="font body muted">NIK, nomor rekam medis, atau nama…</text>
+
+    <rect x="86" y="702" width="648" height="116" rx="16" fill="#F5FAFC" stroke="#D7E5EA" stroke-width="2"/>
+    <circle cx="132" cy="748" r="25" fill="#D7E5EA"/>
+    <text x="172" y="738" class="font h2">Pasien terpilih</text>
+    <text x="172" y="766" class="font small muted">MRN · tanggal lahir · jenis kelamin</text>
+    <rect x="172" y="780" width="118" height="24" rx="12" class="warning"/>
+    <text x="185" y="797" class="font tiny" fill="#8B5614">Belum terhubung</text>
+
+    <text x="86" y="866" class="font label">KUNJUNGAN BARU</text>
+    <text x="86" y="904" class="font small muted">Unit layanan</text>
+    <rect x="86" y="918" width="310" height="52" rx="12" class="input"/>
+    <text x="104" y="950" class="font body">Pilih lokasi</text>
+    <text x="424" y="904" class="font small muted">Dokter</text>
+    <rect x="424" y="918" width="310" height="52" rx="12" class="input"/>
+    <text x="442" y="950" class="font body">Pilih dokter</text>
+    <text x="86" y="1005" class="font small muted">Alasan kunjungan</text>
+    <rect x="86" y="1019" width="648" height="66" rx="12" class="input"/>
+    <text x="104" y="1057" class="font body muted">Tulis alasan singkat…</text>
+    <rect x="494" y="1112" width="240" height="54" rx="14" class="primary"/>
+    <text x="545" y="1146" class="font white body">Daftarkan antrean</text>
+
+    <line x1="86" y1="1204" x2="734" y2="1204" class="divider"/>
+    <text x="86" y="1244" class="font h2">Antrean hari ini</text>
+    <rect x="86" y="1264" width="648" height="52" rx="12" fill="#FFFFFF" stroke="#D7E5EA" stroke-width="2"/>
+    <circle cx="112" cy="1290" r="12" fill="#3F6F9A"/>
+    <text x="138" y="1296" class="font small">A-003 · Pasien · WAITING</text>
+    <text x="625" y="1296" class="font small" fill="#0B7285">Panggil →</text>
+  </g>
+
+  <g id="Page-04-RME-Workspace">
+    <rect x="800" y="490" width="1260" height="850" rx="28" class="card" filter="url(#shadow)"/>
+    <rect x="800" y="490" width="220" height="850" rx="28" fill="#143B4A"/>
+    <rect x="992" y="490" width="28" height="850" fill="#143B4A"/>
+    <text x="838" y="541" class="font white h2">Mitra Faskes</text>
+    <rect x="824" y="580" width="172" height="48" rx="12" fill="#0B7285"/>
+    <text x="852" y="611" class="font white body">Konsultasi</text>
+    <text x="850" y="664" class="font white body" opacity="0.72">Antrean</text>
+    <text x="850" y="710" class="font white body" opacity="0.72">Pasien</text>
+    <text x="850" y="756" class="font white body" opacity="0.72">Laporan</text>
+
+    <rect x="1020" y="490" width="1040" height="112" fill="#FFFFFF"/>
+    <text x="1052" y="531" class="font label" fill="#0B7285">ENCOUNTER A-003 · IN_PROGRESS</text>
+    <text x="1052" y="566" class="font h1">Pasien terpilih</text>
+    <text x="1334" y="563" class="font body muted">MRN · usia · jenis kelamin · alergi belum direview</text>
+    <rect x="1840" y="521" width="184" height="42" rx="12" class="warning"/>
+    <text x="1870" y="548" class="font small" fill="#8B5614">Draft belum final</text>
+    <line x1="1020" y1="602" x2="2060" y2="602" class="divider"/>
+
+    <rect x="1046" y="628" width="230" height="626" rx="18" fill="#F5FAFC" stroke="#D7E5EA" stroke-width="2"/>
+    <text x="1072" y="670" class="font label">BAGIAN RME</text>
+    <rect x="1062" y="691" width="198" height="44" rx="10" fill="#E1F2F4"/>
+    <text x="1084" y="719" class="font body" fill="#0B7285">Anamnesis</text>
+    <text x="1078" y="769" class="font body">Alergi</text>
+    <circle cx="1236" cy="762" r="7" fill="#B0711F"/>
+    <text x="1078" y="815" class="font body">Tanda vital</text>
+    <circle cx="1236" cy="808" r="7" fill="#B0711F"/>
+    <text x="1078" y="861" class="font body">Pemeriksaan</text>
+    <text x="1078" y="907" class="font body">Diagnosis</text>
+    <text x="1078" y="953" class="font body">Tindakan</text>
+    <text x="1078" y="999" class="font body">Resep</text>
+    <text x="1078" y="1045" class="font body">Rencana &amp; edukasi</text>
+    <line x1="1070" y1="1080" x2="1252" y2="1080" class="divider"/>
+    <text x="1078" y="1120" class="font body">Finalisasi</text>
+    <text x="1078" y="1172" class="font small muted">2 bagian perlu dilengkapi</text>
+
+    <rect x="1302" y="628" width="732" height="626" rx="18" class="card"/>
+    <text x="1334" y="675" class="font h1">Anamnesis</text>
+    <text x="1334" y="704" class="font body muted">Draft boleh parsial; data wajib dicek saat finalisasi.</text>
+    <text x="1334" y="752" class="font small">Keluhan utama *</text>
+    <rect x="1334" y="766" width="668" height="70" rx="12" class="input"/>
+    <text x="1354" y="807" class="font body muted">Tuliskan keluhan pasien…</text>
+    <text x="1334" y="875" class="font small">Riwayat penyakit sekarang *</text>
+    <rect x="1334" y="889" width="668" height="145" rx="12" class="input"/>
+    <text x="1354" y="928" class="font body muted">Narasi klinis…</text>
+    <text x="1334" y="1073" class="font small">Onset / durasi</text>
+    <rect x="1334" y="1087" width="320" height="52" rx="12" class="input"/>
+    <rect x="1682" y="1087" width="320" height="52" rx="12" class="input"/>
+    <rect x="1515" y="1170" width="162" height="52" rx="13" fill="#FFFFFF" stroke="#0B7285" stroke-width="2"/>
+    <text x="1552" y="1203" class="font body" fill="#0B7285">Batal</text>
+    <rect x="1693" y="1170" width="309" height="52" rx="13" class="primary"/>
+    <text x="1765" y="1203" class="font white body">Simpan draft</text>
+    <text x="1334" y="1292" class="font small muted">Tersimpan 10:42 · version 4</text>
+  </g>
+
+  <g id="Page-05-Finalization">
+    <rect x="2100" y="490" width="500" height="850" rx="28" class="card" filter="url(#shadow)"/>
+    <text x="2134" y="542" class="font label" fill="#0B7285">FINALISASI RME</text>
+    <text x="2134" y="583" class="font h1">Periksa sebelum selesai</text>
+    <text x="2134" y="615" class="font body muted">Encounter A-003 · Pasien terpilih</text>
+
+    <rect x="2134" y="650" width="432" height="88" rx="14" class="danger"/>
+    <text x="2160" y="681" class="font h2" fill="#9D4444">2 bagian belum lengkap</text>
+    <text x="2160" y="711" class="font small" fill="#9D4444">Klik item untuk kembali ke field.</text>
+
+    <rect x="2134" y="762" width="432" height="52" rx="12" class="success"/>
+    <text x="2160" y="794" class="font body" fill="#2D826E">✓ Anamnesis lengkap</text>
+    <rect x="2134" y="830" width="432" height="52" rx="12" class="warning"/>
+    <text x="2160" y="862" class="font body" fill="#8B5614">! Status alergi belum dipilih</text>
+    <rect x="2134" y="898" width="432" height="52" rx="12" class="warning"/>
+    <text x="2160" y="930" class="font body" fill="#8B5614">! Diagnosis utama belum ada</text>
+    <rect x="2134" y="966" width="432" height="52" rx="12" class="success"/>
+    <text x="2160" y="998" class="font body" fill="#2D826E">✓ Rencana terisi</text>
+
+    <line x1="2134" y1="1054" x2="2566" y2="1054" class="divider"/>
+    <text x="2134" y="1094" class="font body">Setelah final:</text>
+    <text x="2155" y="1128" class="font small muted">• Catatan menjadi read-only</text>
+    <text x="2155" y="1156" class="font small muted">• Encounter menjadi COMPLETED</text>
+    <text x="2155" y="1184" class="font small muted">• Sync opsional berjalan setelah commit</text>
+
+    <rect x="2134" y="1220" width="190" height="54" rx="14" fill="#FFFFFF" stroke="#0B7285" stroke-width="2"/>
+    <text x="2167" y="1254" class="font body" fill="#0B7285">Kembali</text>
+    <rect x="2342" y="1220" width="224" height="54" rx="14" fill="#A6BEC5"/>
+    <text x="2377" y="1254" class="font white body">Finalisasi RME</text>
+    <text x="2151" y="1307" class="font tiny muted">CTA aktif setelah seluruh validation profile lolos.</text>
+  </g>
+
+  <g id="Page-06-Optional-Integration">
+    <rect x="2640" y="490" width="500" height="850" rx="28" class="card" filter="url(#shadow)"/>
+    <text x="2674" y="542" class="font label" fill="#0B7285">INTEGRASI OPSIONAL</text>
+    <text x="2674" y="583" class="font h1">Status SATUSEHAT</text>
+    <text x="2674" y="615" class="font body muted">Status berasal dari linkage persisten.</text>
+
+    <rect x="2674" y="650" width="432" height="102" rx="14" class="success"/>
+    <circle cx="2710" cy="688" r="15" fill="#2D826E"/>
+    <text x="2738" y="687" class="font h2" fill="#2D826E">Encounter terhubung</text>
+    <text x="2738" y="720" class="font small muted">Salin remote ID · update terakhir 10:51</text>
+
+    <text x="2674" y="800" class="font label">DEPENDENCY</text>
+    <rect x="2674" y="818" width="432" height="50" rx="12" class="success"/>
+    <text x="2698" y="850" class="font body" fill="#2D826E">✓ Organization</text>
+    <rect x="2674" y="880" width="432" height="50" rx="12" class="success"/>
+    <text x="2698" y="912" class="font body" fill="#2D826E">✓ Location &amp; Practitioner</text>
+    <rect x="2674" y="942" width="432" height="50" rx="12" class="success"/>
+    <text x="2698" y="974" class="font body" fill="#2D826E">✓ Patient</text>
+
+    <text x="2674" y="1040" class="font label">SYNC TERAKHIR</text>
+    <rect x="2674" y="1058" width="432" height="102" rx="14" class="danger"/>
+    <text x="2698" y="1093" class="font h2" fill="#9D4444">Update gagal</text>
+    <text x="2698" y="1124" class="font small" fill="#9D4444">Link terakhir tetap ada · lihat detail aman</text>
+
+    <rect x="2674" y="1194" width="432" height="54" rx="14" class="primary"/>
+    <text x="2762" y="1228" class="font white body">Sinkronkan ulang</text>
+    <text x="2674" y="1290" class="font small muted">Remote error tidak mengubah RME final lokal.</text>
+  </g>
+
+  <g id="Page-02-Architecture-Boundary">
+    <rect x="60" y="1420" width="3080" height="310" rx="28" fill="#FFFFFF" stroke="#D7E5EA" stroke-width="2" filter="url(#shadow)"/>
+    <text x="94" y="1472" class="font h1">02 · Batas arsitektur dan urutan resource</text>
+
+    <rect x="94" y="1510" width="710" height="172" rx="20" fill="#E1F2F4" stroke="#0B7285" stroke-width="2"/>
+    <text x="124" y="1550" class="font label" fill="#0B7285">CORE PRODUK LOKAL</text>
+    <text x="124" y="1590" class="font h2">Patient · Encounter · MedicalRecord</text>
+    <text x="124" y="1623" class="font body muted">CRUD, lifecycle, validation, audit, finalisasi</text>
+    <text x="124" y="1655" class="font small">Berjalan penuh saat semua integrasi dimatikan.</text>
+
+    <path d="M820 1598 H940" class="primary-stroke" marker-end="url(#arrow)"/>
+    <rect x="958" y="1510" width="520" height="172" rx="20" fill="#EBF2FA" stroke="#3F6F9A" stroke-width="2"/>
+    <text x="988" y="1550" class="font label" fill="#3F6F9A">BOUNDARY GENERIK</text>
+    <text x="988" y="1590" class="font h2">Outbox · capability · linkage</text>
+    <text x="988" y="1623" class="font body muted">Intent provider-neutral dan stable local ID</text>
+    <text x="988" y="1655" class="font small">Tidak mengimpor mapper/client provider.</text>
+
+    <path d="M1494 1598 H1614" class="primary-stroke" marker-end="url(#arrow)"/>
+    <rect x="1632" y="1510" width="520" height="172" rx="20" fill="#FFF4DD" stroke="#B0711F" stroke-width="2"/>
+    <text x="1662" y="1550" class="font label" fill="#8B5614">PLUGIN SATUSEHAT</text>
+    <text x="1662" y="1590" class="font h2">Mapper · OAuth · FHIR client</text>
+    <text x="1662" y="1623" class="font body muted">Preview, dependency check, create/update</text>
+    <text x="1662" y="1655" class="font small">Linkage + sync log hanya setelah hasil remote.</text>
+
+    <path d="M2168 1598 H2288" class="primary-stroke" marker-end="url(#arrow)"/>
+    <rect x="2306" y="1510" width="800" height="172" rx="20" fill="#F5FAFC" stroke="#90AAB3" stroke-width="2"/>
+    <text x="2336" y="1550" class="font label">URUTAN DELIVERY YANG DIKUNCI</text>
+    <text x="2336" y="1592" class="font h2">Organization → Location → Practitioner → Patient</text>
+    <text x="2336" y="1627" class="font h2" fill="#0B7285">→ Encounter → Condition → Observation</text>
+    <text x="2336" y="1660" class="font small muted">Composition dan resource lain menyusul jika use case/data berlaku.</text>
+  </g>
+</svg>

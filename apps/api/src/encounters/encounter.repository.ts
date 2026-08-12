@@ -44,6 +44,7 @@ export type EncounterWithRelations = Prisma.EncounterGetPayload<{
 export interface EncounterListWhere {
   queueDate: Date;
   locationId?: string;
+  doctorId?: string;
   status?: Prisma.EncounterWhereInput['status'];
 }
 
@@ -58,6 +59,7 @@ export class EncounterRepository {
     const prismaWhere: Prisma.EncounterWhereInput = {
       queueDate: where.queueDate,
       locationId: where.locationId,
+      doctorId: where.doctorId,
       status: where.status,
     };
     const [records, total] = await this.prisma.$transaction([

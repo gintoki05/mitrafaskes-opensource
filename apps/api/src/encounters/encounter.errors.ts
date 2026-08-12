@@ -33,7 +33,8 @@ export class EncounterTransitionError extends Error {
     message: string,
     readonly code:
       | 'INVALID_ENCOUNTER_TRANSITION'
-      | 'ENCOUNTER_ALREADY_IN_STATUS',
+      | 'ENCOUNTER_ALREADY_IN_STATUS'
+      | 'ENCOUNTER_COMPLETION_REQUIRES_RME_FINALIZATION',
   ) {
     super(message);
     this.name = 'EncounterTransitionError';

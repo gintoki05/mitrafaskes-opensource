@@ -43,7 +43,10 @@ export class EncountersController {
 
   @Get()
   @RequirePermission(AccessPermission.QUEUE_READ)
-  async findMany(@Query() query: EncounterHttpQuery) {
+  async findMany(
+    @Query() query: EncounterHttpQuery,
+    @Req() request: { user: AuthenticatedUser },
+  ) {
     try {
       return await this.encounters.findMany({
         page: parsePositiveInteger(query.page, 1),
@@ -51,7 +54,7 @@ export class EncountersController {
         queueDate: query.queueDate,
         locationId: query.locationId,
         status: parseEncounterStatus(query.status),
-      });
+      }, request.user);
     } catch (error) {
       this.throwHttpError(error);
     }
@@ -83,9 +86,7 @@ export class EncountersController {
         ? AccessPermission.QUEUE_START
         : status === 'CANCELLED'
           ? AccessPermission.QUEUE_CANCEL
-          : status === 'COMPLETED'
-            ? AccessPermission.RME_FINALIZE
-            : undefined;
+          : undefined;
     if (!requiredPermission) {
       throw new BadRequestException({
         code: 'INVALID_ENCOUNTER_STATUS',

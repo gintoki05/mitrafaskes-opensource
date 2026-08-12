@@ -7,7 +7,8 @@
     "prebuild": "npm --workspace=@mitrafaskes/shared run build",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --test --experimental-strip-types components/screens/rme/*.test.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

@@ -4,19 +4,28 @@ import { useCallback, useState } from 'react';
 import { Stethoscope, Zap } from 'lucide-react';
 import { AccessPermission } from '@mitrafaskes/shared';
 import { RouteGuard } from '@/components/RouteGuard';
-import { apiFetch } from '@/lib/auth';
 import { PageHeader } from '@/components/PageHeader';
 import { ScreenState } from '@/components/ScreenState';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
+import { useRmeLifecycle, RmeApiError } from '@/hooks/useRmeLifecycle';
 import { useRmeResources } from '@/hooks/useRmeResources';
+import { useSession } from '@/hooks/useSession';
+import { can } from '@/lib/auth';
 import { toast } from 'sonner';
 import { RmeEncounterQueue } from './rme/RmeEncounterQueue';
 import { RmeForm, RmeFormPlaceholder } from './rme/RmeForm';
 import type { RmeFormValues } from './rme/rme-form-schema';
 
+function errorDescription(error: unknown): string {
+  if (error instanceof RmeApiError && error.issues.length > 0) {
+    return error.issues.map((issue) => issue.message).join(' ');
+  }
+  return error instanceof Error ? error.message : 'RME tidak dapat diproses.';
+}
+
 export default function RmePage() {
   const [icdSearch, setIcdSearch] = useState('');
-  const [saving, setSaving] = useState(false);
+  const session = useSession();
   const {
     encounters,
     encountersMeta,
@@ -28,47 +37,42 @@ export default function RmePage() {
     searchIcd10,
     selectEncounter,
   } = useRmeResources();
+  const lifecycle = useRmeLifecycle(selectedEncounter?.id ?? null);
 
   const handleSaveShortcut = useCallback((event: KeyboardEvent) => {
     if (!event.ctrlKey || event.key !== 'Enter') return;
     event.preventDefault();
-    document.getElementById('btn-save-rme')?.click();
+    document.getElementById('btn-save-rme-draft')?.click();
   }, []);
 
   useKeyboardShortcut('Enter', handleSaveShortcut);
 
-  const handleSaveRme = async (values: RmeFormValues) => {
-    if (!selectedEncounter) return;
-
-    setSaving(true);
-
+  const handleSaveDraft = async (values: RmeFormValues) => {
     try {
-      const response = await apiFetch('/api/rme', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          encounterId: selectedEncounter.id,
-          ...values,
-        }),
+      await lifecycle.saveDraft(values);
+      toast.success('Draft RME tersimpan', {
+        description: 'Encounter tetap dalam pemeriksaan dan dapat dilanjutkan.',
       });
-
-      if (response.ok) {
-        toast.success('RME berhasil disimpan', {
-          description: 'Rekam medis tersimpan lokal dan Encounter diselesaikan. Integrasi eksternal tidak diperlukan untuk melanjutkan pekerjaan.',
-        });
-        void refreshEncounters(encountersMeta.page);
-      } else {
-        throw new Error('RME tidak dapat disimpan. Periksa data lalu coba lagi.');
-      }
     } catch (error) {
-      console.error(error);
-      toast.error('Penyimpanan RME gagal', {
-        description:
-          error instanceof Error ? error.message : 'RME tidak dapat disimpan.',
+      toast.error('Draft RME gagal disimpan', {
+        description: errorDescription(error),
         duration: 7000,
       });
-    } finally {
-      setSaving(false);
+    }
+  };
+
+  const handleFinalize = async () => {
+    try {
+      await lifecycle.finalize();
+      await refreshEncounters();
+      toast.success('RME berhasil difinalisasi', {
+        description: 'Catatan menjadi read-only dan Encounter telah diselesaikan.',
+      });
+    } catch (error) {
+      toast.error('Finalisasi RME gagal', {
+        description: errorDescription(error),
+        duration: 9000,
+      });
     }
   };
 
@@ -78,11 +82,11 @@ export default function RmePage() {
         <PageHeader
           icon={<Stethoscope className="h-6 w-6" />}
           title="Form Rekam Medis Elektronik (RME) Dokter"
-          description="Input anamnesis, vital signs, diagnosis ICD-10, dan e-resep obat pasien rawat jalan."
+          description="Simpan asesmen bertahap sebagai draft, lalu finalisasi untuk menyelesaikan Encounter."
           action={
             <div className="flex items-center gap-2 rounded-[var(--radius-card)] border border-primary/20 bg-primary/10 px-3 py-2 font-mono text-xs text-primary">
               <Zap className="h-4 w-4 text-warning" />
-              <span>Shortcut: <strong>Ctrl + Enter</strong> untuk Simpan</span>
+              <span>Shortcut: <strong>Ctrl + Enter</strong> untuk simpan draft</span>
             </div>
           }
         />
@@ -101,14 +105,22 @@ export default function RmePage() {
           />
 
           <div className="min-w-0 space-y-6 lg:col-span-3">
-            {selectedEncounter ? (
+            {selectedEncounter && lifecycle.loading ? (
+              <ScreenState kind="loading" title="Memuat draft RME" description="Mengambil versi catatan terbaru." />
+            ) : selectedEncounter && lifecycle.loadError ? (
+              <ScreenState kind="error" title="RME tidak tersedia" description={lifecycle.loadError} />
+            ) : selectedEncounter ? (
               <RmeForm
                 key={selectedEncounter.id}
                 encounter={selectedEncounter}
+                record={lifecycle.record}
+                mutationState={lifecycle.mutationState}
+                canSaveDraft={can(session?.user ?? null, AccessPermission.RME_WRITE_DRAFT)}
+                canFinalize={can(session?.user ?? null, AccessPermission.RME_FINALIZE)}
                 icdSearch={icdSearch}
                 icdResults={icdResults}
-                saving={saving}
-                onSubmit={handleSaveRme}
+                onSaveDraft={handleSaveDraft}
+                onFinalize={handleFinalize}
                 onIcdSearchChange={(value) => {
                   setIcdSearch(value);
                   void searchIcd10(value);

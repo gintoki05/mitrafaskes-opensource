@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable } from '@nestjs/common';
 import {
   Prisma,
   Role,
@@ -23,6 +23,7 @@ import {
   EncounterConflictError,
   EncounterContextError,
   EncounterNotFoundError,
+  EncounterTransitionError,
   EncounterValidationError,
 } from './encounter.errors';
 import { toEncounter } from './encounter.mapper';
@@ -60,7 +61,7 @@ export class EncountersService {
     this.repository = new EncounterRepository(prisma);
   }
 
-  async findMany(query: EncounterListQuery = {}) {
+  async findMany(query: EncounterListQuery = {}, actor?: EncounterActor) {
     let queueDate: Date;
     try {
       queueDate = parseFacilityDate(
@@ -74,10 +75,15 @@ export class EncountersService {
     }
     const page = this.normalizePositiveInteger(query.page, 1);
     const pageSize = Math.min(this.normalizePositiveInteger(query.pageSize, 25), 100);
+    const doctorId =
+      actor?.role === 'DOKTER'
+        ? await this.resolveActorUserId(actor)
+        : undefined;
     const { records, total } = await this.repository.findMany(
       {
         queueDate,
         locationId: query.locationId,
+        doctorId: actor?.role === 'DOKTER' ? doctorId ?? '__unknown_doctor__' : undefined,
         status: query.status ? mapStatusToPrisma(query.status) : undefined,
       },
       page,
@@ -176,6 +182,12 @@ export class EncountersService {
     actor: EncounterActor,
   ): Promise<SharedEncounter> {
     const validated = validateStatusUpdate(input);
+    if (validated.status === ('COMPLETED' as EncounterStatus)) {
+      throw new EncounterTransitionError(
+        'Encounter hanya dapat diselesaikan melalui finalisasi RME.',
+        'ENCOUNTER_COMPLETION_REQUIRES_RME_FINALIZATION',
+      );
+    }
     const actorUserId = await this.resolveActorUserId(actor);
     const record = await this.prisma.$transaction((transaction) =>
       this.transitionInTransaction(
@@ -270,12 +282,23 @@ export class EncountersService {
     actorUserId: string | undefined,
   ): Promise<EncounterWithRelations> {
     const locked = await transaction.$queryRaw<
-      Array<{ id: string; status: PrismaEncounterStatus; version: number }>
+      Array<{
+        id: string;
+        status: PrismaEncounterStatus;
+        version: number;
+        doctorId: string;
+      }>
     >(
-      Prisma.sql`SELECT "id", "status", "version" FROM "Encounter" WHERE "id" = ${id} FOR UPDATE`,
+      Prisma.sql`SELECT "id", "status", "version", "doctorId" FROM "Encounter" WHERE "id" = ${id} FOR UPDATE`,
     );
     const current = locked[0];
     if (!current) throw new EncounterNotFoundError();
+    if (actor.role === 'DOKTER' && actorUserId !== current.doctorId) {
+      throw new ForbiddenException({
+        code: 'ENCOUNTER_NOT_ASSIGNED_TO_DOCTOR',
+        message: 'Encounter ini ditugaskan kepada dokter lain.',
+      });
+    }
     if (input.expectedVersion !== current.version) {
       throw new EncounterConflictError(
         'Encounter sudah berubah. Muat ulang data sebelum mencoba lagi.',

@@ -1,9 +1,10 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
-import { CheckCircle, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { FileText } from 'lucide-react';
+import { MedicalRecordStatus, type MedicalRecord } from '@mitrafaskes/shared';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { ScreenState } from '@/components/ScreenState';
@@ -12,32 +13,56 @@ import { RmeDiagnosisSection } from './RmeDiagnosisSection';
 import { RmePatientBanner } from './RmePatientBanner';
 import { RmePrescriptionSection } from './RmePrescriptionSection';
 import { RmeVitalSigns } from './RmeVitalSigns';
-import { rmeFormSchema, type RmeFormValues } from './rme-form-schema';
+import {
+  emptyRmeFormValues,
+  rmeFormSchema,
+  type RmeFormValues,
+} from './rme-form-schema';
 import type { RmePrescriptionField, RmePresetBundle } from './types';
+import type { RmeMutationState } from '@/hooks/useRmeLifecycle';
+import {
+  RmeLifecycleActions,
+  RmeLifecycleSummary,
+} from './RmeLifecycleControls';
 
 type RmeFormProps = {
   encounter: Encounter;
+  record: MedicalRecord | null;
   icdSearch: string;
   icdResults: Icd10Entry[];
-  saving: boolean;
-  onSubmit: (values: RmeFormValues) => Promise<void>;
+  mutationState: RmeMutationState;
+  canSaveDraft: boolean;
+  canFinalize: boolean;
+  onSaveDraft: (values: RmeFormValues) => Promise<void>;
+  onFinalize: () => Promise<void>;
   onIcdSearchChange: (value: string) => void;
 };
 
-const defaultRmeValues: RmeFormValues = {
-  anamnesis: 'Pasien mengeluh demam dan batuk sejak 2 hari yang lalu.',
-  systolic: '120',
-  diastolic: '80',
-  heartRate: '78',
-  temperature: '37.2',
-  diagnoses: [
-    { icd10Code: 'J00', nameIndo: 'Nasofaringitis Akut (Flu / Batuk Pilek)', isPrimary: true },
-  ],
-  prescriptions: [
-    { medicineName: 'Paracetamol 500mg', dosage: '1 Tablet', frequency: '3x Sehari sesudah makan', quantity: 10 },
-    { medicineName: 'Amoxicillin 500mg', dosage: '1 Kaplet', frequency: '3x Sehari sesudah makan', quantity: 15 },
-  ],
-};
+function formValuesFrom(record: MedicalRecord | null): RmeFormValues {
+  if (!record) return emptyRmeFormValues();
+  return {
+    anamnesis: record.anamnesis ?? '',
+    systolic: record.systolic === undefined ? '' : String(record.systolic),
+    diastolic: record.diastolic === undefined ? '' : String(record.diastolic),
+    heartRate: record.heartRate === undefined ? '' : String(record.heartRate),
+    temperature:
+      record.temperature === undefined ? '' : String(record.temperature),
+    diagnoses: record.diagnoses.map((diagnosis) => ({
+      icd10Code: diagnosis.icd10Code,
+      nameIndo:
+        diagnosis.icd10?.nameIndo ??
+        diagnosis.icd10?.display ??
+        diagnosis.icd10Code,
+      isPrimary: diagnosis.isPrimary,
+    })),
+    prescriptions: record.prescriptions.map((prescription) => ({
+      medicineName: prescription.medicineName,
+      dosage: prescription.dosage,
+      frequency: prescription.frequency,
+      quantity: prescription.quantity,
+    })),
+  };
+}
 
 function presetValues(type: RmePresetBundle): Pick<RmeFormValues, 'diagnoses' | 'prescriptions'> {
   if (type === 'ISPA') {
@@ -77,21 +102,26 @@ function presetValues(type: RmePresetBundle): Pick<RmeFormValues, 'diagnoses' | 
 
 export function RmeForm({
   encounter,
+  record,
   icdSearch,
   icdResults,
-  saving,
-  onSubmit,
+  mutationState,
+  canSaveDraft,
+  canFinalize,
+  onSaveDraft,
+  onFinalize,
   onIcdSearchChange,
 }: RmeFormProps) {
   const {
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isDirty, isSubmitting },
     register,
+    reset,
     setValue,
     handleSubmit,
   } = useForm<RmeFormValues>({
     resolver: zodResolver(rmeFormSchema),
-    defaultValues: defaultRmeValues,
+    defaultValues: emptyRmeFormValues(),
     mode: 'onBlur',
   });
   const { append, replace } = useFieldArray({ control, name: 'prescriptions' });
@@ -101,6 +131,12 @@ export function RmeForm({
   const temperature = useWatch({ control, name: 'temperature' });
   const diagnoses = useWatch({ control, name: 'diagnoses' }) ?? [];
   const prescriptions = useWatch({ control, name: 'prescriptions' }) ?? [];
+  const readOnly = record?.status === MedicalRecordStatus.FINAL;
+  const busy = mutationState === 'saving-draft' || mutationState === 'finalizing';
+
+  useEffect(() => {
+    reset(formValuesFrom(record));
+  }, [record, reset]);
 
   const updateStringValue = (
     field: 'systolic' | 'diastolic' | 'temperature' | 'heartRate',
@@ -155,11 +191,20 @@ export function RmeForm({
     replace(values.prescriptions);
   };
 
-  const submit = handleSubmit(onSubmit);
+  const saveDraft = handleSubmit(onSaveDraft);
 
   return (
-    <form onSubmit={submit} className="space-y-6" noValidate>
+    <form onSubmit={saveDraft} className="space-y-6" noValidate>
       <RmePatientBanner encounter={encounter} />
+
+      <RmeLifecycleSummary
+        record={record}
+        readOnly={readOnly}
+        isDirty={isDirty}
+        mutationState={mutationState}
+      />
+
+      <fieldset disabled={readOnly || busy} className="space-y-6">
 
       <Card>
         <CardHeader className="pb-2">
@@ -205,24 +250,28 @@ export function RmeForm({
         onAddPrescription={() =>
           append({
             medicineName: '',
-            dosage: '1 Tablet',
-            frequency: '3x Sehari',
-            quantity: 10,
+            dosage: '',
+            frequency: '',
+            quantity: 0,
           })
         }
         onUpdatePrescription={handleUpdatePrescription}
         onApplyPresetBundle={handleApplyPresetBundle}
       />
 
-      <Button
-        id="btn-save-rme"
-        type="submit"
-        disabled={saving || isSubmitting}
-        className="w-full rounded-[var(--radius-panel)] bg-primary py-4 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/85"
-      >
-        <CheckCircle className="mr-2 h-5 w-5 stroke-[2.5]" />
-        {saving || isSubmitting ? 'Menyimpan RME lokal...' : 'Simpan RME lokal & Selesaikan Encounter'}
-      </Button>
+      </fieldset>
+
+      <RmeLifecycleActions
+        record={record}
+        readOnly={readOnly}
+        isDirty={isDirty}
+        mutationState={mutationState}
+        busy={busy}
+        isSubmitting={isSubmitting}
+        canSaveDraft={canSaveDraft}
+        canFinalize={canFinalize}
+        onFinalize={onFinalize}
+      />
     </form>
   );
 }

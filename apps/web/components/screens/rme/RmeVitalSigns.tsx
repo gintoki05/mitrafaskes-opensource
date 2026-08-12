@@ -38,7 +38,7 @@ export function RmeVitalSigns({
             <Input id="diastolic" type="number" value={diastolic} onChange={(event) => onChange('diastolic', event.target.value)} className="text-xs font-mono" />
           </div>
           <div>
-            <label htmlFor="temperature" className="mb-1 block text-[11px] font-medium text-muted-foreground">Suhu Tubuh (Â°C)</label>
+            <label htmlFor="temperature" className="mb-1 block text-[11px] font-medium text-muted-foreground">Suhu Tubuh (&deg;C)</label>
             <Input id="temperature" type="number" step="0.1" value={temperature} onChange={(event) => onChange('temperature', event.target.value)} className="text-xs font-mono" />
           </div>
           <div>
@@ -50,4 +50,3 @@ export function RmeVitalSigns({
     </Card>
   );
 }
-

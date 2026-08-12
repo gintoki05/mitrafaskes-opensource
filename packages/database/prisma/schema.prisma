@@ -85,6 +85,11 @@ enum EncounterStatus {
   CANCELLED
 }
 
+enum MedicalRecordStatus {
+  DRAFT
+  FINAL
+}
+
 enum SyncStatus {
   PENDING
   SUCCESS
@@ -505,20 +510,27 @@ model EncounterQueueCounter {
 }
 
 model MedicalRecord {
-  id            String         @id @default(uuid())
-  encounterId   String         @unique
-  anamnesis     String?
-  systolic      Int?
-  diastolic     Int?
-  heartRate     Int?
-  temperature   Float?
-  weight        Float?
-  height        Float?
-  encounter     Encounter      @relation(fields: [encounterId], references: [id])
-  diagnoses     Diagnosis[]
-  prescriptions Prescription[]
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                String              @id @default(uuid())
+  encounterId       String              @unique
+  status            MedicalRecordStatus @default(DRAFT)
+  version           Int                 @default(1)
+  authoredBy        String?             @db.VarChar(128)
+  authoredAt        DateTime?
+  finalizedBy       String?             @db.VarChar(128)
+  finalizedAt       DateTime?
+  validationProfile String              @default("OUTPATIENT_GENERAL_V1") @db.VarChar(64)
+  anamnesis         String?
+  systolic          Int?
+  diastolic         Int?
+  heartRate         Int?
+  temperature       Float?
+  weight            Float?
+  height            Float?
+  encounter         Encounter           @relation(fields: [encounterId], references: [id])
+  diagnoses         Diagnosis[]
+  prescriptions     Prescription[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 }
 
 model MasterIcd10 {

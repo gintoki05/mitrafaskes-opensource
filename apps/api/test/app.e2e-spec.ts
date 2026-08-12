@@ -154,7 +154,11 @@ describe('Access control (e2e)', () => {
         updateStatus: jest.fn().mockResolvedValue({ id: 'enc-test-1' }),
       })
       .overrideProvider(RmeService)
-      .useValue({ findByEncounterId: jest.fn().mockResolvedValue(null) })
+      .useValue({
+        findByEncounterId: jest.fn().mockResolvedValue(null),
+        saveDraft: jest.fn().mockResolvedValue({ id: 'rme-test-1', status: 'DRAFT' }),
+        finalize: jest.fn().mockResolvedValue({ id: 'rme-test-1', status: 'FINAL' }),
+      })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -266,7 +270,7 @@ describe('Access control (e2e)', () => {
       .patch('/api/encounters/enc-test-1/status')
       .set(bearer('mock-jwt-token-dr_budi'))
       .send({ status: 'COMPLETED', expectedVersion: 1 })
-      .expect(200);
+      .expect(400);
 
     await request(app.getHttpServer())
       .get('/api/encounters')
@@ -289,6 +293,34 @@ describe('Access control (e2e)', () => {
       .patch('/api/encounters/enc-test-1/status')
       .set(bearer('mock-jwt-token-perawat_ani'))
       .send({ status: 'COMPLETED', expectedVersion: 1 })
+      .expect(400);
+  });
+
+  it('separates draft and finalize permissions at the API boundary', async () => {
+    const command = { encounterId: 'enc-test-1', expectedVersion: 0 };
+
+    await request(app.getHttpServer())
+      .post('/api/rme/draft')
+      .set(bearer('mock-jwt-token-dr_budi'))
+      .send({ ...command, diagnoses: [], prescriptions: [] })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/rme/finalize')
+      .set(bearer('mock-jwt-token-dr_budi'))
+      .send(command)
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .post('/api/rme/draft')
+      .set(bearer('mock-jwt-token-perawat_ani'))
+      .send(command)
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post('/api/rme/finalize')
+      .set(bearer('mock-jwt-token-perawat_ani'))
+      .send(command)
       .expect(403);
   });
 

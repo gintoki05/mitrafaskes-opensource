@@ -1,15 +1,28 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
-import type { MedicalRecord, SaveMedicalRecordDto } from '@mitrafaskes/shared';
+import {
+  MedicalRecordStatus as PrismaMedicalRecordStatus,
+  Prisma,
+} from '@prisma/client';
+import {
+  MedicalRecordStatus,
+  type MedicalRecord,
+} from '@mitrafaskes/shared';
 import type { AuthenticatedUser } from '../auth/session-permission.guard';
 import { PrismaService } from '../database/prisma.service';
-import { MasterIcd10Service } from '../master-data/master-icd10.service';
 import { EncountersService } from '../encounters/encounters.service';
+import { MasterIcd10Service } from '../master-data/master-icd10.service';
+import {
+  assertReadyForFinalization,
+  parseDraftInput,
+  parseFinalizeInput,
+  type ValidatedMedicalRecordDraft,
+} from './rme.validation';
 
 const medicalRecordInclude = {
   diagnoses: { include: { icd10: true } },
@@ -20,31 +33,30 @@ type MedicalRecordWithRelations = Prisma.MedicalRecordGetPayload<{
   include: typeof medicalRecordInclude;
 }>;
 
-const recordOf = (input: unknown): Record<string, unknown> =>
-  typeof input === 'object' && input !== null
-    ? (input as Record<string, unknown>)
-    : {};
-
-const optionalNumber = (value: unknown): number | undefined => {
-  if (value === undefined || value === null || value === '') return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+type LockedEncounter = {
+  id: string;
+  status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  version: number;
+  doctorId: string;
 };
 
-const requiredString = (value: unknown, field: string): string => {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new BadRequestException({
-      code: 'RME_VALIDATION_FAILED',
-      message: `${field} wajib diisi`,
-    });
-  }
-  return value.trim();
+type LockedMedicalRecord = {
+  id: string;
+  status: PrismaMedicalRecordStatus;
+  version: number;
 };
 
 function toMedicalRecord(record: MedicalRecordWithRelations): MedicalRecord {
   return {
     id: record.id,
     encounterId: record.encounterId,
+    status: record.status as MedicalRecordStatus,
+    version: record.version,
+    authoredBy: record.authoredBy ?? undefined,
+    authoredAt: record.authoredAt?.toISOString(),
+    finalizedBy: record.finalizedBy ?? undefined,
+    finalizedAt: record.finalizedAt?.toISOString(),
+    validationProfile: record.validationProfile,
     anamnesis: record.anamnesis ?? undefined,
     systolic: record.systolic ?? undefined,
     diastolic: record.diastolic ?? undefined,
@@ -75,6 +87,7 @@ function toMedicalRecord(record: MedicalRecordWithRelations): MedicalRecord {
       instructions: prescription.instructions ?? undefined,
     })),
     createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString(),
   };
 }
 
@@ -86,7 +99,17 @@ export class RmeService {
     private readonly encounters: EncountersService,
   ) {}
 
-  async findByEncounterId(encounterId: string): Promise<MedicalRecord | null> {
+  async findByEncounterId(
+    encounterId: string,
+    actor: AuthenticatedUser,
+  ): Promise<MedicalRecord | null> {
+    const actorUserId = await this.resolveActorUserId(actor);
+    const encounter = await this.prisma.encounter.findUnique({
+      where: { id: encounterId },
+      select: { doctorId: true },
+    });
+    if (!encounter) throw new NotFoundException('Kunjungan / Encounter tidak ditemukan');
+    this.assertDoctorAssignment(encounter.doctorId, actor, actorUserId);
     const record = await this.prisma.medicalRecord.findUnique({
       where: { encounterId },
       include: medicalRecordInclude,
@@ -94,101 +117,221 @@ export class RmeService {
     return record ? toMedicalRecord(record) : null;
   }
 
-  async save(
+  async saveDraft(
     input: unknown,
     actor: AuthenticatedUser,
   ): Promise<MedicalRecord> {
-    const body = recordOf(input);
-    const encounterId = requiredString(body.encounterId, 'encounterId');
-    const encounter = await this.encounters.findById(encounterId);
-    if (!encounter) throw new NotFoundException('Kunjungan / Encounter tidak ditemukan');
-    if (encounter.status !== 'IN_PROGRESS') {
-      throw new ConflictException({
-        code: 'RME_ENCOUNTER_NOT_IN_PROGRESS',
-        message: 'Encounter harus berstatus IN_PROGRESS sebelum RME diselesaikan',
-      });
-    }
-
-    const diagnosisInputs = Array.isArray(body.diagnoses) ? body.diagnoses : [];
-    const diagnosisCodes = diagnosisInputs.map((diagnosis) =>
-      requiredString(recordOf(diagnosis).icd10Code, 'icd10Code'),
-    );
-    const icd10Entries = await this.icd10.findByCodes(diagnosisCodes);
-    const icd10ByCode = new Map(icd10Entries.map((entry) => [entry.code, entry]));
-    const missingCodes = diagnosisCodes.filter((code) => !icd10ByCode.has(code));
-    if (missingCodes.length > 0) {
-      throw new BadRequestException({
-        code: 'RME_ICD10_NOT_FOUND',
-        message: 'Kode ICD-10 tidak ditemukan di katalog lokal',
-        codes: missingCodes,
-      });
-    }
-
-    const diagnoses = diagnosisInputs.map((diagnosis) => {
-      const value = recordOf(diagnosis);
-      return {
-        icd10Code: String(value.icd10Code),
-        isPrimary: value.isPrimary !== false,
-      };
-    });
-    const prescriptions = (Array.isArray(body.prescriptions) ? body.prescriptions : []).map(
-      (prescription) => {
-        const value = recordOf(prescription);
-        const quantity = Number(value.quantity);
-        if (!Number.isInteger(quantity) || quantity < 1) {
-          throw new BadRequestException({
-            code: 'RME_VALIDATION_FAILED',
-            message: 'Jumlah resep harus berupa bilangan bulat positif',
-          });
-        }
-        return {
-          medicineName: requiredString(value.medicineName, 'medicineName'),
-          kfaCode: typeof value.kfaCode === 'string' && value.kfaCode.trim() ? value.kfaCode.trim() : null,
-          dosage: requiredString(value.dosage, 'dosage'),
-          frequency: requiredString(value.frequency, 'frequency'),
-          quantity,
-          instructions: typeof value.instructions === 'string' ? value.instructions.trim() || null : null,
-        };
-      },
-    );
+    const draft = parseDraftInput(input);
+    await this.assertIcd10CodesExist(draft);
+    const actorUserId = await this.resolveActorUserId(actor);
 
     const record = await this.prisma.$transaction(async (transaction) => {
-      const saved = await transaction.medicalRecord.upsert({
-        where: { encounterId },
-        create: {
-          encounterId,
-          anamnesis: typeof body.anamnesis === 'string' ? body.anamnesis : null,
-          systolic: optionalNumber(body.systolic),
-          diastolic: optionalNumber(body.diastolic),
-          heartRate: optionalNumber(body.heartRate),
-          temperature: optionalNumber(body.temperature),
-          weight: optionalNumber(body.weight),
-          height: optionalNumber(body.height),
-          diagnoses: { create: diagnoses },
-          prescriptions: { create: prescriptions },
+      const encounter = await this.lockEncounter(transaction, draft.encounterId);
+      this.assertDoctorAssignment(encounter.doctorId, actor, actorUserId);
+      this.assertEncounterInProgress(encounter);
+      const current = await this.lockMedicalRecord(transaction, draft.encounterId);
+      if (current?.status === PrismaMedicalRecordStatus.FINAL) {
+        throw new ConflictException({
+          code: 'RME_FINAL_IMMUTABLE',
+          message: 'RME yang sudah final tidak dapat diubah melalui simpan draft.',
+        });
+      }
+      this.assertExpectedVersion(current?.version ?? 0, draft.expectedVersion);
+
+      const now = new Date();
+      const clinicalData = {
+        anamnesis: draft.anamnesis ?? null,
+        systolic: draft.systolic ?? null,
+        diastolic: draft.diastolic ?? null,
+        heartRate: draft.heartRate ?? null,
+        temperature: draft.temperature ?? null,
+        weight: draft.weight ?? null,
+        height: draft.height ?? null,
+        authoredBy: actor.username,
+        authoredAt: now,
+        validationProfile: draft.validationProfile,
+      };
+      if (!current) {
+        return transaction.medicalRecord.create({
+          data: {
+            encounterId: draft.encounterId,
+            ...clinicalData,
+            status: PrismaMedicalRecordStatus.DRAFT,
+            version: 1,
+            diagnoses: { create: draft.diagnoses },
+            prescriptions: { create: draft.prescriptions },
+          },
+          include: medicalRecordInclude,
+        });
+      }
+
+      return transaction.medicalRecord.update({
+        where: { id: current.id },
+        data: {
+          ...clinicalData,
+          version: { increment: 1 },
+          diagnoses: { deleteMany: {}, create: draft.diagnoses },
+          prescriptions: { deleteMany: {}, create: draft.prescriptions },
         },
-        update: {
-          anamnesis: typeof body.anamnesis === 'string' ? body.anamnesis : null,
-          systolic: optionalNumber(body.systolic),
-          diastolic: optionalNumber(body.diastolic),
-          heartRate: optionalNumber(body.heartRate),
-          temperature: optionalNumber(body.temperature),
-          weight: optionalNumber(body.weight),
-          height: optionalNumber(body.height),
-          diagnoses: { deleteMany: {}, create: diagnoses },
-          prescriptions: { deleteMany: {}, create: prescriptions },
+        include: medicalRecordInclude,
+      });
+    });
+    return toMedicalRecord(record);
+  }
+
+  async finalize(
+    input: unknown,
+    actor: AuthenticatedUser,
+  ): Promise<MedicalRecord> {
+    const command = parseFinalizeInput(input);
+    const actorUserId = await this.resolveActorUserId(actor);
+    const record = await this.prisma.$transaction(async (transaction) => {
+      const encounter = await this.lockEncounter(transaction, command.encounterId);
+      this.assertDoctorAssignment(encounter.doctorId, actor, actorUserId);
+      const current = await this.lockMedicalRecord(transaction, command.encounterId);
+      if (!current) {
+        throw new ConflictException({
+          code: 'RME_DRAFT_REQUIRED',
+          message: 'Simpan draft RME sebelum melakukan finalisasi.',
+        });
+      }
+
+      if (current.status === PrismaMedicalRecordStatus.FINAL) {
+        if (
+          encounter.status === 'COMPLETED' &&
+          (command.expectedVersion === current.version ||
+            command.expectedVersion === current.version - 1)
+        ) {
+          const finalized = await transaction.medicalRecord.findUnique({
+            where: { id: current.id },
+            include: medicalRecordInclude,
+          });
+          if (!finalized) throw new NotFoundException('RME tidak ditemukan');
+          return finalized;
+        }
+        throw new ConflictException({
+          code: 'RME_ALREADY_FINAL',
+          message: 'RME sudah final. Muat ulang catatan untuk melihat versi terbaru.',
+        });
+      }
+
+      this.assertEncounterInProgress(encounter);
+      this.assertExpectedVersion(current.version, command.expectedVersion);
+      const draft = await transaction.medicalRecord.findUnique({
+        where: { id: current.id },
+        include: {
+          ...medicalRecordInclude,
+          encounter: {
+            select: {
+              patientId: true,
+              doctorId: true,
+              organizationId: true,
+              locationId: true,
+            },
+          },
+        },
+      });
+      if (!draft) throw new NotFoundException('RME tidak ditemukan');
+      assertReadyForFinalization(draft);
+
+      const now = new Date();
+      const finalized = await transaction.medicalRecord.update({
+        where: { id: current.id },
+        data: {
+          status: PrismaMedicalRecordStatus.FINAL,
+          version: { increment: 1 },
+          finalizedBy: actor.username,
+          finalizedAt: now,
         },
         include: medicalRecordInclude,
       });
       await this.encounters.saveRmeCompletion(
         transaction,
-        encounterId,
+        command.encounterId,
         encounter.version,
         actor,
       );
-      return saved;
+      return finalized;
     });
-
     return toMedicalRecord(record);
+  }
+
+  private async assertIcd10CodesExist(
+    draft: ValidatedMedicalRecordDraft,
+  ): Promise<void> {
+    const codes = draft.diagnoses.map((diagnosis) => diagnosis.icd10Code);
+    const entries = await this.icd10.findByCodes(codes);
+    const found = new Set(entries.map((entry) => entry.code));
+    const missing = codes.filter((code) => !found.has(code));
+    if (missing.length > 0) {
+      throw new BadRequestException({
+        code: 'RME_ICD10_NOT_FOUND',
+        message: 'Kode ICD-10 tidak ditemukan di katalog lokal.',
+        codes: missing,
+      });
+    }
+  }
+
+  private async lockEncounter(
+    transaction: Prisma.TransactionClient,
+    encounterId: string,
+  ): Promise<LockedEncounter> {
+    const rows = await transaction.$queryRaw<LockedEncounter[]>(
+      Prisma.sql`SELECT "id", "status", "version", "doctorId" FROM "Encounter" WHERE "id" = ${encounterId} FOR UPDATE`,
+    );
+    if (!rows[0]) throw new NotFoundException('Kunjungan / Encounter tidak ditemukan');
+    return rows[0];
+  }
+
+  private async lockMedicalRecord(
+    transaction: Prisma.TransactionClient,
+    encounterId: string,
+  ): Promise<LockedMedicalRecord | null> {
+    const rows = await transaction.$queryRaw<LockedMedicalRecord[]>(
+      Prisma.sql`SELECT "id", "status", "version" FROM "MedicalRecord" WHERE "encounterId" = ${encounterId} FOR UPDATE`,
+    );
+    return rows[0] ?? null;
+  }
+
+  private assertEncounterInProgress(encounter: LockedEncounter): void {
+    if (encounter.status !== 'IN_PROGRESS') {
+      throw new ConflictException({
+        code: 'RME_ENCOUNTER_NOT_IN_PROGRESS',
+        message: 'Encounter harus berstatus IN_PROGRESS untuk menulis RME.',
+      });
+    }
+  }
+
+  private assertDoctorAssignment(
+    encounterDoctorId: string,
+    actor: AuthenticatedUser,
+    actorUserId: string | undefined,
+  ): void {
+    if (actor.role === 'DOKTER' && actorUserId !== encounterDoctorId) {
+      throw new ForbiddenException({
+        code: 'ENCOUNTER_NOT_ASSIGNED_TO_DOCTOR',
+        message: 'Encounter ini ditugaskan kepada dokter lain.',
+      });
+    }
+  }
+
+  private async resolveActorUserId(
+    actor: AuthenticatedUser,
+  ): Promise<string | undefined> {
+    const user = await this.prisma.user.findUnique({
+      where: { username: actor.username },
+      select: { id: true },
+    });
+    return user?.id;
+  }
+
+  private assertExpectedVersion(current: number, expected: number): void {
+    if (current !== expected) {
+      throw new ConflictException({
+        code: 'RME_VERSION_CONFLICT',
+        message: 'RME sudah berubah. Muat ulang data sebelum mencoba lagi.',
+        currentVersion: current,
+      });
+    }
   }
 }

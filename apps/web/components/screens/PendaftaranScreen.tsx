@@ -47,7 +47,6 @@ export default function PendaftaranPage() {
   const canCreateQueue = can(currentUser, AccessPermission.QUEUE_CREATE);
   const canStartEncounter = can(currentUser, AccessPermission.QUEUE_START);
   const canCancelEncounter = can(currentUser, AccessPermission.QUEUE_CANCEL);
-  const canCompleteEncounter = can(currentUser, AccessPermission.RME_FINALIZE);
   const {
     patients,
     patientsMeta,
@@ -212,7 +211,6 @@ export default function PendaftaranPage() {
               onStatusChange={handleStatusChange}
               canStart={canStartEncounter}
               canCancel={canCancelEncounter}
-              canComplete={canCompleteEncounter}
             />
           </div>
         )}

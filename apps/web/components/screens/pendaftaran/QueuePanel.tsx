@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { EncounterStatus } from '@mitrafaskes/shared';
 import type { Encounter, ListMeta } from '@mitrafaskes/shared';
 import {
-  Check,
   Clock3,
   Play,
   RefreshCw,
@@ -26,7 +25,6 @@ type QueuePanelProps = {
   onStatusChange: (encounter: Encounter, status: EncounterStatus) => Promise<void>;
   canStart: boolean;
   canCancel: boolean;
-  canComplete: boolean;
 };
 
 const statusLabels: Record<EncounterStatus, string> = {
@@ -68,7 +66,6 @@ export function QueuePanel({
   onStatusChange,
   canStart,
   canCancel,
-  canComplete,
 }: QueuePanelProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
@@ -131,7 +128,6 @@ export function QueuePanel({
           const isUpdating = updatingId === encounter.id;
           const canCancelThis = canCancel && (encounter.status === 'WAITING' || encounter.status === 'IN_PROGRESS');
           const canStartThis = canStart && encounter.status === 'WAITING';
-          const canCompleteThis = canComplete && encounter.status === 'IN_PROGRESS';
 
           return (
             <div key={encounter.id} className="flex min-w-0 flex-wrap items-start justify-between gap-4 px-4 py-4 transition-colors hover:bg-primary/[0.035] sm:px-5">
@@ -170,20 +166,6 @@ export function QueuePanel({
                       title={isUpdating ? 'Memperbarui status...' : 'Mulai pemeriksaan'}
                     >
                       <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                    </Button>
-                  ) : null}
-                  {canCompleteThis ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-xs"
-                      disabled={isUpdating}
-                      onClick={() => void transition(encounter, EncounterStatus.COMPLETED)}
-                      aria-label={`Selesaikan pemeriksaan ${encounter.encounterNumber}`}
-                      title={isUpdating ? 'Memperbarui status...' : 'Selesaikan pemeriksaan'}
-                      className="text-success hover:bg-success/10 hover:text-success"
-                    >
-                      <Check className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
                   ) : null}
                   {canCancelThis ? (
