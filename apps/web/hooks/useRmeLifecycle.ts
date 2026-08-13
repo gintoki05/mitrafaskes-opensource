@@ -111,11 +111,11 @@ function draftPayload(
       unitCode: 'cm',
     },
   ] as const;
-  const knownCodes = new Set<string>(
-    observationDefinitions
-      .map((definition) => definition.code)
-      .concat(['39156-5', 'body-mass-index']),
-  );
+  const knownCodes = new Set<string>([
+    ...observationDefinitions.map((definition) => definition.code),
+    '39156-5',
+    'body-mass-index',
+  ]);
   const observations = observationDefinitions.flatMap((definition) => {
     const rawValue = values[definition.field];
     if (!rawValue.trim()) return [];

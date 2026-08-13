@@ -110,9 +110,7 @@ describe('PatientsService', () => {
     ).rejects.toMatchObject<Partial<BadRequestException>>({
       response: {
         code: 'PATIENT_VALIDATION_FAILED',
-        errors: [
-          expect.objectContaining({ code: 'REGION_NOT_FOUND' }),
-        ],
+        errors: [expect.objectContaining({ code: 'REGION_NOT_FOUND' })],
       },
       status: 400,
     });

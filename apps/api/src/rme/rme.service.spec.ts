@@ -13,7 +13,10 @@ const finalizeCommand = {
   idempotencyKey: 'finalize-request-123',
 };
 
-function medicalRecord(status: MedicalRecordStatus = MedicalRecordStatus.DRAFT, version = 1) {
+function medicalRecord(
+  status: MedicalRecordStatus = MedicalRecordStatus.DRAFT,
+  version = 1,
+) {
   return {
     id: 'rme-1',
     encounterId: 'encounter-1',
@@ -88,7 +91,10 @@ function finalizationDraft() {
   };
 }
 
-function createHarness(transaction: Record<string, any>, completion = jest.fn().mockResolvedValue({})) {
+function createHarness(
+  transaction: Record<string, any>,
+  completion = jest.fn().mockResolvedValue({}),
+) {
   const state = { committed: false };
   const prisma = {
     user: { findUnique: jest.fn().mockResolvedValue({ id: 'doctor-1' }) },
@@ -122,24 +128,28 @@ function successfulTransaction() {
   return {
     $queryRaw: jest
       .fn()
-      .mockResolvedValueOnce([{
-        id: 'encounter-1',
-        status: 'IN_PROGRESS',
-        version: 3,
-        doctorId: 'doctor-1',
-        organizationId: 'organization-1',
-        locationId: 'location-1',
+      .mockResolvedValueOnce([
+        {
+          id: 'encounter-1',
+          status: 'IN_PROGRESS',
+          version: 3,
+          doctorId: 'doctor-1',
+          organizationId: 'organization-1',
+          locationId: 'location-1',
         },
       ])
-      .mockResolvedValueOnce([{
-        id: 'rme-1',
-        status: MedicalRecordStatus.DRAFT,
-        version: 1,
+      .mockResolvedValueOnce([
+        {
+          id: 'rme-1',
+          status: MedicalRecordStatus.DRAFT,
+          version: 1,
         },
       ]),
     medicalRecord: {
       findUnique: jest.fn().mockResolvedValue(finalizationDraft()),
-      update: jest.fn().mockResolvedValue(medicalRecord(MedicalRecordStatus.FINAL, 2)),
+      update: jest
+        .fn()
+        .mockResolvedValue(medicalRecord(MedicalRecordStatus.FINAL, 2)),
     },
     medicalRecordAuditEvent: {
       findUnique: jest.fn().mockResolvedValue(null),
@@ -153,9 +163,14 @@ describe('RmeService lifecycle', () => {
     const transaction = {
       $queryRaw: jest
         .fn()
-        .mockResolvedValueOnce([{
-          id: 'encounter-1', status: 'IN_PROGRESS', version: 2,
-          doctorId: 'doctor-1', organizationId: 'organization-1', locationId: 'location-1',
+        .mockResolvedValueOnce([
+          {
+            id: 'encounter-1',
+            status: 'IN_PROGRESS',
+            version: 2,
+            doctorId: 'doctor-1',
+            organizationId: 'organization-1',
+            locationId: 'location-1',
           },
         ])
         .mockResolvedValueOnce([]),
@@ -176,8 +191,12 @@ describe('RmeService lifecycle', () => {
     };
     const { service, completion } = createHarness(transaction);
 
-    const result = await service.saveDraft({
-      encounterId: 'encounter-1', expectedVersion: 0, diagnoses: [], prescriptions: [],
+    const result = await service.saveDraft(
+      {
+        encounterId: 'encounter-1',
+        expectedVersion: 0,
+        diagnoses: [],
+        prescriptions: [],
       },
       actor,
     );
@@ -258,14 +277,21 @@ describe('RmeService lifecycle', () => {
       diagnoses: [],
     };
     const encounterLock = {
-      id: 'encounter-1', status: 'IN_PROGRESS', version: 3,
-      doctorId: 'doctor-1', organizationId: 'organization-1', locationId: 'location-1',
+      id: 'encounter-1',
+      status: 'IN_PROGRESS',
+      version: 3,
+      doctorId: 'doctor-1',
+      organizationId: 'organization-1',
+      locationId: 'location-1',
     };
     const draftLock = {
-      id: 'rme-1', status: MedicalRecordStatus.DRAFT, version: 1,
+      id: 'rme-1',
+      status: MedicalRecordStatus.DRAFT,
+      version: 1,
     };
     const transaction = {
-      $queryRaw: jest.fn()
+      $queryRaw: jest
+        .fn()
         .mockResolvedValueOnce([encounterLock])
         .mockResolvedValueOnce([draftLock])
         .mockResolvedValueOnce([encounterLock])
@@ -277,17 +303,28 @@ describe('RmeService lifecycle', () => {
     };
     const { service, completion } = createHarness(transaction);
 
-    const preflight = await service.preflight({
-      encounterId: 'encounter-1', expectedVersion: 1,
+    const preflight = await service.preflight(
+      {
+        encounterId: 'encounter-1',
+        expectedVersion: 1,
       },
       actor,
     );
     expect(preflight.ready).toBe(false);
-    expect(preflight.issues).toEqual(expect.arrayContaining([expect.objectContaining({ section: 'anamnesis' })]));
+    expect(preflight.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ section: 'anamnesis' }),
+      ]),
+    );
 
-    await expect(service.saveDraft({
-      encounterId: 'encounter-1', expectedVersion: 1,
-      chiefComplaint: 'Batuk', diagnoses: [], prescriptions: [],
+    await expect(
+      service.saveDraft(
+        {
+          encounterId: 'encounter-1',
+          expectedVersion: 1,
+          chiefComplaint: 'Batuk',
+          diagnoses: [],
+          prescriptions: [],
         },
         actor,
       ),
@@ -298,23 +335,36 @@ describe('RmeService lifecycle', () => {
 
   it('keeps a final RME immutable through the draft endpoint', async () => {
     const transaction = {
-      $queryRaw: jest.fn()
-        .mockResolvedValueOnce([{
-          id: 'encounter-1', status: 'IN_PROGRESS', version: 3,
-          doctorId: 'doctor-1', organizationId: 'organization-1', locationId: 'location-1',
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            id: 'encounter-1',
+            status: 'IN_PROGRESS',
+            version: 3,
+            doctorId: 'doctor-1',
+            organizationId: 'organization-1',
+            locationId: 'location-1',
           },
         ])
-        .mockResolvedValueOnce([{
-          id: 'rme-1', status: MedicalRecordStatus.FINAL, version: 2,
+        .mockResolvedValueOnce([
+          {
+            id: 'rme-1',
+            status: MedicalRecordStatus.FINAL,
+            version: 2,
           },
         ]),
       medicalRecord: { update: jest.fn() },
     };
     const { service } = createHarness(transaction);
 
-    await expect(service.saveDraft({
-      encounterId: 'encounter-1', expectedVersion: 2,
-      diagnoses: [], prescriptions: [],
+    await expect(
+      service.saveDraft(
+        {
+          encounterId: 'encounter-1',
+          expectedVersion: 2,
+          diagnoses: [],
+          prescriptions: [],
         },
         actor,
       ),
@@ -332,7 +382,12 @@ describe('RmeService lifecycle', () => {
 
     expect(result).toMatchObject({ status: 'FINAL', version: 2 });
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
-    expect(completion).toHaveBeenCalledWith(transaction, 'encounter-1', 3, actor);
+    expect(completion).toHaveBeenCalledWith(
+      transaction,
+      'encounter-1',
+      3,
+      actor,
+    );
     expect(transaction.medicalRecordAuditEvent.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         actorUserId: 'doctor-1',
@@ -346,7 +401,9 @@ describe('RmeService lifecycle', () => {
         idempotencyKey: 'finalize-request-123',
       }),
     });
-    expect(transaction.medicalRecordAuditEvent.create.mock.calls[0][0].data).not.toHaveProperty('clinicalPayload');
+    expect(
+      transaction.medicalRecordAuditEvent.create.mock.calls[0][0].data,
+    ).not.toHaveProperty('clinicalPayload');
     expect(state.committed).toBe(true);
   });
 
@@ -355,13 +412,21 @@ describe('RmeService lifecycle', () => {
     const transaction = {
       $queryRaw: jest
         .fn()
-        .mockResolvedValueOnce([{
-          id: 'encounter-1', status: 'COMPLETED', version: 4,
-          doctorId: 'doctor-1', organizationId: 'organization-1', locationId: 'location-1',
+        .mockResolvedValueOnce([
+          {
+            id: 'encounter-1',
+            status: 'COMPLETED',
+            version: 4,
+            doctorId: 'doctor-1',
+            organizationId: 'organization-1',
+            locationId: 'location-1',
           },
         ])
-        .mockResolvedValueOnce([{
-          id: 'rme-1', status: MedicalRecordStatus.FINAL, version: 2,
+        .mockResolvedValueOnce([
+          {
+            id: 'rme-1',
+            status: MedicalRecordStatus.FINAL,
+            version: 2,
           },
         ]),
       medicalRecord: {
@@ -370,15 +435,19 @@ describe('RmeService lifecycle', () => {
       },
       medicalRecordAuditEvent: {
         findUnique: jest.fn().mockResolvedValue({
-          medicalRecordId: 'rme-1', expectedVersion: 1,
-          entityVersion: 2, action: 'RME_FINALIZED',
+          medicalRecordId: 'rme-1',
+          expectedVersion: 1,
+          entityVersion: 2,
+          action: 'RME_FINALIZED',
         }),
         create: jest.fn(),
       },
     };
     const { service, completion } = createHarness(transaction);
 
-    await expect(service.finalize(finalizeCommand, actor, request)).resolves.toMatchObject({
+    await expect(
+      service.finalize(finalizeCommand, actor, request),
+    ).resolves.toMatchObject({
       status: 'FINAL',
       version: 2,
     });
@@ -391,13 +460,21 @@ describe('RmeService lifecycle', () => {
     const transaction = {
       $queryRaw: jest
         .fn()
-        .mockResolvedValueOnce([{
-          id: 'encounter-1', status: 'COMPLETED', version: 4,
-          doctorId: 'doctor-1', organizationId: 'organization-1', locationId: 'location-1',
+        .mockResolvedValueOnce([
+          {
+            id: 'encounter-1',
+            status: 'COMPLETED',
+            version: 4,
+            doctorId: 'doctor-1',
+            organizationId: 'organization-1',
+            locationId: 'location-1',
           },
         ])
-        .mockResolvedValueOnce([{
-          id: 'rme-1', status: MedicalRecordStatus.FINAL, version: 2,
+        .mockResolvedValueOnce([
+          {
+            id: 'rme-1',
+            status: MedicalRecordStatus.FINAL,
+            version: 2,
           },
         ]),
       medicalRecord: { findUnique: jest.fn(), update: jest.fn() },
@@ -408,9 +485,11 @@ describe('RmeService lifecycle', () => {
     };
     const { service, completion } = createHarness(transaction);
 
-    await expect(service.finalize({
-      ...finalizeCommand,
-      idempotencyKey: 'different-request-456',
+    await expect(
+      service.finalize(
+        {
+          ...finalizeCommand,
+          idempotencyKey: 'different-request-456',
         },
         actor,
         request,
@@ -425,19 +504,30 @@ describe('RmeService lifecycle', () => {
 
   it('rejects a stale version before any finalization mutation', async () => {
     const transaction = successfulTransaction();
-    transaction.$queryRaw.mockReset()
-      .mockResolvedValueOnce([{
-        id: 'encounter-1', status: 'IN_PROGRESS', version: 3,
-        doctorId: 'doctor-1', organizationId: 'organization-1', locationId: 'location-1',
+    transaction.$queryRaw
+      .mockReset()
+      .mockResolvedValueOnce([
+        {
+          id: 'encounter-1',
+          status: 'IN_PROGRESS',
+          version: 3,
+          doctorId: 'doctor-1',
+          organizationId: 'organization-1',
+          locationId: 'location-1',
         },
       ])
-      .mockResolvedValueOnce([{
-        id: 'rme-1', status: MedicalRecordStatus.DRAFT, version: 4,
+      .mockResolvedValueOnce([
+        {
+          id: 'rme-1',
+          status: MedicalRecordStatus.DRAFT,
+          version: 4,
         },
       ]);
     const { service } = createHarness(transaction);
 
-    await expect(service.finalize(finalizeCommand, actor, request)).rejects.toMatchObject({
+    await expect(
+      service.finalize(finalizeCommand, actor, request),
+    ).rejects.toMatchObject({
       response: { code: 'RME_VERSION_CONFLICT' },
     });
     expect(transaction.medicalRecord.update).not.toHaveBeenCalled();
@@ -445,14 +535,21 @@ describe('RmeService lifecycle', () => {
 
   it('rejects a doctor who does not own the Encounter', async () => {
     const transaction = successfulTransaction();
-    transaction.$queryRaw.mockReset().mockResolvedValueOnce([{
-      id: 'encounter-1', status: 'IN_PROGRESS', version: 3,
-      doctorId: 'doctor-other', organizationId: 'organization-1', locationId: 'location-1',
+    transaction.$queryRaw.mockReset().mockResolvedValueOnce([
+      {
+        id: 'encounter-1',
+        status: 'IN_PROGRESS',
+        version: 3,
+        doctorId: 'doctor-other',
+        organizationId: 'organization-1',
+        locationId: 'location-1',
       },
     ]);
     const { service } = createHarness(transaction);
 
-    await expect(service.finalize(finalizeCommand, actor, request)).rejects.toMatchObject({
+    await expect(
+      service.finalize(finalizeCommand, actor, request),
+    ).rejects.toMatchObject({
       response: { code: 'ENCOUNTER_NOT_ASSIGNED_TO_DOCTOR' },
     });
     expect(transaction.medicalRecord.update).not.toHaveBeenCalled();
@@ -462,32 +559,43 @@ describe('RmeService lifecycle', () => {
     ['Encounter update', new Error('encounter update failed'), false],
     ['status history', new Error('status history failed'), false],
     ['audit insert', new Error('audit insert failed'), true],
-  ])('rolls back all finalization writes when %s fails', async (_label, failure, failAudit) => {
-    const transaction = successfulTransaction();
-    const completion = failAudit ? jest.fn().mockResolvedValue({}) : jest.fn().mockRejectedValue(failure);
-    if (failAudit) {
-      transaction.medicalRecordAuditEvent.create.mockRejectedValue(failure);
-    }
-    const { service, state } = createHarness(transaction, completion);
+  ])(
+    'rolls back all finalization writes when %s fails',
+    async (_label, failure, failAudit) => {
+      const transaction = successfulTransaction();
+      const completion = failAudit
+        ? jest.fn().mockResolvedValue({})
+        : jest.fn().mockRejectedValue(failure);
+      if (failAudit) {
+        transaction.medicalRecordAuditEvent.create.mockRejectedValue(failure);
+      }
+      const { service, state } = createHarness(transaction, completion);
 
-    await expect(service.finalize(finalizeCommand, actor, request)).rejects.toBe(failure);
-    expect(state.committed).toBe(false);
-    expect(transaction.medicalRecord.update).toHaveBeenCalled();
-    if (failAudit) expect(completion).toHaveBeenCalled();
-  });
+      await expect(
+        service.finalize(finalizeCommand, actor, request),
+      ).rejects.toBe(failure);
+      expect(state.committed).toBe(false);
+      expect(transaction.medicalRecord.update).toHaveBeenCalled();
+      if (failAudit) expect(completion).toHaveBeenCalled();
+    },
+  );
 
   it('keeps empty draft input free of invented clinical values', () => {
     const parsed = parseDraftInput({
-      encounterId: 'encounter-1', expectedVersion: 0, diagnoses: [], prescriptions: [],
-    });
-    expect(parsed).toEqual(expect.objectContaining({
-      serviceProfile: 'OUTPATIENT_GENERAL',
-      validationProfile: 'OUTPATIENT_GENERAL_V1',
-      chiefComplaint: undefined,
-      presentIllness: undefined,
-      allergyReviewStatus: undefined,
+      encounterId: 'encounter-1',
+      expectedVersion: 0,
       diagnoses: [],
       prescriptions: [],
+    });
+    expect(parsed).toEqual(
+      expect.objectContaining({
+        serviceProfile: 'OUTPATIENT_GENERAL',
+        validationProfile: 'OUTPATIENT_GENERAL_V1',
+        chiefComplaint: undefined,
+        presentIllness: undefined,
+        allergyReviewStatus: undefined,
+        diagnoses: [],
+        prescriptions: [],
       }),
     );
   });
@@ -536,7 +644,9 @@ describe('RmeService lifecycle', () => {
       {
         encounterId: 'encounter-1',
         expectedVersion: 1,
-        diagnoses: [{ id: existingDiagnosis.id, icd10Code: 'J00', isPrimary: true }],
+        diagnoses: [
+          { id: existingDiagnosis.id, icd10Code: 'J00', isPrimary: true },
+        ],
         prescriptions: [],
       },
       actor,
@@ -607,9 +717,11 @@ describe('RmeService lifecycle', () => {
         findUnique: jest.fn().mockResolvedValue(saved),
       },
       clinicalObservation: {
-        findMany: jest.fn().mockResolvedValue([
-          { id: existingObservation.id, code: existingObservation.code },
-        ]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: existingObservation.id, code: existingObservation.code },
+          ]),
         update: jest.fn().mockResolvedValue(existingObservation),
         create: jest.fn(),
         deleteMany: jest.fn(),

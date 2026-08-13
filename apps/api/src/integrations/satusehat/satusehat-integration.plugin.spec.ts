@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- Jest asymmetric matchers intentionally return any in this isolated unit test. */
 import { ConflictException, HttpException } from '@nestjs/common';
 import { SatusehatIntegrationPlugin } from './satusehat-integration.plugin';
 
@@ -6,7 +5,10 @@ function buildPlugin(
   input: {
     encounters?: { previewEncounter: jest.Mock; syncEncounter: jest.Mock };
     conditions?: { previewCondition: jest.Mock; syncCondition: jest.Mock };
-    observations?: { previewObservation: jest.Mock; syncObservation: jest.Mock };
+    observations?: {
+      previewObservation: jest.Mock;
+      syncObservation: jest.Mock;
+    };
     reconciliation?: { reconcile: jest.Mock };
     prisma?: unknown;
   } = {},
@@ -194,9 +196,7 @@ describe('SatusehatIntegrationPlugin Encounter handler', () => {
   });
 
   it('rejects a handler result without a new audit log instead of returning success', async () => {
-    const syncEncounter = jest
-      .fn()
-      .mockResolvedValue({ syncedRemotely: true });
+    const syncEncounter = jest.fn().mockResolvedValue({ syncedRemotely: true });
     const findUnique = jest.fn().mockResolvedValue({
       id: 'sync-without-audit-1',
       resourceType: 'Encounter',
@@ -219,10 +219,12 @@ describe('SatusehatIntegrationPlugin Encounter handler', () => {
       prisma: { satusehatSyncLog: { findUnique } },
     });
 
-    await expect(plugin.retryLog('sync-without-audit-1')).rejects.toMatchObject({
-      status: 502,
-      response: expect.objectContaining({ code: 'SYNC_RETRY_AUDIT_MISSING' }),
-    });
+    await expect(plugin.retryLog('sync-without-audit-1')).rejects.toMatchObject(
+      {
+        status: 502,
+        response: expect.objectContaining({ code: 'SYNC_RETRY_AUDIT_MISSING' }),
+      },
+    );
   });
 
   it('returns HTTP 429 while a retryable log is inside persisted backoff', async () => {
@@ -244,7 +246,9 @@ describe('SatusehatIntegrationPlugin Encounter handler', () => {
         },
       },
     });
-    const plugin = buildPlugin({ prisma: { satusehatSyncLog: { findUnique } } });
+    const plugin = buildPlugin({
+      prisma: { satusehatSyncLog: { findUnique } },
+    });
 
     try {
       await plugin.retryLog('sync-backoff-1');

@@ -11,6 +11,7 @@ import type {
   MasterDataListQuery,
   MasterDataListResponse,
   PractitionerSummary,
+  ResourceIntegrationSummary,
 } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
 import { IntegrationRegistry } from '../integrations/integration-registry';
@@ -66,7 +67,10 @@ export class PractitionersService {
 
     try {
       const { password, locationIds, ...profile } = validated;
-      await this.validatePractitionerContext(profile.organizationId, locationIds);
+      await this.validatePractitionerContext(
+        profile.organizationId,
+        locationIds,
+      );
       const record = await this.prisma.user.create({
         data: {
           ...profile,
@@ -114,9 +118,11 @@ export class PractitionersService {
 
     if (input.organizationId) baseWhere.organizationId = input.organizationId;
     if (input.locationId) {
-      baseWhere.locationAssignments = { some: { locationId: input.locationId } };
+      baseWhere.locationAssignments = {
+        some: { locationId: input.locationId },
+      };
     }
-    if (input.role) baseWhere.role = input.role as Role;
+    if (input.role) baseWhere.role = input.role;
     if (search) {
       baseWhere.OR = [
         { username: { contains: search, mode: 'insensitive' } },
@@ -160,7 +166,7 @@ export class PractitionersService {
     const ids = records.map((record) => record.id);
     const integrations = this.integrations
       ? await this.integrations.findResourceSummaries('Practitioner', ids)
-      : new Map();
+      : new Map<string, ResourceIntegrationSummary[]>();
 
     return {
       items: records.map((record) =>
@@ -198,22 +204,23 @@ export class PractitionersService {
     )
       ? validated.organizationId
       : existing.organizationId;
-    const hasLocationIds = Object.prototype.hasOwnProperty.call(
-      validated,
-      'locationIds',
-    );
+    const hasLocationIds = 'locationIds' in validated;
     const existingLocationIds =
-      existing.locationAssignments?.map((assignment) => assignment.location.id) ??
-      (existing.locationId ? [existing.locationId] : []);
+      existing.locationAssignments?.map(
+        (assignment) => assignment.location.id,
+      ) ?? (existing.locationId ? [existing.locationId] : []);
     const nextLocationIds = hasLocationIds
-      ? validated.locationIds ?? []
+      ? (validated.locationIds ?? [])
       : existingLocationIds;
     await this.validatePractitionerContext(nextOrganizationId, nextLocationIds);
     try {
-      const { locationIds: _locationIds, ...profile } = validated;
-      const nextPrimaryLocationId = nextLocationIds.includes(existing.locationId ?? '')
+      const profile = { ...validated };
+      delete profile.locationIds;
+      const nextPrimaryLocationId = nextLocationIds.includes(
+        existing.locationId ?? '',
+      )
         ? existing.locationId
-        : nextLocationIds[0] ?? null;
+        : (nextLocationIds[0] ?? null);
 
       if (hasLocationIds) {
         await this.prisma.$transaction(async (transaction) => {
@@ -301,7 +308,9 @@ export class PractitionersService {
     if (locations.length !== locationIds.length) {
       throw new NotFoundException('Location Practitioner tidak ditemukan.');
     }
-    if (locations.some((location) => location.organizationId !== organizationId)) {
+    if (
+      locations.some((location) => location.organizationId !== organizationId)
+    ) {
       throw new ConflictException({
         code: 'PRACTITIONER_LOCATION_ORGANIZATION_MISMATCH',
         message: 'Semua Location harus berada pada Organization yang dipilih.',
@@ -314,10 +323,14 @@ export class PractitionersService {
     return this.getPractitionerRecord(id);
   }
 
-  private async toSummary(record: Awaited<ReturnType<PractitionersService['getPractitionerRecord']>>) {
+  private async toSummary(
+    record: Awaited<ReturnType<PractitionersService['getPractitionerRecord']>>,
+  ) {
     const integrations = this.integrations
-      ? await this.integrations.findResourceSummaries('Practitioner', [record.id])
-      : new Map();
+      ? await this.integrations.findResourceSummaries('Practitioner', [
+          record.id,
+        ])
+      : new Map<string, ResourceIntegrationSummary[]>();
     return toPractitionerSummary(record, integrations.get(record.id) ?? []);
   }
 

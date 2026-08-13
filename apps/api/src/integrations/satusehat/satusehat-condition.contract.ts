@@ -47,8 +47,10 @@ export interface SatusehatConditionPreview {
   payload: SatusehatConditionPayload;
 }
 
-export interface SatusehatConditionSyncResult
-  extends Omit<SatusehatConditionPreview, 'payload'> {
+export interface SatusehatConditionSyncResult extends Omit<
+  SatusehatConditionPreview,
+  'payload'
+> {
   syncedRemotely: boolean;
   syncLogId: string;
   response?: { resourceType: 'Condition'; id: string };

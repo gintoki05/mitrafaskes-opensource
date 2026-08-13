@@ -1,10 +1,6 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import {
-  MasterDataImportStatus,
-  MasterRegionLevel,
-  Prisma,
-} from '@prisma/client';
+import { MasterDataImportStatus, Prisma } from '@prisma/client';
 import type {
   MasterDataDatasetStatus,
   MasterDataRegionsResponse,
@@ -56,7 +52,7 @@ export class MasterWilayahService {
     query: MasterWilayahListQuery,
   ): Promise<MasterDataRegionsResponse> {
     const where: Prisma.MasterRegionWhereInput = {
-      level: query.level as MasterRegionLevel,
+      level: query.level,
       active: true,
       ...(query.parentCode ? { parentCode: query.parentCode } : {}),
       ...(query.search
@@ -95,7 +91,7 @@ export class MasterWilayahService {
     const item = await this.prisma.masterRegion.findUnique({
       where: {
         level_code: {
-          level: level as MasterRegionLevel,
+          level,
           code: normalizedCode,
         },
       },
@@ -183,7 +179,7 @@ export class MasterWilayahService {
             const values = recordBatch.map(
               (record) => Prisma.sql`(
               ${randomUUID()},
-              CAST(${record.level as MasterRegionLevel} AS "MasterRegionLevel"),
+              CAST(${record.level} AS "MasterRegionLevel"),
               ${record.code},
               ${record.parentCode ?? null},
               ${record.bpsCode ?? null},

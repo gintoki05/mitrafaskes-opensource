@@ -27,9 +27,7 @@ const listSorts: MasterDataListSort[] = ['name', 'active', 'createdAt'];
 @UseGuards(SessionPermissionGuard)
 @ApiTags('Practitioners')
 export class PractitionersController {
-  constructor(
-    private readonly practitioners: PractitionersService,
-  ) {}
+  constructor(private readonly practitioners: PractitionersService) {}
 
   @Post()
   @RequirePermission(AccessPermission.MASTER_DATA_WRITE)

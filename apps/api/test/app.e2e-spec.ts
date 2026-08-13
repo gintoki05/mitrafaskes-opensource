@@ -35,14 +35,17 @@ class InMemoryPatientRepository {
     const page = input.page ?? 1;
     const pageSize = Math.min(input.pageSize ?? 25, 100);
     const filteredPatients = this.patients.filter(
-      (patient) => input.active === undefined || patient.active === input.active,
+      (patient) =>
+        input.active === undefined || patient.active === input.active,
     );
     return {
       items: filteredPatients.slice((page - 1) * pageSize, page * pageSize),
       meta: { page, pageSize, total: filteredPatients.length },
       statusCounts: {
-        active: this.patients.filter((patient) => patient.active !== false).length,
-        inactive: this.patients.filter((patient) => patient.active === false).length,
+        active: this.patients.filter((patient) => patient.active !== false)
+          .length,
+        inactive: this.patients.filter((patient) => patient.active === false)
+          .length,
       },
     };
   }
@@ -156,8 +159,12 @@ describe('Access control (e2e)', () => {
       .overrideProvider(RmeService)
       .useValue({
         findByEncounterId: jest.fn().mockResolvedValue(null),
-        saveDraft: jest.fn().mockResolvedValue({ id: 'rme-test-1', status: 'DRAFT' }),
-        finalize: jest.fn().mockResolvedValue({ id: 'rme-test-1', status: 'FINAL' }),
+        saveDraft: jest
+          .fn()
+          .mockResolvedValue({ id: 'rme-test-1', status: 'DRAFT' }),
+        finalize: jest
+          .fn()
+          .mockResolvedValue({ id: 'rme-test-1', status: 'FINAL' }),
       })
       .compile();
 
@@ -219,7 +226,11 @@ describe('Access control (e2e)', () => {
       .expect(200);
 
     expect(capabilities.body.integrations).toEqual([
-      expect.objectContaining({ provider: 'SATUSEHAT', enabled: false, status: 'DISABLED' }),
+      expect.objectContaining({
+        provider: 'SATUSEHAT',
+        enabled: false,
+        status: 'DISABLED',
+      }),
     ]);
 
     const logs = await request(app.getHttpServer())
@@ -244,7 +255,9 @@ describe('Access control (e2e)', () => {
     expect(conditionSync.body.code).toBe('INTEGRATION_DISABLED');
 
     const observationSync = await request(app.getHttpServer())
-      .post('/api/integrations/SATUSEHAT/resources/Observation/observation-1/sync')
+      .post(
+        '/api/integrations/SATUSEHAT/resources/Observation/observation-1/sync',
+      )
       .set(bearer('mock-jwt-token-admin'))
       .expect(503);
 
@@ -265,7 +278,11 @@ describe('Access control (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/encounters')
       .set(bearer('mock-jwt-token-perawat_ani'))
-      .send({ patientId: 'patient-1', locationId: 'location-1', doctorId: 'doctor-1' })
+      .send({
+        patientId: 'patient-1',
+        locationId: 'location-1',
+        doctorId: 'doctor-1',
+      })
       .expect(201);
 
     await request(app.getHttpServer())
@@ -300,7 +317,11 @@ describe('Access control (e2e)', () => {
     await request(app.getHttpServer())
       .post('/api/encounters')
       .set(bearer('mock-jwt-token-dr_budi'))
-      .send({ patientId: 'patient-1', locationId: 'location-1', doctorId: 'doctor-1' })
+      .send({
+        patientId: 'patient-1',
+        locationId: 'location-1',
+        doctorId: 'doctor-1',
+      })
       .expect(403);
 
     await request(app.getHttpServer())

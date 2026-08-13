@@ -69,7 +69,9 @@ function createService() {
   const record = encounterRecord();
   const transaction = {
     patient: {
-      findUnique: jest.fn().mockResolvedValue({ id: 'patient-1', active: true }),
+      findUnique: jest
+        .fn()
+        .mockResolvedValue({ id: 'patient-1', active: true }),
     },
     location: {
       findUnique: jest.fn().mockResolvedValue({
@@ -102,8 +104,9 @@ function createService() {
   const prisma = {
     user: { findUnique: jest.fn().mockResolvedValue({ id: 'user-1' }) },
     encounter: { findUnique: jest.fn().mockResolvedValue(record) },
-    $transaction: jest.fn(async (callback: (tx: typeof transaction) => unknown) =>
-      callback(transaction),
+    $transaction: jest.fn(
+      async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
     ),
   } as unknown as PrismaService;
   const service = new EncountersService(prisma);
@@ -115,7 +118,11 @@ describe('EncountersService', () => {
     const { service, transaction } = createService();
 
     const result = await service.create(
-      { patientId: 'patient-1', locationId: 'location-1', doctorId: 'doctor-1' },
+      {
+        patientId: 'patient-1',
+        locationId: 'location-1',
+        doctorId: 'doctor-1',
+      },
       { id: 'user-1', username: 'perawat_ani', role: 'PERAWAT' },
     );
 
@@ -167,19 +174,17 @@ describe('EncountersService', () => {
     };
     const prisma = {
       user: { findUnique: jest.fn().mockResolvedValue({ id: 'user-db-1' }) },
-      $transaction: jest.fn(async (callback: (tx: typeof transaction) => unknown) =>
-        callback(transaction),
+      $transaction: jest.fn(
+        async (callback: (tx: typeof transaction) => unknown) =>
+          callback(transaction),
       ),
     } as unknown as PrismaService;
-    const service = new EncountersService(
-      prisma,
-      {
-        findForList: jest.fn(),
-        findDependencyLink: jest.fn(),
-        toLinkage: jest.fn(),
-        toSyncSummary: jest.fn(),
-      } as never,
-    );
+    const service = new EncountersService(prisma, {
+      findForList: jest.fn(),
+      findDependencyLink: jest.fn(),
+      toLinkage: jest.fn(),
+      toSyncSummary: jest.fn(),
+    } as never);
 
     const result = await service.updateStatus(
       current.id,
@@ -236,14 +241,14 @@ describe('EncountersService', () => {
     };
     const prisma = {
       user: { findUnique: jest.fn().mockResolvedValue({ id: 'user-db-1' }) },
-      $transaction: jest.fn(async (callback: (tx: typeof transaction) => unknown) =>
-        callback(transaction),
+      $transaction: jest.fn(
+        async (callback: (tx: typeof transaction) => unknown) =>
+          callback(transaction),
       ),
     } as unknown as PrismaService;
-    const service = new EncountersService(
-      prisma,
-      { findForList: jest.fn() } as never,
-    );
+    const service = new EncountersService(prisma, {
+      findForList: jest.fn(),
+    } as never);
 
     await expect(
       service.updateStatus(
@@ -290,11 +295,14 @@ describe('EncountersService', () => {
     };
     const prisma = {
       user: { findUnique: jest.fn().mockResolvedValue({ id: 'doctor-1' }) },
-      $transaction: jest.fn(async (callback: (tx: typeof transaction) => unknown) =>
-        callback(transaction),
+      $transaction: jest.fn(
+        async (callback: (tx: typeof transaction) => unknown) =>
+          callback(transaction),
       ),
     } as unknown as PrismaService;
-    const service = new EncountersService(prisma, { findForList: jest.fn() } as never);
+    const service = new EncountersService(prisma, {
+      findForList: jest.fn(),
+    } as never);
 
     await expect(
       service.updateStatus(

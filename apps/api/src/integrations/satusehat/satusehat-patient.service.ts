@@ -11,7 +11,6 @@ import type {
   SatusehatPatientLookupQuery,
   SatusehatPatientMutationResponse,
   SatusehatPatientPreview,
-  SatusehatPatientRemoteSummary,
   SatusehatPatientSearchResponse,
   SatusehatPatientSyncResult,
 } from '@mitrafaskes/shared';
@@ -70,8 +69,11 @@ export class SatusehatPatientService {
     }
   }
 
-  async previewPatient(localResourceId: string): Promise<SatusehatPatientPreview> {
-    const patient = await this.patients.getPatientForExternalIntegration(localResourceId);
+  async previewPatient(
+    localResourceId: string,
+  ): Promise<SatusehatPatientPreview> {
+    const patient =
+      await this.patients.getPatientForExternalIntegration(localResourceId);
     const environment = this.readEnvironment();
     const link = await this.findLocalLink(localResourceId, environment);
 
@@ -166,9 +168,13 @@ export class SatusehatPatientService {
 
     try {
       const externalResourceId = this.readExternalResourceId(input);
-      const patient = await this.patients.getPatientForExternalIntegration(localResourceId);
+      const patient =
+        await this.patients.getPatientForExternalIntegration(localResourceId);
       const environment = this.readEnvironment();
-      const currentLink = await this.findLocalLink(localResourceId, environment);
+      const currentLink = await this.findLocalLink(
+        localResourceId,
+        environment,
+      );
 
       if (
         currentLink &&
@@ -300,7 +306,10 @@ export class SatusehatPatientService {
     });
   }
 
-  private findLinkageByExternalId(externalResourceId: string, environment: string) {
+  private findLinkageByExternalId(
+    externalResourceId: string,
+    environment: string,
+  ) {
     return this.prisma.externalResourceLink.findUnique({
       where: {
         externalResourceScope: {
@@ -415,7 +424,7 @@ export class SatusehatPatientService {
 
   private extractResourceId(response: unknown): string | undefined {
     if (!isRecord(response)) return undefined;
-    const identifiers = Array.isArray(response.identifier)
+    const identifiers: unknown[] = Array.isArray(response.identifier)
       ? response.identifier
       : [];
     const ihs = identifiers.find(

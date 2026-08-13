@@ -9,10 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import {
-  AccessPermission,
-  UserRole,
-} from '@mitrafaskes/shared';
+import { AccessPermission, UserRole } from '@mitrafaskes/shared';
 import { Request } from 'express';
 import { RequirePermission } from '../auth/access-control.decorator';
 import {
@@ -77,7 +74,7 @@ export class MasterDataReferenceController {
   @Get('regions')
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
   listRegions(@Query() query: RegionQuery) {
-    let level;
+    let level: ReturnType<typeof parseRegionLevel>;
     try {
       level = parseRegionLevel(query.level || 'PROVINCE');
     } catch (error) {

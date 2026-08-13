@@ -8,15 +8,9 @@ import type {
 } from './patient.validation';
 
 type RegionCodeField =
-  | 'provinceCode'
-  | 'regencyCode'
-  | 'districtCode'
-  | 'villageCode';
+  'provinceCode' | 'regencyCode' | 'districtCode' | 'villageCode';
 type RegionNameField =
-  | 'provinceName'
-  | 'regencyName'
-  | 'districtName'
-  | 'villageName';
+  'provinceName' | 'regencyName' | 'districtName' | 'villageName';
 
 type RegionDefinition = {
   level: MasterRegionLevel;
@@ -143,7 +137,8 @@ export class PatientAddressRegionValidator {
       const hasUnchangedLegacyValue =
         options.mode === 'UPDATE' &&
         options.previousAddresses?.some(
-          (previous) => isCurrentAddress(previous) && sameRegionValues(previous, address),
+          (previous) =>
+            isCurrentAddress(previous) && sameRegionValues(previous, address),
         );
       if (hasUnchangedLegacyValue) return address;
 

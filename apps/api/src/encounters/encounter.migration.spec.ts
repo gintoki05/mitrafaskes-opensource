@@ -23,7 +23,7 @@ describe('PRI-14 Encounter migration', () => {
     );
     expect(migration).toContain('Encounter_active_patient_context_key');
     expect(migration).toContain(
-      'WHERE "status" IN (\'WAITING\', \'IN_PROGRESS\')',
+      "WHERE \"status\" IN ('WAITING', 'IN_PROGRESS')",
     );
   });
 
@@ -32,7 +32,9 @@ describe('PRI-14 Encounter migration', () => {
     expect(migration).toContain('CREATE TABLE "EncounterQueueCounter"');
     expect(migration).toContain('actorUsername');
     expect(migration).toContain('actorRole');
-    expect(migration).toContain('EncounterQueueCounter_locationId_queueDate_key');
+    expect(migration).toContain(
+      'EncounterQueueCounter_locationId_queueDate_key',
+    );
   });
 
   it('contains no remote SATUSEHAT request', () => {

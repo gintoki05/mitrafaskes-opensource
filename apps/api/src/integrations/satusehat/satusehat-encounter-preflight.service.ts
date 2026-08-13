@@ -215,7 +215,9 @@ export class SatusehatEncounterPreflightService {
     if (diagnoses.length === 0) return [];
 
     const catalogEntries = await this.prisma.masterIcd10.findMany({
-      where: { code: { in: diagnoses.map((diagnosis) => diagnosis.icd10Code) } },
+      where: {
+        code: { in: diagnoses.map((diagnosis) => diagnosis.icd10Code) },
+      },
       select: { code: true, display: true },
     });
     const catalogByCode = new Map(
@@ -249,7 +251,8 @@ export class SatusehatEncounterPreflightService {
         return [
           {
             externalResourceId,
-            display: catalogByCode.get(diagnosis.icd10Code) ?? diagnosis.icd10Code,
+            display:
+              catalogByCode.get(diagnosis.icd10Code) ?? diagnosis.icd10Code,
             rank: index + 1,
           },
         ];

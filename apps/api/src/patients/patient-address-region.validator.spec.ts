@@ -94,7 +94,10 @@ describe('PatientAddressRegionValidator', () => {
     );
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { active: true, code: { in: ['31', '3171', '317101', '3171011001'] } },
+        where: {
+          active: true,
+          code: { in: ['31', '3171', '317101', '3171011001'] },
+        },
       }),
     );
   });
@@ -140,10 +143,9 @@ describe('PatientAddressRegionValidator', () => {
     const { validator } = createValidator([]);
 
     await expect(
-      validator.canonicalize(
-        [address({ provinceName: 'Provinsi Manual' })],
-        { mode: 'CREATE' },
-      ),
+      validator.canonicalize([address({ provinceName: 'Provinsi Manual' })], {
+        mode: 'CREATE',
+      }),
     ).rejects.toMatchObject({
       issues: [
         expect.objectContaining({

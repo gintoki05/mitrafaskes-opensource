@@ -60,7 +60,9 @@ describe('SATUSEHAT Patient mapper', () => {
     expect(toSatusehatPatientPatch(patient)).not.toContainEqual(
       expect.objectContaining({ path: '/multipleBirthBoolean' }),
     );
-    expect(toSatusehatPatientPatch({ ...patient, multipleBirthOrder: 2 })).not.toContainEqual(
+    expect(
+      toSatusehatPatientPatch({ ...patient, multipleBirthOrder: 2 }),
+    ).not.toContainEqual(
       expect.objectContaining({ path: '/multipleBirthInteger' }),
     );
     expect(toSatusehatPatientPatch(patient)).not.toContainEqual({

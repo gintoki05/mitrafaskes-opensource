@@ -6,12 +6,16 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import type { Request } from 'express';
 import {
   AccessPermission,
   evaluateAccess,
   UserRole,
 } from '@mitrafaskes/shared';
-import { ACCESS_PERMISSION_KEY, IS_PUBLIC_KEY } from './access-control.decorator';
+import {
+  ACCESS_PERMISSION_KEY,
+  IS_PUBLIC_KEY,
+} from './access-control.decorator';
 
 export interface AuthenticatedUser {
   id: string;
@@ -19,9 +23,19 @@ export interface AuthenticatedUser {
   role: UserRole;
 }
 
+type AuthenticatedRequest = Request & { user?: AuthenticatedUser };
+
 const SESSIONS: Record<string, AuthenticatedUser> = {
-  'mock-jwt-token-admin': { id: 'usr-admin', username: 'admin', role: UserRole.ADMIN },
-  'mock-jwt-token-dr_budi': { id: 'usr-dr_budi', username: 'dr_budi', role: UserRole.DOKTER },
+  'mock-jwt-token-admin': {
+    id: 'usr-admin',
+    username: 'admin',
+    role: UserRole.ADMIN,
+  },
+  'mock-jwt-token-dr_budi': {
+    id: 'usr-dr_budi',
+    username: 'dr_budi',
+    role: UserRole.DOKTER,
+  },
   'mock-jwt-token-perawat_ani': {
     id: 'usr-perawat_ani',
     username: 'perawat_ani',
@@ -46,7 +60,7 @@ export class SessionPermissionGuard implements CanActivate {
     );
     if (!permission) return true;
 
-    const request = context.switchToHttp().getRequest();
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     const authorization = request.headers.authorization;
     const token =
       typeof authorization === 'string' && authorization.startsWith('Bearer ')
@@ -65,7 +79,10 @@ export class SessionPermissionGuard implements CanActivate {
     const decision = evaluateAccess(user.role, permission);
     if (!decision.allowed) {
       if (decision.statusCode === 401) {
-        throw new UnauthorizedException({ code: decision.code, message: 'Sesi tidak valid' });
+        throw new UnauthorizedException({
+          code: decision.code,
+          message: 'Sesi tidak valid',
+        });
       }
       throw new ForbiddenException({
         code: decision.code,

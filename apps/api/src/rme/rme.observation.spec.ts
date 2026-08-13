@@ -26,8 +26,9 @@ describe('RME typed observations', () => {
       ]),
     );
     expect(
-      observations.find((observation) => observation.code === 'systolic-blood-pressure')
-        ?.valueQuantityValue,
+      observations.find(
+        (observation) => observation.code === 'systolic-blood-pressure',
+      )?.valueQuantityValue,
     ).toBe(240);
   });
 

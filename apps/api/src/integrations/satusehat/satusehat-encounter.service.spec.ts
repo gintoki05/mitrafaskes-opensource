@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- Jest matcher and mock-call APIs intentionally expose any in this isolated unit test. */
 import { BadGatewayException, ConflictException } from '@nestjs/common';
 import type { SatusehatEncounterPreview } from '@mitrafaskes/shared';
 import { SatusehatEncounterService } from './satusehat-encounter.service';

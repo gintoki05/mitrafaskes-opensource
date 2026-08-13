@@ -303,7 +303,8 @@ export class SatusehatObservationService {
 
   private readEnvironment(): string {
     return (
-      process.env.SATUSEHAT_ENVIRONMENT?.trim() || DEFAULT_OBSERVATION_ENVIRONMENT
+      process.env.SATUSEHAT_ENVIRONMENT?.trim() ||
+      DEFAULT_OBSERVATION_ENVIRONMENT
     );
   }
 

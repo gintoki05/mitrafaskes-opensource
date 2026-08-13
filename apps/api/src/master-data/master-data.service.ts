@@ -31,11 +31,7 @@ const optional = (value: string | null | undefined): string | undefined =>
 
 const optionalNumber = (value: unknown): number | undefined => {
   if (typeof value === 'number') return value;
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'toNumber' in value
-  ) {
+  if (typeof value === 'object' && value !== null && 'toNumber' in value) {
     const decimal = value as { toNumber?: () => number };
     return typeof decimal.toNumber === 'function'
       ? decimal.toNumber()
@@ -106,12 +102,14 @@ type NormalizedListQuery = Omit<MasterDataListQuery, 'page' | 'pageSize'> & {
 const normalizeListQuery = (
   query: MasterDataListQuery = {},
 ): NormalizedListQuery => {
-  const page = Number.isInteger(query.page) && query.page! > 0
-    ? query.page!
-    : DEFAULT_PAGE;
-  const pageSize = Number.isInteger(query.pageSize) && query.pageSize! > 0
-    ? Math.min(query.pageSize!, MAX_PAGE_SIZE)
-    : DEFAULT_PAGE_SIZE;
+  const page =
+    Number.isInteger(query.page) && query.page! > 0
+      ? query.page!
+      : DEFAULT_PAGE;
+  const pageSize =
+    Number.isInteger(query.pageSize) && query.pageSize! > 0
+      ? Math.min(query.pageSize!, MAX_PAGE_SIZE)
+      : DEFAULT_PAGE_SIZE;
 
   return { ...query, page, pageSize };
 };
@@ -157,7 +155,10 @@ export class MasterDataService {
             locations.map((location) => location.id),
           ),
         ])
-      : [new Map(), new Map()];
+      : [
+          new Map<string, ResourceIntegrationSummary[]>(),
+          new Map<string, ResourceIntegrationSummary[]>(),
+        ];
 
     return {
       organizations: organizations.map((organization) =>
@@ -211,7 +212,7 @@ export class MasterDataService {
           'Organization',
           records.map((record) => record.id),
         )
-      : new Map();
+      : new Map<string, ResourceIntegrationSummary[]>();
 
     return {
       items: records.map((record) =>
@@ -261,7 +262,7 @@ export class MasterDataService {
           'Location',
           records.map((record) => record.id),
         )
-      : new Map();
+      : new Map<string, ResourceIntegrationSummary[]>();
 
     return {
       items: records.map((record) =>

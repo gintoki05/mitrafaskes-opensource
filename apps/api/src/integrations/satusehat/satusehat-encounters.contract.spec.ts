@@ -169,8 +169,7 @@ describe('SATUSEHAT Encounter payload contract', () => {
         use: {
           coding: [
             {
-              system:
-                'http://terminology.hl7.org/CodeSystem/diagnosis-role',
+              system: 'http://terminology.hl7.org/CodeSystem/diagnosis-role',
               code: 'AD',
               display: 'Admission diagnosis',
             },
@@ -186,8 +185,7 @@ describe('SATUSEHAT Encounter payload contract', () => {
         use: {
           coding: [
             {
-              system:
-                'http://terminology.hl7.org/CodeSystem/diagnosis-role',
+              system: 'http://terminology.hl7.org/CodeSystem/diagnosis-role',
               code: 'AD',
               display: 'Admission diagnosis',
             },

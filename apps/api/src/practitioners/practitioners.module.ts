@@ -5,10 +5,7 @@ import { PractitionersService } from './practitioners.service';
 
 @Module({
   controllers: [PractitionersController],
-  providers: [
-    PrismaService,
-    PractitionersService,
-  ],
+  providers: [PrismaService, PractitionersService],
   exports: [PractitionersService, PrismaService],
 })
 export class PractitionersModule {}

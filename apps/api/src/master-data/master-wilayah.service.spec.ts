@@ -39,7 +39,12 @@ describe('MasterWilayahService refresh pipeline', () => {
         sourceVersion: 'v1',
         complete: true,
         records: [
-          { level: 'REGENCY', code: '1103', parentCode: '11', name: 'Aceh Timur' },
+          {
+            level: 'REGENCY',
+            code: '1103',
+            parentCode: '11',
+            name: 'Aceh Timur',
+          },
         ],
       }),
     };
@@ -91,9 +96,11 @@ describe('MasterWilayahService refresh pipeline', () => {
     prisma.masterRegion.count.mockResolvedValue(1);
     const tx = {
       masterRegion: {
-        findMany: jest.fn().mockResolvedValue([
-          { id: 'stale-1', level: 'PROVINCE', code: '12' },
-        ]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { id: 'stale-1', level: 'PROVINCE', code: '12' },
+          ]),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       masterDataImportRun: {
@@ -108,9 +115,7 @@ describe('MasterWilayahService refresh pipeline', () => {
         source: 'SATUSEHAT',
         sourceVersion: 'v1',
         complete: true,
-        records: [
-          { level: 'PROVINCE', code: '11', name: 'Aceh' },
-        ],
+        records: [{ level: 'PROVINCE', code: '11', name: 'Aceh' }],
       }),
     };
     const datasetStatuses = {

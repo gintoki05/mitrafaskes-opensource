@@ -5,11 +5,12 @@ import {
   LocationStatus,
   EncounterStatus as PrismaEncounterStatus,
 } from '@prisma/client';
+import { EncounterStatus, UserRole } from '@mitrafaskes/shared';
 import type {
   Encounter as SharedEncounter,
   EncounterListQuery,
-  EncounterStatus,
 } from '@mitrafaskes/shared';
+import type { ResourceIntegrationSummary } from '@mitrafaskes/shared';
 import { randomUUID } from 'node:crypto';
 import type { AuthenticatedUser } from '../auth/session-permission.guard';
 import { PrismaService } from '../database/prisma.service';
@@ -45,10 +46,11 @@ type EncounterActor = Pick<AuthenticatedUser, 'username' | 'role'> & {
 };
 
 const mapStatusToPrisma = (status: EncounterStatus): PrismaEncounterStatus =>
-  status as PrismaEncounterStatus;
+  status;
 
 const isUniqueError = (error: unknown): boolean =>
-  error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+  error instanceof Prisma.PrismaClientKnownRequestError &&
+  error.code === 'P2002';
 
 @Injectable()
 export class EncountersService {
@@ -70,20 +72,31 @@ export class EncountersService {
     } catch (error) {
       throw new EncounterValidationError(
         error instanceof Error ? error.message : 'Tanggal antrean tidak valid',
-        [{ field: 'queueDate', message: 'Tanggal antrean harus berformat YYYY-MM-DD' }],
+        [
+          {
+            field: 'queueDate',
+            message: 'Tanggal antrean harus berformat YYYY-MM-DD',
+          },
+        ],
       );
     }
     const page = this.normalizePositiveInteger(query.page, 1);
-    const pageSize = Math.min(this.normalizePositiveInteger(query.pageSize, 25), 100);
+    const pageSize = Math.min(
+      this.normalizePositiveInteger(query.pageSize, 25),
+      100,
+    );
     const doctorId =
-      actor?.role === 'DOKTER'
+      actor?.role === UserRole.DOKTER
         ? await this.resolveActorUserId(actor)
         : undefined;
     const { records, total } = await this.repository.findMany(
       {
         queueDate,
         locationId: query.locationId,
-        doctorId: actor?.role === 'DOKTER' ? doctorId ?? '__unknown_doctor__' : undefined,
+        doctorId:
+          actor?.role === UserRole.DOKTER
+            ? (doctorId ?? '__unknown_doctor__')
+            : undefined,
         status: query.status ? mapStatusToPrisma(query.status) : undefined,
       },
       page,
@@ -94,7 +107,7 @@ export class EncountersService {
           'Encounter',
           records.map((record) => record.id),
         )
-      : new Map();
+      : new Map<string, ResourceIntegrationSummary[]>();
     return {
       items: records.map((record) =>
         toEncounter(record, integrations.get(record.id) ?? []),
@@ -103,7 +116,10 @@ export class EncountersService {
     };
   }
 
-  async create(input: unknown, actor: EncounterActor): Promise<SharedEncounter> {
+  async create(
+    input: unknown,
+    actor: EncounterActor,
+  ): Promise<SharedEncounter> {
     const validated = validateCreateEncounter(input);
     const actorUserId = await this.resolveActorUserId(actor);
     const queueDateValue = formatFacilityDate(new Date());
@@ -111,13 +127,21 @@ export class EncountersService {
 
     try {
       const record = await this.prisma.$transaction(async (transaction) => {
-        const context = await this.readAndValidateContext(transaction, validated);
+        const context = await this.readAndValidateContext(
+          transaction,
+          validated,
+        );
         const duplicate = await transaction.encounter.findFirst({
           where: {
             patientId: validated.patientId,
             locationId: validated.locationId,
             queueDate,
-            status: { in: [PrismaEncounterStatus.WAITING, PrismaEncounterStatus.IN_PROGRESS] },
+            status: {
+              in: [
+                PrismaEncounterStatus.WAITING,
+                PrismaEncounterStatus.IN_PROGRESS,
+              ],
+            },
           },
           select: { id: true },
         });
@@ -156,7 +180,7 @@ export class EncountersService {
                 periodStart: now,
                 actorUserId,
                 actorUsername: actor.username,
-                actorRole: actor.role as Role,
+                actorRole: actor.role,
               },
             },
           },
@@ -237,13 +261,22 @@ export class EncountersService {
       }),
     ]);
     if (!patient || !patient.active) {
-      throw new EncounterContextError('Pasien tidak ditemukan atau tidak aktif', 'PATIENT_NOT_FOUND');
+      throw new EncounterContextError(
+        'Pasien tidak ditemukan atau tidak aktif',
+        'PATIENT_NOT_FOUND',
+      );
     }
     if (!location) {
-      throw new EncounterContextError('Lokasi layanan tidak ditemukan', 'LOCATION_NOT_FOUND');
+      throw new EncounterContextError(
+        'Lokasi layanan tidak ditemukan',
+        'LOCATION_NOT_FOUND',
+      );
     }
     if (!location.active || location.status !== LocationStatus.ACTIVE) {
-      throw new EncounterContextError('Lokasi layanan tidak aktif', 'LOCATION_INACTIVE');
+      throw new EncounterContextError(
+        'Lokasi layanan tidak aktif',
+        'LOCATION_INACTIVE',
+      );
     }
     if (!location.organization) {
       throw new EncounterContextError(
@@ -258,14 +291,20 @@ export class EncountersService {
       );
     }
     if (!doctor || !doctor.active || doctor.role !== Role.DOKTER) {
-      throw new EncounterContextError('Dokter tidak ditemukan atau tidak aktif', 'PRACTITIONER_NOT_FOUND');
+      throw new EncounterContextError(
+        'Dokter tidak ditemukan atau tidak aktif',
+        'PRACTITIONER_NOT_FOUND',
+      );
     }
     const assignedToLocation = doctor.locationAssignments
       ? doctor.locationAssignments.some(
           (assignment) => assignment.locationId === location.id,
         )
       : doctor.locationId === location.id;
-    if (doctor.organizationId !== location.organizationId || !assignedToLocation) {
+    if (
+      doctor.organizationId !== location.organizationId ||
+      !assignedToLocation
+    ) {
       throw new EncounterContextError(
         'Dokter belum ditugaskan ke lokasi layanan yang dipilih',
         'PRACTITIONER_NOT_ASSIGNED_TO_LOCATION',
@@ -293,7 +332,7 @@ export class EncountersService {
     );
     const current = locked[0];
     if (!current) throw new EncounterNotFoundError();
-    if (actor.role === 'DOKTER' && actorUserId !== current.doctorId) {
+    if (actor.role === UserRole.DOKTER && actorUserId !== current.doctorId) {
       throw new ForbiddenException({
         code: 'ENCOUNTER_NOT_ASSIGNED_TO_DOCTOR',
         message: 'Encounter ini ditugaskan kepada dokter lain.',
@@ -324,9 +363,15 @@ export class EncountersService {
       status: mapStatusToPrisma(input.status),
       version: { increment: 1 },
     };
-    if (input.status === 'IN_PROGRESS') lifecycleData.startedAt = now;
-    if (input.status === 'COMPLETED') lifecycleData.completedAt = now;
-    if (input.status === 'CANCELLED') lifecycleData.cancelledAt = now;
+    if (input.status === EncounterStatus.IN_PROGRESS) {
+      lifecycleData.startedAt = now;
+    }
+    if (input.status === EncounterStatus.COMPLETED) {
+      lifecycleData.completedAt = now;
+    }
+    if (input.status === EncounterStatus.CANCELLED) {
+      lifecycleData.cancelledAt = now;
+    }
 
     await transaction.encounter.update({ where: { id }, data: lifecycleData });
     await transaction.encounterStatusHistory.create({
@@ -336,15 +381,20 @@ export class EncountersService {
         periodStart: now,
         actorUserId,
         actorUsername: actor.username,
-        actorRole: actor.role as Role,
+        actorRole: actor.role,
       },
     });
-    const updated = await this.repository.findByIdInTransaction(transaction, id);
+    const updated = await this.repository.findByIdInTransaction(
+      transaction,
+      id,
+    );
     if (!updated) throw new EncounterNotFoundError();
     return updated;
   }
 
-  private async resolveActorUserId(actor: EncounterActor): Promise<string | undefined> {
+  private async resolveActorUserId(
+    actor: EncounterActor,
+  ): Promise<string | undefined> {
     const user = await this.prisma.user.findUnique({
       where: { username: actor.username },
       select: { id: true },
@@ -352,7 +402,10 @@ export class EncountersService {
     return user?.id;
   }
 
-  private normalizePositiveInteger(value: number | undefined, fallback: number): number {
+  private normalizePositiveInteger(
+    value: number | undefined,
+    fallback: number,
+  ): number {
     return value !== undefined && Number.isInteger(value) && value > 0
       ? value
       : fallback;

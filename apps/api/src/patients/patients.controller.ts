@@ -16,13 +16,17 @@ import { PatientsService } from './patients.service';
 
 type PatientHttpQuery = Record<string, string | undefined>;
 
-const parsePositiveInteger = (value: string | undefined): number | undefined => {
+const parsePositiveInteger = (
+  value: string | undefined,
+): number | undefined => {
   if (!value) return undefined;
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : undefined;
 };
 
-const parseOptionalBoolean = (value: string | undefined): boolean | undefined => {
+const parseOptionalBoolean = (
+  value: string | undefined,
+): boolean | undefined => {
   if (value === 'true') return true;
   if (value === 'false') return false;
   return undefined;
@@ -32,9 +36,7 @@ const parseOptionalBoolean = (value: string | undefined): boolean | undefined =>
 @UseGuards(SessionPermissionGuard)
 @ApiTags('Patients')
 export class PatientsController {
-  constructor(
-    private readonly patients: PatientsService,
-  ) {}
+  constructor(private readonly patients: PatientsService) {}
 
   @Get()
   @RequirePermission(AccessPermission.PATIENT_READ)

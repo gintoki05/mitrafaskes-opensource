@@ -147,7 +147,7 @@ function readReference(
 function readFirstCoding(
   value: unknown,
 ): { code?: string; display?: string } | undefined {
-  const concept = Array.isArray(value) ? value[0] : value;
+  const concept: unknown = Array.isArray(value) ? value[0] : value;
   if (!isRecord(concept) || !Array.isArray(concept.coding)) return undefined;
   const coding = concept.coding.find(isRecord);
   if (!coding) return undefined;
@@ -165,7 +165,7 @@ function readAddress(value: unknown):
       countryCode?: string;
     }
   | undefined {
-  const address = Array.isArray(value) ? value[0] : value;
+  const address: unknown = Array.isArray(value) ? value[0] : value;
   if (!isRecord(address)) return undefined;
 
   const text = readRecordString(address, 'text');
@@ -184,20 +184,23 @@ function readAddress(value: unknown):
     text: (text ?? composedText) || undefined,
     city,
     postalCode,
-    countryCode: countryCode && /^[A-Z]{2}$/.test(countryCode)
-      ? countryCode
-      : undefined,
+    countryCode:
+      countryCode && /^[A-Z]{2}$/.test(countryCode) ? countryCode : undefined,
   };
 }
 
-function readPosition(value: unknown):
-  | { latitude?: number; longitude?: number; altitude?: number }
-  | undefined {
+function readPosition(
+  value: unknown,
+): { latitude?: number; longitude?: number; altitude?: number } | undefined {
   if (!isRecord(value)) return undefined;
   const latitude = readNumber(value.latitude);
   const longitude = readNumber(value.longitude);
   const altitude = readNumber(value.altitude);
-  if (latitude === undefined && longitude === undefined && altitude === undefined) {
+  if (
+    latitude === undefined &&
+    longitude === undefined &&
+    altitude === undefined
+  ) {
     return undefined;
   }
   return { latitude, longitude, altitude };
@@ -219,7 +222,8 @@ function readRecordString(
 }
 
 function readNumber(value: unknown): number | undefined {
-  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'number')
+    return Number.isFinite(value) ? value : undefined;
   if (typeof value !== 'string' || !value.trim()) return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;

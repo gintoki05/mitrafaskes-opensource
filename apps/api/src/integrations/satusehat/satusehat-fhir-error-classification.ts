@@ -165,9 +165,7 @@ export function classifySatusehatFhirFailure(
     return classification('DUPLICATE', false, 'RECONCILE');
   }
 
-  if (
-    VALIDATION_STATUSES.has(context.httpStatus ?? 0)
-  ) {
+  if (VALIDATION_STATUSES.has(context.httpStatus ?? 0)) {
     return classification('VALIDATION', false, 'FIX_PAYLOAD');
   }
 

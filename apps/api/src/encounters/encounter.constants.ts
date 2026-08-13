@@ -24,7 +24,10 @@ export const parseFacilityDate = (value: string): Date => {
     throw new Error('Tanggal antrean harus berformat YYYY-MM-DD');
   }
   const date = new Date(`${value}T00:00:00.000Z`);
-  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) {
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.toISOString().slice(0, 10) !== value
+  ) {
     throw new Error('Tanggal antrean tidak valid');
   }
   return date;
@@ -32,4 +35,5 @@ export const parseFacilityDate = (value: string): Date => {
 
 export const currentFacilityDate = (): string => formatFacilityDate(new Date());
 
-export const yearFromFacilityDate = (value: string): string => value.slice(0, 4);
+export const yearFromFacilityDate = (value: string): string =>
+  value.slice(0, 4);

@@ -32,11 +32,7 @@ describe('MasterMaritalStatusService', () => {
     ]);
     expect(findMany).toHaveBeenCalledWith({
       where: { active: true },
-      orderBy: [
-        { displayOrder: 'asc' },
-        { display: 'asc' },
-        { code: 'asc' },
-      ],
+      orderBy: [{ displayOrder: 'asc' }, { display: 'asc' }, { code: 'asc' }],
     });
   });
 });

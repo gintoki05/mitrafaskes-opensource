@@ -265,7 +265,8 @@ export class SatusehatLocationService {
   private readConfig(): { environment: string } {
     return {
       environment:
-        process.env.SATUSEHAT_ENVIRONMENT?.trim() || DEFAULT_SATUSEHAT_ENVIRONMENT,
+        process.env.SATUSEHAT_ENVIRONMENT?.trim() ||
+        DEFAULT_SATUSEHAT_ENVIRONMENT,
     };
   }
 
@@ -293,7 +294,8 @@ export class SatusehatLocationService {
     ) {
       throw new ConflictException({
         code: 'SATUSEHAT_LOCATION_COORDINATES_INVALID',
-        message: 'Latitude atau longitude Location berada di luar rentang valid',
+        message:
+          'Latitude atau longitude Location berada di luar rentang valid',
       });
     }
     if (

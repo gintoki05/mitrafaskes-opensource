@@ -8,7 +8,6 @@ import {
 } from '@nestjs/common';
 import type {
   LocationSummary,
-  SatusehatLocationLinkRequest,
   SatusehatLocationMutationResponse,
 } from '@mitrafaskes/shared';
 import { PrismaService } from '../../database/prisma.service';
@@ -78,9 +77,7 @@ export class SatusehatLocationLinkService {
     }
   }
 
-  private async getContext(
-    localResourceId: string,
-  ): Promise<LocationContext> {
+  private async getContext(localResourceId: string): Promise<LocationContext> {
     const record = await this.prisma.location.findUnique({
       where: { id: localResourceId },
       include: { organization: true, parent: true },
@@ -146,8 +143,7 @@ export class SatusehatLocationLinkService {
     if (context.parentExternalId !== remote.parentExternalResourceId) {
       throw new ConflictException({
         code: 'SATUSEHAT_LOCATION_PARENT_MISMATCH',
-        message:
-          'Location.partOf SATUSEHAT tidak sesuai dengan parent lokal',
+        message: 'Location.partOf SATUSEHAT tidak sesuai dengan parent lokal',
       });
     }
   }

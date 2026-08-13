@@ -76,7 +76,11 @@ describe('SatusehatLocationService', () => {
       parent: { id: 'location-parent', name: 'Gedung Utama' },
     });
     prisma.externalResourceLink.findUnique.mockImplementation(
-      ({ where }: { where: { localResourceScope: { resourceType: string } } }) =>
+      ({
+        where,
+      }: {
+        where: { localResourceScope: { resourceType: string } };
+      }) =>
         Promise.resolve(
           where.localResourceScope.resourceType === 'Organization'
             ? { externalResourceId: '100000004' }
@@ -99,7 +103,11 @@ describe('SatusehatLocationService', () => {
     const prisma = createPrismaMock();
     prisma.location.findUnique.mockResolvedValue(location);
     prisma.externalResourceLink.findUnique.mockImplementation(
-      ({ where }: { where: { localResourceScope: { resourceType: string } } }) =>
+      ({
+        where,
+      }: {
+        where: { localResourceScope: { resourceType: string } };
+      }) =>
         Promise.resolve(
           where.localResourceScope.resourceType === 'Organization'
             ? { externalResourceId: '100000004' }
@@ -130,7 +138,10 @@ describe('SatusehatLocationService', () => {
     expect(fhir.createLocation).toHaveBeenCalledWith(
       expect.objectContaining({
         resourceType: 'Location',
-        managingOrganization: { reference: 'Organization/100000004', display: organization.name },
+        managingOrganization: {
+          reference: 'Organization/100000004',
+          display: organization.name,
+        },
       }),
     );
     expect(prisma.externalResourceLink.upsert).toHaveBeenCalledWith(
@@ -160,14 +171,20 @@ describe('SatusehatLocationService', () => {
       longitude: undefined,
     });
     prisma.externalResourceLink.findUnique.mockImplementation(
-      ({ where }: { where: { localResourceScope: { resourceType: string } } }) =>
+      ({
+        where,
+      }: {
+        where: { localResourceScope: { resourceType: string } };
+      }) =>
         Promise.resolve(
           where.localResourceScope.resourceType === 'Organization'
             ? { externalResourceId: '100000004' }
             : null,
         ),
     );
-    prisma.satusehatSyncLog.create.mockResolvedValue({ id: 'sync-no-position' });
+    prisma.satusehatSyncLog.create.mockResolvedValue({
+      id: 'sync-no-position',
+    });
     const fhir = createFhirMock();
     fhir.createLocation.mockResolvedValue({
       resourceType: 'Location',
@@ -189,7 +206,11 @@ describe('SatusehatLocationService', () => {
     const prisma = createPrismaMock();
     prisma.location.findUnique.mockResolvedValue(location);
     prisma.externalResourceLink.findUnique.mockImplementation(
-      ({ where }: { where: { localResourceScope: { resourceType: string } } }) =>
+      ({
+        where,
+      }: {
+        where: { localResourceScope: { resourceType: string } };
+      }) =>
         Promise.resolve({
           externalResourceId:
             where.localResourceScope.resourceType === 'Organization'
@@ -222,7 +243,11 @@ describe('SatusehatLocationService', () => {
     const prisma = createPrismaMock();
     prisma.location.findUnique.mockResolvedValue(location);
     prisma.externalResourceLink.findUnique.mockImplementation(
-      ({ where }: { where: { localResourceScope: { resourceType: string } } }) =>
+      ({
+        where,
+      }: {
+        where: { localResourceScope: { resourceType: string } };
+      }) =>
         Promise.resolve(
           where.localResourceScope.resourceType === 'Organization'
             ? { externalResourceId: '100000004' }

@@ -30,11 +30,14 @@ describe('Encounter status policy', () => {
     );
   });
 
-  it.each(Object.values(EncounterStatus))('rejects same status %s', (status) => {
-    expect(() => assertEncounterTransition(status, status)).toThrow(
-      EncounterTransitionError,
-    );
-  });
+  it.each(Object.values(EncounterStatus))(
+    'rejects same status %s',
+    (status) => {
+      expect(() => assertEncounterTransition(status, status)).toThrow(
+        EncounterTransitionError,
+      );
+    },
+  );
 
   it('keeps the transition matrix explicit', () => {
     expect(ENCOUNTER_TRANSITIONS).toEqual({
@@ -44,5 +47,4 @@ describe('Encounter status policy', () => {
       CANCELLED: [],
     });
   });
-
 });

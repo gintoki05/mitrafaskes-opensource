@@ -52,7 +52,9 @@ describe('Encounter validation', () => {
 
   it('validates query status and clamps page values', () => {
     expect(parseEncounterStatus('CANCELLED')).toBe(EncounterStatus.CANCELLED);
-    expect(() => parseEncounterStatus('UNKNOWN')).toThrow(EncounterValidationError);
+    expect(() => parseEncounterStatus('UNKNOWN')).toThrow(
+      EncounterValidationError,
+    );
     expect(parsePositiveInteger('3', 1)).toBe(3);
     expect(parsePositiveInteger('999', 1, 100)).toBe(100);
     expect(parsePositiveInteger('nope', 1)).toBe(1);

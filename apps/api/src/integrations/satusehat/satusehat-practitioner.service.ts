@@ -10,7 +10,6 @@ import { Prisma } from '@prisma/client';
 import type {
   SatusehatPractitionerLookupQuery,
   SatusehatPractitionerMutationResponse,
-  SatusehatPractitionerRemoteSummary,
   SatusehatPractitionerSearchResponse,
 } from '@mitrafaskes/shared';
 import { PrismaService } from '../../database/prisma.service';
@@ -45,7 +44,9 @@ export class SatusehatPractitionerService {
   ): Promise<SatusehatPractitionerSearchResponse> {
     try {
       const practitioner =
-        await this.practitioners.getPractitionerForExternalIntegration(localResourceId);
+        await this.practitioners.getPractitionerForExternalIntegration(
+          localResourceId,
+        );
       this.assertNikAvailable(practitioner.nik);
       const response = await this.fhir.searchPractitioners({
         identifier: `${PRACTITIONER_NIK_SYSTEM}|${practitioner.nik}`,
@@ -83,7 +84,9 @@ export class SatusehatPractitionerService {
     try {
       const externalResourceId = this.readExternalResourceId(input);
       const practitioner =
-        await this.practitioners.getPractitionerForExternalIntegration(localResourceId);
+        await this.practitioners.getPractitionerForExternalIntegration(
+          localResourceId,
+        );
       this.assertNikAvailable(practitioner.nik);
       const environment = this.readEnvironment();
       const currentLink = await this.findLocalLink(
@@ -111,7 +114,7 @@ export class SatusehatPractitionerService {
             resourceType: PRACTITIONER_RESOURCE_TYPE,
             id: externalResourceId,
             operation: 'LINK_EXISTING',
-          } as Prisma.InputJsonValue,
+          },
         },
       });
       syncLogId = syncLog.id;
@@ -144,11 +147,7 @@ export class SatusehatPractitionerService {
         });
       }
 
-      await this.upsertLink(
-        localResourceId,
-        externalResourceId,
-        environment,
-      );
+      await this.upsertLink(localResourceId, externalResourceId, environment);
       await this.prisma.satusehatSyncLog.update({
         where: { id: syncLog.id },
         data: {
@@ -257,7 +256,10 @@ export class SatusehatPractitionerService {
     });
   }
 
-  private async markSyncFailed(syncLogId: string, error: unknown): Promise<void> {
+  private async markSyncFailed(
+    syncLogId: string,
+    error: unknown,
+  ): Promise<void> {
     try {
       await this.prisma.satusehatSyncLog.update({
         where: { id: syncLogId },
@@ -283,11 +285,14 @@ export class SatusehatPractitionerService {
     return externalResourceId;
   }
 
-  private assertNikAvailable(nik: string | null | undefined): asserts nik is string {
+  private assertNikAvailable(
+    nik: string | null | undefined,
+  ): asserts nik is string {
     if (!nik) {
       throw new ConflictException({
         code: 'SATUSEHAT_PRACTITIONER_NIK_REQUIRED',
-        message: 'NIK tenaga kesehatan wajib diisi sebelum mencari Practitioner SATUSEHAT.',
+        message:
+          'NIK tenaga kesehatan wajib diisi sebelum mencari Practitioner SATUSEHAT.',
       });
     }
   }

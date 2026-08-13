@@ -71,8 +71,10 @@ export interface SatusehatObservationPreview {
   payload: SatusehatObservationPayload;
 }
 
-export interface SatusehatObservationSyncResult
-  extends Omit<SatusehatObservationPreview, 'payload'> {
+export interface SatusehatObservationSyncResult extends Omit<
+  SatusehatObservationPreview,
+  'payload'
+> {
   syncedRemotely: boolean;
   syncLogId: string;
   response?: { resourceType: 'Observation'; id: string };
@@ -111,7 +113,12 @@ export function validateSatusehatObservationPayload(
   const code = firstCoding(payload.code, 'code', issues);
   if (code) {
     const codeRecord = asRecord(code);
-    requireCodingSystem(codeRecord, OBSERVATION_LOINC_SYSTEM, 'code.coding[0]', issues);
+    requireCodingSystem(
+      codeRecord,
+      OBSERVATION_LOINC_SYSTEM,
+      'code.coding[0]',
+      issues,
+    );
     requireText(codeRecord.code, 'code.coding[0].code', issues);
     requireText(codeRecord.display, 'code.coding[0].display', issues);
   }
@@ -120,7 +127,10 @@ export function validateSatusehatObservationPayload(
   requireText(payload.effectiveDateTime, 'effectiveDateTime', issues);
 
   if (!Array.isArray(payload.performer) || payload.performer.length === 0) {
-    issues.push({ field: 'performer', message: 'performer wajib berisi satu Practitioner.' });
+    issues.push({
+      field: 'performer',
+      message: 'performer wajib berisi satu Practitioner.',
+    });
   } else {
     payload.performer.forEach((entry, index) =>
       requireReference(entry, 'Practitioner', `performer[${index}]`, issues),
@@ -141,7 +151,10 @@ export function validateSatusehatObservationPayload(
   }
   if (payload.valueQuantity !== undefined) {
     const quantity = asRecord(payload.valueQuantity);
-    if (typeof quantity.value !== 'number' || !Number.isFinite(quantity.value)) {
+    if (
+      typeof quantity.value !== 'number' ||
+      !Number.isFinite(quantity.value)
+    ) {
       issues.push({
         field: 'valueQuantity.value',
         message: 'valueQuantity.value harus berupa angka finite, bukan string.',
@@ -157,7 +170,10 @@ export function validateSatusehatObservationPayload(
     requireText(quantity.code, 'valueQuantity.code', issues);
   }
   if (payload.derivedFrom !== undefined) {
-    if (!Array.isArray(payload.derivedFrom) || payload.derivedFrom.length === 0) {
+    if (
+      !Array.isArray(payload.derivedFrom) ||
+      payload.derivedFrom.length === 0
+    ) {
       issues.push({
         field: 'derivedFrom',
         message: 'derivedFrom harus berisi source Observation.',
@@ -188,7 +204,10 @@ function firstCoding(
 ): unknown {
   const record = asRecord(value);
   if (!Array.isArray(record.coding) || record.coding.length === 0) {
-    issues.push({ field: `${field}.coding`, message: 'coding wajib berisi satu item.' });
+    issues.push({
+      field: `${field}.coding`,
+      message: 'coding wajib berisi satu item.',
+    });
     return undefined;
   }
   return record.coding[0];
@@ -218,7 +237,10 @@ function requireCoding(
     coding.code !== expected.code ||
     coding.display !== expected.display
   ) {
-    issues.push({ field, message: `Terminology ${field} tidak sesuai profile Observation.` });
+    issues.push({
+      field,
+      message: `Terminology ${field} tidak sesuai profile Observation.`,
+    });
   }
 }
 
@@ -229,7 +251,10 @@ function requireCodingSystem(
   issues: SatusehatObservationContractIssue[],
 ): void {
   if (asRecord(value).system !== system) {
-    issues.push({ field: `${field}.system`, message: `System harus ${system}.` });
+    issues.push({
+      field: `${field}.system`,
+      message: `System harus ${system}.`,
+    });
   }
 }
 
@@ -244,7 +269,10 @@ function requireReference(
     typeof reference !== 'string' ||
     !new RegExp(`^${resourceType}/[^/\\s]+$`).test(reference)
   ) {
-    issues.push({ field: `${field}.reference`, message: `Reference harus ${resourceType}/{id}.` });
+    issues.push({
+      field: `${field}.reference`,
+      message: `Reference harus ${resourceType}/{id}.`,
+    });
   }
 }
 
@@ -264,7 +292,8 @@ function requireEqual(
   field: string,
   issues: SatusehatObservationContractIssue[],
 ): void {
-  if (value !== expected) issues.push({ field, message: `${field} harus ${expected}.` });
+  if (value !== expected)
+    issues.push({ field, message: `${field} harus ${expected}.` });
 }
 
 function asRecord(value: unknown): Record<string, unknown> {

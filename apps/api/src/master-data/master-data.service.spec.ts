@@ -125,9 +125,7 @@ describe('MasterDataService list queries', () => {
     );
     expect(count).toHaveBeenCalledWith(expect.any(Object));
     expect(result).toEqual({
-      items: [
-        expect.objectContaining({ id: 'org-1', name: 'Klinik Mitra' }),
-      ],
+      items: [expect.objectContaining({ id: 'org-1', name: 'Klinik Mitra' })],
       meta: { page: 2, pageSize: 10, total: 21 },
       statusCounts: { active: 12, inactive: 9 },
     });
@@ -234,12 +232,15 @@ describe('MasterDataService list queries', () => {
           ]),
         ),
     };
-    const service = new MasterDataService({
-      healthcareOrganization: {
-        findMany: organizationFindMany,
-      },
-      location: { findMany: locationFindMany },
-    } as never, integrations as never);
+    const service = new MasterDataService(
+      {
+        healthcareOrganization: {
+          findMany: organizationFindMany,
+        },
+        location: { findMany: locationFindMany },
+      } as never,
+      integrations as never,
+    );
 
     const result = await service.findAll();
 

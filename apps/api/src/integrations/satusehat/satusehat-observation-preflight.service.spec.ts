@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment -- The service is isolated with a Prisma test double. */
 import { ConflictException } from '@nestjs/common';
 import { SatusehatObservationPreflightService } from './satusehat-observation-preflight.service';
 
@@ -60,26 +59,23 @@ function buildService(
       ? { externalResourceId: options.observationExternalResourceId }
       : null,
   };
-  const findLink = jest.fn(
-    ({ where }: { where: Record<string, unknown> }) => {
-      const scope = where.localResourceScope as
-        | { resourceType: string; localResourceId: string }
-        | undefined;
-      if (!scope) return Promise.resolve(null);
-      if (scope.resourceType === options.missing) return Promise.resolve(null);
-      if (
-        scope.resourceType === 'Observation' &&
-        scope.localResourceId !== observationId
-      ) {
-        return Promise.resolve(
-          options.derivedSourceExternalResourceId
-            ? { externalResourceId: options.derivedSourceExternalResourceId }
-            : null,
-        );
-      }
-      return Promise.resolve(links[scope.resourceType] ?? null);
-    },
-  );
+  const findLink = jest.fn(({ where }: { where: Record<string, unknown> }) => {
+    const scope = where.localResourceScope as
+      { resourceType: string; localResourceId: string } | undefined;
+    if (!scope) return Promise.resolve(null);
+    if (scope.resourceType === options.missing) return Promise.resolve(null);
+    if (
+      scope.resourceType === 'Observation' &&
+      scope.localResourceId !== observationId
+    ) {
+      return Promise.resolve(
+        options.derivedSourceExternalResourceId
+          ? { externalResourceId: options.derivedSourceExternalResourceId }
+          : null,
+      );
+    }
+    return Promise.resolve(links[scope.resourceType] ?? null);
+  });
   const prisma = {
     clinicalObservation: {
       findUnique: jest.fn().mockResolvedValue(observation),
@@ -148,7 +144,9 @@ describe('SatusehatObservationPreflightService', () => {
     async (missing) => {
       const { service } = buildService({ missing });
 
-      await expect(service.previewObservation(observationId)).rejects.toMatchObject({
+      await expect(
+        service.previewObservation(observationId),
+      ).rejects.toMatchObject({
         constructor: ConflictException,
         response: expect.objectContaining({
           code: 'SATUSEHAT_OBSERVATION_DEPENDENCY_MISSING',
@@ -166,7 +164,9 @@ describe('SatusehatObservationPreflightService', () => {
       }),
     });
 
-    await expect(service.previewObservation(observationId)).rejects.toMatchObject({
+    await expect(
+      service.previewObservation(observationId),
+    ).rejects.toMatchObject({
       constructor: ConflictException,
       response: expect.objectContaining({
         code: 'SATUSEHAT_OBSERVATION_MAPPING_REQUIRED',
@@ -180,7 +180,9 @@ describe('SatusehatObservationPreflightService', () => {
       observation: observationRecord({ valueQuantityUnit: 'kPa' }),
     });
 
-    await expect(service.previewObservation(observationId)).rejects.toMatchObject({
+    await expect(
+      service.previewObservation(observationId),
+    ).rejects.toMatchObject({
       response: expect.objectContaining({
         code: 'SATUSEHAT_OBSERVATION_MAPPING_REQUIRED',
         mappingStatus: 'mapping-required',
@@ -198,11 +200,16 @@ describe('SatusehatObservationPreflightService', () => {
         valueQuantityUnit: 'kg/m2',
         valueQuantityCode: 'kg/m2',
         provenance: 'derived',
-        derivedFromObservationIds: ['observation-weight-1', 'observation-height-1'],
+        derivedFromObservationIds: [
+          'observation-weight-1',
+          'observation-height-1',
+        ],
       }),
     });
 
-    await expect(service.previewObservation('observation-bmi-1')).rejects.toMatchObject({
+    await expect(
+      service.previewObservation('observation-bmi-1'),
+    ).rejects.toMatchObject({
       response: expect.objectContaining({
         code: 'SATUSEHAT_OBSERVATION_DERIVED_SOURCE_MISSING',
         dependencies: ['Observation'],
@@ -221,7 +228,10 @@ describe('SatusehatObservationPreflightService', () => {
         valueQuantityUnit: 'kg/m2',
         valueQuantityCode: 'kg/m2',
         provenance: 'derived',
-        derivedFromObservationIds: ['observation-weight-1', 'observation-height-1'],
+        derivedFromObservationIds: [
+          'observation-weight-1',
+          'observation-height-1',
+        ],
       }),
     });
 

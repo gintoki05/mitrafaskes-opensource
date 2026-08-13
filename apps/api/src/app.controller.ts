@@ -8,10 +8,20 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { AccessPermission } from '@mitrafaskes/shared';
+import { AccessPermission, UserRole } from '@mitrafaskes/shared';
 import { Public, RequirePermission } from './auth/access-control.decorator';
 import { SessionPermissionGuard } from './auth/session-permission.guard';
 import { MasterIcd10Service } from './master-data/master-icd10.service';
+
+type LoginBody = {
+  username?: unknown;
+};
+
+type MockLoginUser = {
+  role: UserRole;
+  name: string;
+  sip?: string;
+};
 
 @Controller('api')
 @UseGuards(SessionPermissionGuard)
@@ -29,21 +39,21 @@ export class AppController {
   @Post('auth/login')
   @ApiTags('Authentication')
   @Public()
-  login(@Body() body: any) {
-    const { username } = body;
+  login(@Body() body: LoginBody) {
+    const username = typeof body.username === 'string' ? body.username : '';
     if (
       username === 'admin' ||
       username === 'dr_budi' ||
       username === 'perawat_ani'
     ) {
-      const roleMap: Record<string, any> = {
-        admin: { role: 'ADMIN', name: 'Siti Rahma (Admin)' },
+      const roleMap: Record<string, MockLoginUser> = {
+        admin: { role: UserRole.ADMIN, name: 'Siti Rahma (Admin)' },
         dr_budi: {
-          role: 'DOKTER',
+          role: UserRole.DOKTER,
           name: 'dr. Budi Santoso, Sp.PD',
           sip: 'SIP-449/123/2023',
         },
-        perawat_ani: { role: 'PERAWAT', name: 'Ani Wijaya, S.Kep' },
+        perawat_ani: { role: UserRole.PERAWAT, name: 'Ani Wijaya, S.Kep' },
       };
 
       const user = roleMap[username];
@@ -78,5 +88,4 @@ export class AppController {
       nameEng,
     }));
   }
-
 }

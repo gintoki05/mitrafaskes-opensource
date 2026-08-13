@@ -109,22 +109,27 @@ export function buildObservationDrafts(
   now: Date,
   performerId?: string,
 ): RmeObservationDraft[] {
-  const drafts = observations.length > 0
-    ? observations.map((observation) => ({
-        ...observation,
-        performerId: observation.performerId ?? performerId,
-        effectiveAt: observation.effectiveAt ?? now,
-      }))
-    : legacyObservationDrafts(legacy, now, performerId);
+  const drafts =
+    observations.length > 0
+      ? observations.map((observation) => ({
+          ...observation,
+          performerId: observation.performerId ?? performerId,
+          effectiveAt: observation.effectiveAt ?? now,
+        }))
+      : legacyObservationDrafts(legacy, now, performerId);
 
   const weight = findQuantity(drafts, ['body-weight', '29463-7']);
   const height = findQuantity(drafts, ['body-height', '8302-2']);
   const bmi = findQuantity(drafts, ['body-mass-index', '39156-5']);
   const derivedBmi =
     weight !== undefined && height !== undefined && height > 0
-      ? weight / ((height / 100) ** 2)
+      ? weight / (height / 100) ** 2
       : undefined;
-  if (derivedBmi !== undefined && Number.isFinite(derivedBmi) && bmi === undefined) {
+  if (
+    derivedBmi !== undefined &&
+    Number.isFinite(derivedBmi) &&
+    bmi === undefined
+  ) {
     drafts.push({
       category: 'vital-signs',
       code: 'body-mass-index',
@@ -163,9 +168,13 @@ export function projectLegacyVitals(
   return result;
 }
 
-export function isDerivedBmi(observation: Pick<RmeObservationDraft, 'code' | 'provenance'>): boolean {
-  return observation.provenance === 'derived' &&
-    (observation.code === 'body-mass-index' || observation.code === '39156-5');
+export function isDerivedBmi(
+  observation: Pick<RmeObservationDraft, 'code' | 'provenance'>,
+): boolean {
+  return (
+    observation.provenance === 'derived' &&
+    (observation.code === 'body-mass-index' || observation.code === '39156-5')
+  );
 }
 
 export function sourceObservationIdsForDerived(
@@ -177,8 +186,15 @@ export function sourceObservationIdsForDerived(
   }
   if (!isDerivedBmi(observation)) return [];
   return prepared
-    .filter((candidate) =>
-      candidate.id && matchesCode(candidate, ['body-weight', '29463-7', 'body-height', '8302-2']),
+    .filter(
+      (candidate) =>
+        candidate.id &&
+        matchesCode(candidate, [
+          'body-weight',
+          '29463-7',
+          'body-height',
+          '8302-2',
+        ]),
     )
     .map((candidate) => candidate.id as string);
 }
@@ -195,21 +211,23 @@ function legacyObservationDrafts(
   return LEGACY_VITALS.flatMap((definition) => {
     const value = legacy[definition.field];
     if (value === undefined) return [];
-    return [{
-      category: 'vital-signs',
-      code: definition.code,
-      codeDisplay: definition.codeDisplay,
-      valueType: 'quantity' as const,
-      valueQuantityValue: value,
-      valueQuantityUnit: definition.unit,
-      valueQuantitySystem: 'http://unitsofmeasure.org',
-      valueQuantityCode: definition.unitCode,
-      effectiveAt,
-      performerId,
-      status: 'final' as const,
-      provenance: 'original' as const,
-      derivedFromObservationIds: [],
-    }];
+    return [
+      {
+        category: 'vital-signs',
+        code: definition.code,
+        codeDisplay: definition.codeDisplay,
+        valueType: 'quantity' as const,
+        valueQuantityValue: value,
+        valueQuantityUnit: definition.unit,
+        valueQuantitySystem: 'http://unitsofmeasure.org',
+        valueQuantityCode: definition.unitCode,
+        effectiveAt,
+        performerId,
+        status: 'final' as const,
+        provenance: 'original' as const,
+        derivedFromObservationIds: [],
+      },
+    ];
   });
 }
 
@@ -217,7 +235,9 @@ function findQuantity(
   observations: readonly RmeObservationDraft[],
   codes: readonly string[],
 ): number | undefined {
-  const observation = observations.find((candidate) => matchesCode(candidate, codes));
+  const observation = observations.find((candidate) =>
+    matchesCode(candidate, codes),
+  );
   return observation?.valueType === 'quantity'
     ? observation.valueQuantityValue
     : undefined;

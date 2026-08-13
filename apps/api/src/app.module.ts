@@ -10,8 +10,7 @@ import { EncountersModule } from './encounters/encounters.module';
 import { RmeModule } from './rme/rme.module';
 import { SatusehatIntegrationModule } from './integrations/satusehat/satusehat-integration.module';
 
-const satusehatEnabled =
-  process.env.INTEGRATION_SATUSEHAT_ENABLED === 'true';
+const satusehatEnabled = process.env.INTEGRATION_SATUSEHAT_ENABLED === 'true';
 
 @Module({
   imports: [

@@ -1,39 +1,18 @@
 "use client";
 
-import {
-  type SubmitEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import type {
-  OrganizationSummary,
-  SatusehatOrganizationRemoteSummary,
-} from "@mitrafaskes/shared";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useSatusehatOrganizations } from "@/hooks/useSatusehatOrganizations";
-import {
-  MasterFaskesDialog,
-  useMasterFaskesDialogClose,
-  useMasterFaskesDialogGuard,
-} from "./MasterFaskesDialog";
+import { MasterFaskesDialog } from "./MasterFaskesDialog";
 import { OrganizationImportBulkPanel } from "./OrganizationImportBulkPanel";
 import { OrganizationImportLocalPanel } from "./OrganizationImportLocalPanel";
 import { OrganizationImportSearchPanel } from "./OrganizationImportSearchPanel";
 import { SatusehatOrganizationResult } from "./SatusehatOrganizationResult";
-import { toast } from "sonner";
-
-type OrganizationImportDialogProps = {
-  open: boolean;
-  organizations: OrganizationSummary[];
-  canWrite: boolean;
-  onClose: () => void;
-  onImported: () => void | Promise<void>;
-};
+import {
+  type OrganizationImportDialogProps,
+  useOrganizationImportDialog,
+} from "./useOrganizationImportDialog";
 
 export function OrganizationImportDialog({
   open,
@@ -67,432 +46,43 @@ function OrganizationImportDialogContent({
   onClose,
   onImported,
 }: Omit<OrganizationImportDialogProps, "open">) {
-  const { search, importOrganization } = useSatusehatOrganizations();
-  const parentOptions = useMemo(
-    () => organizations.filter((organization) => organization.active),
-    [organizations],
-  );
-  const defaultSearchParentId = useMemo(
-    () =>
-      parentOptions.find(
-        (organization) =>
-          organization.type === "HEALTHCARE_FACILITY" && !organization.parentId,
-      )?.id ?? "",
-    [parentOptions],
-  );
-  const [externalId, setExternalId] = useState("");
-  const [name, setName] = useState("");
-  const [searchParentId, setSearchParentId] = useState(defaultSearchParentId);
-  const [localParentId, setLocalParentId] = useState("");
-  const [code, setCode] = useState("");
-  const [items, setItems] = useState<SatusehatOrganizationRemoteSummary[]>([]);
-  const [selected, setSelected] =
-    useState<SatusehatOrganizationRemoteSummary | null>(null);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [bulkCodes, setBulkCodes] = useState<Record<string, string>>({});
-  const [searching, setSearching] = useState(false);
-  const [importing, setImporting] = useState(false);
-  const requestClose = useMasterFaskesDialogClose(onClose);
-
-  const resetSelection = useCallback(() => {
-    setSelected(null);
-    setSelectedIds([]);
-    setBulkCodes({});
-    setLocalParentId("");
-    setCode("");
-  }, []);
-
-  const loadChildren = useCallback(
-    async (parentId: string) => {
-      setSearching(true);
-      resetSelection();
-      try {
-        const result = await search({ parentLocalId: parentId });
-        setItems(result.items);
-      } catch (requestError) {
-        setItems([]);
-        toast.error("Suborganisasi SATUSEHAT gagal dimuat", {
-          description:
-            requestError instanceof Error
-              ? requestError.message
-              : "Daftar suborganisasi tidak dapat dimuat.",
-          duration: 7000,
-        });
-      } finally {
-        setSearching(false);
-      }
-    },
-    [resetSelection, search],
-  );
-
-  useEffect(() => {
-    if (!searchParentId) return;
-
-    const timeoutId = window.setTimeout(() => {
-      void loadChildren(searchParentId);
-    }, 0);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [loadChildren, searchParentId]);
-
-  const runSearch = async (event: SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const queryId = externalId.trim();
-    const queryName = name.trim();
-    if (!queryId && !queryName && !searchParentId) {
-      toast.error("Pencarian belum berhasil", {
-        description: "Masukkan nama atau ID SATUSEHAT untuk mencari data.",
-      });
-      return;
-    }
-
-    setSearching(true);
-    resetSelection();
-    try {
-      const result = await search({
-        id: queryId || undefined,
-        name: queryId ? undefined : queryName || undefined,
-        parentLocalId: searchParentId || undefined,
-      });
-      setItems(result.items);
-      if (result.items.length === 0) {
-        toast.info("Data organisasi tidak ditemukan", {
-          description:
-            "Coba gunakan nama yang lebih spesifik atau ID SATUSEHAT.",
-        });
-      }
-    } catch (requestError) {
-      setItems([]);
-      toast.error("Pencarian SATUSEHAT gagal", {
-        description:
-          requestError instanceof Error
-            ? requestError.message
-            : "Data organisasi SATUSEHAT tidak dapat dicari.",
-        duration: 7000,
-      });
-    } finally {
-      setSearching(false);
-    }
-  };
-
-  const selectItem = (item: SatusehatOrganizationRemoteSummary) => {
-    setSelected(item);
-    setSelectedIds([item.externalResourceId]);
-    setBulkCodes({
-      [item.externalResourceId]: defaultBulkCode(item),
-    });
-    setLocalParentId(item.parentExternalResourceId ? searchParentId : "");
-    setCode("");
-  };
-
-  const toggleItem = (
-    item: SatusehatOrganizationRemoteSummary,
-    checked: boolean,
-  ) => {
-    if (item.linkedLocalResourceId) return;
-
-    const nextIds = checked
-      ? Array.from(new Set([...selectedIds, item.externalResourceId]))
-      : selectedIds.filter((id) => id !== item.externalResourceId);
-    const nextItems = items.filter((candidate) =>
-      nextIds.includes(candidate.externalResourceId),
-    );
-    const nextCodes = { ...bulkCodes };
-
-    if (selected && code.trim()) {
-      nextCodes[selected.externalResourceId] = code.trim();
-    }
-    if (checked && !nextCodes[item.externalResourceId]) {
-      nextCodes[item.externalResourceId] = defaultBulkCode(item);
-    }
-    if (!checked) delete nextCodes[item.externalResourceId];
-
-    setSelectedIds(nextIds);
-    setBulkCodes(nextCodes);
-    setLocalParentId(
-      nextItems.some((candidate) => candidate.parentExternalResourceId)
-        ? searchParentId
-        : "",
-    );
-
-    if (nextIds.length === 0) {
-      setSelected(null);
-      setCode("");
-    } else if (nextIds.length === 1) {
-      const nextItem = nextItems[0];
-      setSelected(nextItem ?? null);
-      setCode(selectedIds.length > 1 ? (nextCodes[nextIds[0]] ?? "") : "");
-    } else {
-      setSelected(null);
-      setCode("");
-    }
-  };
-
-  const toggleAll = (checked: boolean) => {
-    const selectableItems = items.filter((item) => !item.linkedLocalResourceId);
-    const nextItems = checked ? selectableItems : [];
-    const nextIds = nextItems.map((item) => item.externalResourceId);
-    const nextCodes = checked ? { ...bulkCodes } : {};
-
-    if (selected && code.trim()) {
-      nextCodes[selected.externalResourceId] = code.trim();
-    }
-    for (const item of nextItems) {
-      if (!nextCodes[item.externalResourceId]) {
-        nextCodes[item.externalResourceId] = defaultBulkCode(item);
-      }
-    }
-
-    setSelectedIds(nextIds);
-    setBulkCodes(nextCodes);
-    setSelected(nextItems.length === 1 ? nextItems[0] : null);
-    setCode("");
-    setLocalParentId(
-      nextItems.some((item) => item.parentExternalResourceId)
-        ? searchParentId
-        : "",
-    );
-  };
-
-  const importSelected = async () => {
-    if (!selected) return;
-    const normalizedCode = code.trim().toUpperCase();
-    if (!normalizedCode) {
-      toast.error("Kode belum diisi", {
-        description: "Isi kode singkat yang akan digunakan di aplikasi.",
-      });
-      return;
-    }
-    if (!/^[A-Z0-9][A-Z0-9._-]*$/.test(normalizedCode)) {
-      toast.error("Format kode belum benar", {
-        description:
-          "Kode hanya boleh berisi huruf, angka, titik, garis bawah, atau tanda hubung tanpa spasi.",
-      });
-      return;
-    }
-    if (selected.parentExternalResourceId && !localParentId) {
-      toast.error("Organisasi induk belum dipilih", {
-        description: "Pilih organisasi lokal tempat data ini akan disimpan.",
-      });
-      return;
-    }
-
-    setImporting(true);
-    try {
-      const result = await importOrganization({
-        externalResourceId: selected.externalResourceId,
-        code: normalizedCode,
-        parentId: selected.parentExternalResourceId
-          ? localParentId || undefined
-          : undefined,
-      });
-      setItems((current) =>
-        current.map((item) =>
-          item.externalResourceId === selected.externalResourceId
-            ? { ...item, linkedLocalResourceId: result.localResourceId }
-            : item,
-        ),
-      );
-      setSelected((current) =>
-        current
-          ? { ...current, linkedLocalResourceId: result.localResourceId }
-          : current,
-      );
-      setSelectedIds((current) =>
-        current.filter((id) => id !== selected.externalResourceId),
-      );
-      toast.success("Data organisasi berhasil disimpan", {
-        description:
-          "Data berhasil disimpan ke Master Faskes dan dihubungkan ke SATUSEHAT.",
-      });
-      await onImported();
-      resetSelection();
-    } catch (requestError) {
-      toast.error("Data organisasi belum tersimpan", {
-        description:
-          requestError instanceof Error
-            ? requestError.message
-            : "Data organisasi SATUSEHAT tidak dapat disimpan.",
-        duration: 7000,
-      });
-    } finally {
-      setImporting(false);
-    }
-  };
-
-  const importSelectedBulk = async () => {
-    const selectedItems = items.filter((item) =>
-      selectedIds.includes(item.externalResourceId),
-    );
-    if (selectedItems.length < 2) return;
-
-    const remoteParentKeys = new Set(
-      selectedItems.map((item) => item.parentExternalResourceId ?? "__root__"),
-    );
-    if (remoteParentKeys.size > 1) {
-      toast.error("Induk organisasi tidak sama", {
-        description:
-          "Pilih data dengan induk SATUSEHAT yang sama sebelum menyimpan sekaligus.",
-      });
-      return;
-    }
-
-    const codeById = new Map<string, string>();
-    for (const item of selectedItems) {
-      const normalizedCode = (bulkCodes[item.externalResourceId] ?? "")
-        .trim()
-        .toUpperCase();
-      if (!normalizedCode) {
-        toast.error("Kode lokal belum lengkap", {
-          description: `Isi kode lokal untuk ${item.name}.`,
-        });
-        return;
-      }
-      if (!/^[A-Z0-9][A-Z0-9._-]*$/.test(normalizedCode)) {
-        toast.error("Format kode belum benar", {
-          description: `Kode lokal untuk ${item.name} tidak valid.`,
-        });
-        return;
-      }
-      codeById.set(item.externalResourceId, normalizedCode);
-    }
-
-    const codes = [...codeById.values()];
-    if (new Set(codes).size !== codes.length) {
-      toast.error("Kode lokal harus berbeda", {
-        description:
-          "Setiap Organization yang dipilih harus memiliki kode unik.",
-      });
-      return;
-    }
-
-    const requiresLocalParent = selectedItems.some(
-      (item) => item.parentExternalResourceId,
-    );
-    if (requiresLocalParent && !localParentId) {
-      toast.error("Organisasi induk belum dipilih", {
-        description: "Pilih organisasi lokal tempat data ini akan disimpan.",
-      });
-      return;
-    }
-
-    const failures: {
-      item: SatusehatOrganizationRemoteSummary;
-      message: string;
-    }[] = [];
-    let importedCount = 0;
-
-    setImporting(true);
-    try {
-      for (const item of selectedItems) {
-        try {
-          const result = await importOrganization({
-            externalResourceId: item.externalResourceId,
-            code: codeById.get(item.externalResourceId) ?? "",
-            parentId: item.parentExternalResourceId
-              ? localParentId || undefined
-              : undefined,
-          });
-          importedCount += 1;
-          setItems((current) =>
-            current.map((currentItem) =>
-              currentItem.externalResourceId === item.externalResourceId
-                ? {
-                    ...currentItem,
-                    linkedLocalResourceId: result.localResourceId,
-                  }
-                : currentItem,
-            ),
-          );
-        } catch (requestError) {
-          failures.push({
-            item,
-            message:
-              requestError instanceof Error
-                ? requestError.message
-                : "Data tidak dapat disimpan.",
-          });
-        }
-      }
-    } finally {
-      setImporting(false);
-    }
-
-    if (importedCount > 0) {
-      try {
-        await onImported();
-      } catch {
-        toast.error("Daftar lokal belum diperbarui", {
-          description:
-            "Data sudah diproses, tetapi daftar lokal perlu dimuat ulang.",
-        });
-      }
-    }
-
-    if (failures.length === 0) {
-      resetSelection();
-      toast.success(`${importedCount} organisasi berhasil disimpan`, {
-        description:
-          "Semua data pilihan sudah tersimpan di Master Faskes dan terhubung ke SATUSEHAT.",
-      });
-      return;
-    }
-
-    const failedItems = failures.map(({ item }) => item);
-    setSelectedIds(failedItems.map((item) => item.externalResourceId));
-    setBulkCodes(
-      Object.fromEntries(
-        failedItems.map((item) => [
-          item.externalResourceId,
-          codeById.get(item.externalResourceId) ?? "",
-        ]),
-      ),
-    );
-    if (failedItems.length === 1) {
-      const failedItem = failedItems[0];
-      setSelected(failedItem);
-      setCode(codeById.get(failedItem.externalResourceId) ?? "");
-      setLocalParentId(
-        failedItem.parentExternalResourceId ? localParentId : "",
-      );
-    } else {
-      setSelected(null);
-      setCode("");
-    }
-    toast.error(`${importedCount} berhasil, ${failures.length} gagal`, {
-      description: failures
-        .map(({ item, message }) => `${item.name}: ${message}`)
-        .join(" "),
-      duration: 9000,
-    });
-  };
-
-  const hasUnsavedChanges =
-    externalId.trim() !== '' ||
-    name.trim() !== '' ||
-    searchParentId !== defaultSearchParentId ||
-    localParentId !== '' ||
-    code.trim() !== '' ||
-    selectedIds.length > 0 ||
-    Object.values(bulkCodes).some((value) => value.trim() !== '');
-
-  useMasterFaskesDialogGuard({
-    hasUnsavedChanges: canWrite && hasUnsavedChanges,
-    isBusy: importing,
+  const {
+    parentOptions,
+    externalId,
+    name,
+    searchParentId,
+    localParentId,
+    code,
+    items,
+    selected,
+    selectedIds,
+    bulkCodes,
+    searching,
+    importing,
+    selectedImportItems,
+    selectableItems,
+    selectedSelectableCount,
+    allSelectableSelected,
+    someSelectableSelected,
+    requestClose,
+    runSearch,
+    selectItem,
+    toggleItem,
+    toggleAll,
+    importSelected,
+    importSelectedBulk,
+    setExternalId,
+    setName,
+    setSearchParentId,
+    setLocalParentId,
+    setCode,
+    setBulkCode,
+  } = useOrganizationImportDialog({
+    organizations,
+    canWrite,
+    onClose,
+    onImported,
   });
-
-  const selectableItems = items.filter((item) => !item.linkedLocalResourceId);
-  const selectedImportItems = items.filter((item) =>
-    selectedIds.includes(item.externalResourceId),
-  );
-  const selectedSelectableCount = selectedImportItems.filter(
-    (item) => !item.linkedLocalResourceId,
-  ).length;
-  const allSelectableSelected =
-    selectableItems.length > 0 &&
-    selectedSelectableCount === selectableItems.length;
-  const someSelectableSelected =
-    selectedSelectableCount > 0 && !allSelectableSelected;
 
   return (
     <Card>
@@ -574,12 +164,7 @@ function OrganizationImportDialogContent({
             localParentId={localParentId}
             canWrite={canWrite}
             importing={importing}
-            onCodeChange={(externalResourceId, value) =>
-              setBulkCodes((current) => ({
-                ...current,
-                [externalResourceId]: value,
-              }))
-            }
+            onCodeChange={setBulkCode}
             onLocalParentChange={setLocalParentId}
             onImport={() => void importSelectedBulk()}
           />
@@ -605,13 +190,4 @@ function OrganizationImportDialogContent({
       </CardContent>
     </Card>
   );
-}
-
-function defaultBulkCode(item: SatusehatOrganizationRemoteSummary): string {
-  const source = item.identifiers[0]?.value || item.name;
-  const normalized = source
-    .toUpperCase()
-    .replace(/[^A-Z0-9._-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  return normalized.slice(0, 64) || "ORGANIZATION";
 }

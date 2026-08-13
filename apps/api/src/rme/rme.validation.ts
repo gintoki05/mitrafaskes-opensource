@@ -65,13 +65,18 @@ function optionalDate(value: unknown, field: string): Date | undefined {
 function expectedVersion(value: unknown): number {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed < 0) {
-    throw validationError('expectedVersion harus berupa bilangan bulat non-negatif');
+    throw validationError(
+      'expectedVersion harus berupa bilangan bulat non-negatif',
+    );
   }
   return parsed;
 }
 
 function serviceProfile(value: unknown): MedicalRecordServiceProfile {
-  if (value === undefined || value === MedicalRecordServiceProfile.OUTPATIENT_GENERAL) {
+  if (
+    value === undefined ||
+    value === MedicalRecordServiceProfile.OUTPATIENT_GENERAL
+  ) {
     return MedicalRecordServiceProfile.OUTPATIENT_GENERAL;
   }
   throw validationError('Profil layanan RME tidak didukung.');
@@ -83,7 +88,8 @@ function optionalEnum<T extends string>(
   field: string,
 ): T | undefined {
   if (value === undefined || value === null || value === '') return undefined;
-  if (typeof value === 'string' && values.includes(value as T)) return value as T;
+  if (typeof value === 'string' && values.includes(value as T))
+    return value as T;
   throw validationError(`${field} tidak valid`);
 }
 
@@ -104,19 +110,21 @@ function observationCode(value: unknown): {
 }
 
 function observationStatus(value: unknown): ClinicalObservationStatus {
-  return optionalEnum(
-    value,
-    [
-      'preliminary',
-      'final',
-      'amended',
-      'corrected',
-      'cancelled',
-      'entered-in-error',
-      'unknown',
-    ] as const,
-    'observations.status',
-  ) ?? 'final';
+  return (
+    optionalEnum(
+      value,
+      [
+        'preliminary',
+        'final',
+        'amended',
+        'corrected',
+        'cancelled',
+        'entered-in-error',
+        'unknown',
+      ] as const,
+      'observations.status',
+    ) ?? 'final'
+  );
 }
 
 function observationValue(
@@ -136,8 +144,13 @@ function observationValue(
   | 'valueString'
 > {
   const rawValue = recordOf(input.value);
-  const rawType = optionalString(input.valueType ?? rawValue.type)?.toLowerCase();
-  if (rawType === 'quantity' || rawValue.value !== undefined && rawValue.unit !== undefined) {
+  const rawType = optionalString(
+    input.valueType ?? rawValue.type,
+  )?.toLowerCase();
+  if (
+    rawType === 'quantity' ||
+    (rawValue.value !== undefined && rawValue.unit !== undefined)
+  ) {
     const value = optionalNumber(
       rawValue.value ?? input.valueQuantityValue,
       `observations[${index}].value.value`,
@@ -188,7 +201,11 @@ function observationValue(
     return { valueType: 'boolean', valueBoolean: value };
   }
 
-  if (rawType === 'string' || typeof rawValue.value === 'string' || typeof input.valueString === 'string') {
+  if (
+    rawType === 'string' ||
+    typeof rawValue.value === 'string' ||
+    typeof input.valueString === 'string'
+  ) {
     const value = optionalString(rawValue.value ?? input.valueString);
     if (!value) {
       throw validationError(`observations[${index}].value.value wajib diisi`);
@@ -201,7 +218,10 @@ function observationValue(
   );
 }
 
-function parseObservationDraft(value: unknown, index: number): RmeObservationDraft {
+function parseObservationDraft(
+  value: unknown,
+  index: number,
+): RmeObservationDraft {
   const input = recordOf(value);
   const code = observationCode(input.code);
   const referenceRange = recordOf(input.referenceRange);
@@ -233,7 +253,10 @@ function parseObservationDraft(value: unknown, index: number): RmeObservationDra
     category: optionalString(input.category) ?? 'vital-signs',
     ...code,
     ...observationValue(input, index),
-    effectiveAt: optionalDate(input.effectiveAt, `observations[${index}].effectiveAt`),
+    effectiveAt: optionalDate(
+      input.effectiveAt,
+      `observations[${index}].effectiveAt`,
+    ),
     performerId: optionalString(input.performerId),
     status: observationStatus(input.status),
     provenance: input.provenance === 'derived' ? 'derived' : 'original',
@@ -244,7 +267,9 @@ function parseObservationDraft(value: unknown, index: number): RmeObservationDra
     ...(interpretationCode
       ? {
           interpretationCode,
-          interpretationDisplay: optionalString(interpretation.display ?? input.interpretationDisplay),
+          interpretationDisplay: optionalString(
+            interpretation.display ?? input.interpretationDisplay,
+          ),
         }
       : {}),
   };
@@ -271,7 +296,9 @@ export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
     const value = recordOf(prescription);
     const quantity = Number(value.quantity ?? 0);
     if (!Number.isInteger(quantity) || quantity < 0) {
-      throw validationError('Jumlah resep harus berupa bilangan bulat non-negatif');
+      throw validationError(
+        'Jumlah resep harus berupa bilangan bulat non-negatif',
+      );
     }
     return {
       medicineName: optionalString(value.medicineName) ?? '',
@@ -282,9 +309,9 @@ export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
       instructions: optionalString(value.instructions),
     };
   });
-  const observations = (Array.isArray(body.observations) ? body.observations : []).map(
-    (observation, index) => parseObservationDraft(observation, index),
-  );
+  const observations = (
+    Array.isArray(body.observations) ? body.observations : []
+  ).map((observation, index) => parseObservationDraft(observation, index));
 
   return {
     encounterId: requiredString(body.encounterId, 'encounterId'),

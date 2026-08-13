@@ -26,7 +26,10 @@ async function bootstrap() {
       'Pengaturan organisasi dan lokasi fasilitas kesehatan.',
     )
     .addTag('Medical Records', 'Pencatatan rekam medis elektronik (RME).')
-    .addTag('Integrations', 'Capability dan operasi provider integrasi opsional.')
+    .addTag(
+      'Integrations',
+      'Capability dan operasi provider integrasi opsional.',
+    )
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig, {
     autoTagControllers: false,

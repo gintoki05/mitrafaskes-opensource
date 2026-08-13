@@ -46,7 +46,10 @@ describe('SatusehatPractitionerService', () => {
             gender: 'male',
             birthDate: '1994-01-01',
             identifier: [
-              { system: 'https://fhir.kemkes.go.id/id/nik', value: localPractitioner.nik },
+              {
+                system: 'https://fhir.kemkes.go.id/id/nik',
+                value: localPractitioner.nik,
+              },
               {
                 system: 'https://fhir.kemkes.go.id/id/nakes-his-number',
                 value: '10009880728',
@@ -111,13 +114,13 @@ describe('SatusehatPractitionerService', () => {
         identifier: '10009880728',
       }),
     ).resolves.toEqual({
-      items: [
-        expect.objectContaining({ externalResourceId: '10009880728' }),
-      ],
+      items: [expect.objectContaining({ externalResourceId: '10009880728' })],
       total: 1,
     });
     expect(fhir.getPractitioner).toHaveBeenCalledWith('10009880728');
-    expect(practitioners.getPractitionerForExternalIntegration).not.toHaveBeenCalled();
+    expect(
+      practitioners.getPractitionerForExternalIntegration,
+    ).not.toHaveBeenCalled();
     expect(prisma.externalResourceLink.upsert).not.toHaveBeenCalled();
   });
 
@@ -159,7 +162,9 @@ describe('SatusehatPractitionerService', () => {
       name: [{ text: 'dr. Alexander' }],
     });
     const practitioners = createPractitionerMock();
-    practitioners.getPractitionerForExternalIntegration.mockResolvedValue(localPractitioner);
+    practitioners.getPractitionerForExternalIntegration.mockResolvedValue(
+      localPractitioner,
+    );
     practitioners.findLinkageByExternalId.mockResolvedValue(null);
     practitioners.findById.mockResolvedValue({
       id: localPractitioner.id,
@@ -182,15 +187,17 @@ describe('SatusehatPractitionerService', () => {
       practitioners as unknown as PractitionersService,
     );
 
-    await expect(service.searchForLocal(localPractitioner.id)).resolves.toEqual({
-      items: [
-        expect.objectContaining({
-          externalResourceId: '10009880728',
-          name: 'dr. Alexander',
-        }),
-      ],
-      total: 1,
-    });
+    await expect(service.searchForLocal(localPractitioner.id)).resolves.toEqual(
+      {
+        items: [
+          expect.objectContaining({
+            externalResourceId: '10009880728',
+            name: 'dr. Alexander',
+          }),
+        ],
+        total: 1,
+      },
+    );
     expect(fhir.searchPractitioners).toHaveBeenCalledWith({
       identifier: 'https://fhir.kemkes.go.id/id/nik|7209061211900001',
     });
@@ -238,7 +245,9 @@ describe('SatusehatPractitionerService', () => {
       ),
     );
     const practitioners = createPractitionerMock();
-    practitioners.getPractitionerForExternalIntegration.mockResolvedValue(localPractitioner);
+    practitioners.getPractitionerForExternalIntegration.mockResolvedValue(
+      localPractitioner,
+    );
     practitioners.findLinkageByExternalId.mockResolvedValue({
       localResourceId: localPractitioner.id,
       externalResourceId: '10009880728',
@@ -274,7 +283,9 @@ describe('PractitionersService create flow', () => {
     const prisma = createPrismaMock();
     prisma.user.create.mockResolvedValue(localPractitioner);
 
-    const service = new PractitionersService(prisma as unknown as PrismaService);
+    const service = new PractitionersService(
+      prisma as unknown as PrismaService,
+    );
 
     await expect(
       service.create({
@@ -311,7 +322,9 @@ describe('PractitionersService create flow', () => {
 
   it('rejects a Location from a different Organization', async () => {
     const prisma = createPrismaMock();
-    prisma.healthcareOrganization.findUnique.mockResolvedValue({ id: 'organization-1' });
+    prisma.healthcareOrganization.findUnique.mockResolvedValue({
+      id: 'organization-1',
+    });
     prisma.location.findMany.mockResolvedValue([
       {
         id: 'location-1',
@@ -319,7 +332,9 @@ describe('PractitionersService create flow', () => {
       },
     ]);
 
-    const service = new PractitionersService(prisma as unknown as PrismaService);
+    const service = new PractitionersService(
+      prisma as unknown as PrismaService,
+    );
 
     await expect(
       service.create({

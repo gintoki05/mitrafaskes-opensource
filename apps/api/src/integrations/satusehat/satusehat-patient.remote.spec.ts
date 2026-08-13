@@ -1,4 +1,7 @@
-import { parseRemotePatient, parseSearchResponse } from './satusehat-patient.remote';
+import {
+  parseRemotePatient,
+  parseSearchResponse,
+} from './satusehat-patient.remote';
 
 describe('SATUSEHAT Patient remote parser', () => {
   it('maps a Patient Bundle and prefers the IHS identifier over a UUID', () => {

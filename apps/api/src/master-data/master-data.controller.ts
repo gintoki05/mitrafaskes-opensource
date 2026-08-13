@@ -62,9 +62,7 @@ const parseListQuery = (
 @UseGuards(SessionPermissionGuard)
 @ApiTags('Master Faskes')
 export class MasterDataController {
-  constructor(
-    private readonly masterData: MasterDataService,
-  ) {}
+  constructor(private readonly masterData: MasterDataService) {}
 
   @Get('faskes')
   @RequirePermission(AccessPermission.MASTER_DATA_READ)

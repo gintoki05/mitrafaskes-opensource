@@ -3,9 +3,8 @@ import type { Prisma } from '@prisma/client';
 import type { MaritalStatusSummary } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
 
-type MaritalStatusRecord = Prisma.MasterMaritalStatusGetPayload<
-  Prisma.MasterMaritalStatusDefaultArgs
->;
+type MaritalStatusRecord =
+  Prisma.MasterMaritalStatusGetPayload<Prisma.MasterMaritalStatusDefaultArgs>;
 
 const toMaritalStatusSummary = (
   record: MaritalStatusRecord,
@@ -27,11 +26,7 @@ export class MasterMaritalStatusService {
   async list(): Promise<MaritalStatusSummary[]> {
     const records = await this.prisma.masterMaritalStatus.findMany({
       where: { active: true },
-      orderBy: [
-        { displayOrder: 'asc' },
-        { display: 'asc' },
-        { code: 'asc' },
-      ],
+      orderBy: [{ displayOrder: 'asc' }, { display: 'asc' }, { code: 'asc' }],
     });
 
     return records.map(toMaritalStatusSummary);

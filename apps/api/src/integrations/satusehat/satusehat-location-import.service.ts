@@ -9,7 +9,6 @@ import {
 import type {
   SatusehatLocationImportRequest,
   SatusehatLocationMutationResponse,
-  SatusehatLocationRemoteSummary,
   SatusehatLocationSearchQuery,
   SatusehatLocationSearchResponse,
 } from '@mitrafaskes/shared';
@@ -54,8 +53,7 @@ export class SatusehatLocationImportService {
     if (!id && !identifier && !name && !organization && !organizationLocalId) {
       throw new BadRequestException({
         code: 'SATUSEHAT_LOCATION_SEARCH_TERM_REQUIRED',
-        message:
-          'Isi ID, kode, nama, atau organisasi untuk mencari Location',
+        message: 'Isi ID, kode, nama, atau organisasi untuk mencari Location',
       });
     }
 
@@ -189,9 +187,7 @@ export class SatusehatLocationImportService {
   private async getRemoteLocation(
     externalResourceId: string,
   ): Promise<RemoteLocation> {
-    return parseRemoteLocation(
-      await this.fhir.getLocation(externalResourceId),
-    );
+    return parseRemoteLocation(await this.fhir.getLocation(externalResourceId));
   }
 
   private async resolveOrganizationExternalId(
@@ -225,8 +221,7 @@ export class SatusehatLocationImportService {
     requestedLocalId: string | undefined,
     environment: string,
   ): Promise<string> {
-    const remoteOrganizationId =
-      remote.managingOrganizationExternalResourceId;
+    const remoteOrganizationId = remote.managingOrganizationExternalResourceId;
     if (!remoteOrganizationId) {
       throw new ConflictException({
         code: 'SATUSEHAT_LOCATION_MANAGING_ORGANIZATION_MISSING',
@@ -270,14 +265,10 @@ export class SatusehatLocationImportService {
       remoteOrganizationId,
       environment,
     );
-    if (
-      !link ||
-      link.localResourceType !== LOCAL_ORGANIZATION_RESOURCE_TYPE
-    ) {
+    if (!link || link.localResourceType !== LOCAL_ORGANIZATION_RESOURCE_TYPE) {
       throw new ConflictException({
         code: 'SATUSEHAT_ORGANIZATION_NOT_LINKED',
-        message:
-          'Managing Organization Location belum terhubung ke data lokal',
+        message: 'Managing Organization Location belum terhubung ke data lokal',
       });
     }
     return link.localResourceId;
@@ -319,7 +310,8 @@ export class SatusehatLocationImportService {
     const parent = await this.prisma.location.findUnique({
       where: { id: parentId },
     });
-    if (!parent) throw new NotFoundException('Parent Location lokal tidak ditemukan');
+    if (!parent)
+      throw new NotFoundException('Parent Location lokal tidak ditemukan');
     if (parent.organizationId !== organizationId) {
       throw new ConflictException({
         code: 'SATUSEHAT_LOCATION_PARENT_ORGANIZATION_MISMATCH',
@@ -333,7 +325,10 @@ export class SatusehatLocationImportService {
       parentId,
       environment,
     );
-    if (!parentLink || parentLink.externalResourceId !== remote.parentExternalResourceId) {
+    if (
+      !parentLink ||
+      parentLink.externalResourceId !== remote.parentExternalResourceId
+    ) {
       throw new ConflictException({
         code: 'SATUSEHAT_LOCATION_PARENT_MISMATCH',
         message:
@@ -421,13 +416,17 @@ export class SatusehatLocationImportService {
   }
 
   private toLocalCode(remote: RemoteLocation, requestedCode?: string): string {
-    const raw = this.optionalText(requestedCode) ?? remote.identifierValue ?? remote.name;
+    const raw =
+      this.optionalText(requestedCode) ?? remote.identifierValue ?? remote.name;
     const normalized = raw
       .toUpperCase()
       .replace(/[^A-Z0-9._-]+/g, '-')
       .replace(/^-+|-+$/g, '')
       .slice(0, 64);
-    return normalized || `LOCATION-${remote.externalResourceId.slice(0, 8).toUpperCase()}`;
+    return (
+      normalized ||
+      `LOCATION-${remote.externalResourceId.slice(0, 8).toUpperCase()}`
+    );
   }
 
   private toLocalType(

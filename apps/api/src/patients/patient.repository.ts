@@ -235,10 +235,7 @@ export class PatientRepository {
         return transaction.patient.update({
           where: { id },
           data: {
-            ...this.buildPatientData(
-              input,
-              current.medicalRecNo,
-            ),
+            ...this.buildPatientData(input, current.medicalRecNo),
             version: { increment: 1 },
           },
           include: patientInclude,
@@ -262,10 +259,7 @@ export class PatientRepository {
     }
   }
 
-  private buildPatientData(
-    input: ValidatedPatientInput,
-    medicalRecNo: string,
-  ) {
+  private buildPatientData(input: ValidatedPatientInput, medicalRecNo: string) {
     return {
       nik: input.nik ?? null,
       fullName: input.fullName,

@@ -45,12 +45,14 @@ export class RmeController {
   @RequirePermission(AccessPermission.RME_FINALIZE)
   finalize(
     @Body() body: unknown,
-    @Req() request: {
+    @Req()
+    request: {
       user: AuthenticatedUser;
       headers: Record<string, string | string[] | undefined>;
     },
   ) {
-    const requestId = this.header(request.headers['x-request-id']) ?? randomUUID();
+    const requestId =
+      this.header(request.headers['x-request-id']) ?? randomUUID();
     const correlationId =
       this.header(request.headers['x-correlation-id']) ?? requestId;
     return this.rme.finalize(body, request.user, { requestId, correlationId });

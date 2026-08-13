@@ -10,6 +10,7 @@ import {
   PatientListQuery,
   PatientListResponse,
 } from '@mitrafaskes/shared';
+import type { ResourceIntegrationSummary } from '@mitrafaskes/shared';
 import { IntegrationRegistry } from '../integrations/integration-registry';
 import {
   PatientIdentityConflictError,
@@ -125,7 +126,10 @@ export class PatientsService {
         { mode: 'UPDATE', previousAddresses: current.addresses },
       );
       return await this.attachIntegrations([
-        await this.repository.update(id, { ...validated, addresses: canonical }),
+        await this.repository.update(id, {
+          ...validated,
+          addresses: canonical,
+        }),
       ]).then(([patient]) => patient);
     } catch (error) {
       if (
@@ -173,7 +177,7 @@ export class PatientsService {
           'Patient',
           patients.map((patient) => patient.id),
         )
-      : new Map();
+      : new Map<string, ResourceIntegrationSummary[]>();
     return patients.map((patient) => ({
       ...patient,
       integrations: summaries.get(patient.id) ?? [],

@@ -25,6 +25,11 @@ import { MasterIcd10Service } from './master-icd10.service';
       useExisting: IntegrationMasterWilayahProvider,
     },
   ],
-  exports: [MasterDataService, MasterWilayahService, MasterIcd10Service, PrismaService],
+  exports: [
+    MasterDataService,
+    MasterWilayahService,
+    MasterIcd10Service,
+    PrismaService,
+  ],
 })
 export class MasterDataModule {}

@@ -14,7 +14,6 @@ function contextFor(
   };
   return {
     // Metadata is attached to the prototype method; the guard only inspects it.
-    // eslint-disable-next-line @typescript-eslint/unbound-method
     getHandler: () => handler,
     getClass: () => IntegrationGatewayController,
     switchToHttp: () => ({ getRequest: () => request }),
@@ -95,7 +94,10 @@ describe('IntegrationGatewayController resource payload visibility', () => {
   it('redacts raw preview and sync payloads for non-Admin operators', async () => {
     const preview = jest.fn().mockResolvedValue({
       operation: 'CREATE',
-      payload: { resourceType: 'Condition', subject: { reference: 'Patient/P1' } },
+      payload: {
+        resourceType: 'Condition',
+        subject: { reference: 'Patient/P1' },
+      },
     });
     const sync = jest.fn().mockResolvedValue({
       syncedRemotely: true,
@@ -129,12 +131,16 @@ describe('IntegrationGatewayController resource payload visibility', () => {
     ).resolves.toEqual({ syncedRemotely: true });
     await expect(
       controller.preview('SATUSEHAT', 'Condition', 'diagnosis-1', admin),
-    ).resolves.toEqual(expect.objectContaining({ payload: expect.any(Object) }));
+    ).resolves.toEqual(
+      expect.objectContaining({ payload: expect.any(Object) }),
+    );
     await expect(
       controller.sync('SATUSEHAT', 'Condition', 'diagnosis-1', admin),
-    ).resolves.toEqual(expect.objectContaining({
-      payload: expect.any(Object),
-      response: expect.any(Object),
-    }));
+    ).resolves.toEqual(
+      expect.objectContaining({
+        payload: expect.any(Object),
+        response: expect.any(Object),
+      }),
+    );
   });
 });

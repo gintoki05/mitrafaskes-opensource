@@ -62,7 +62,10 @@ export function validateStatusUpdate(input: unknown): ValidatedStatusInput {
     !Number.isInteger(expectedVersion) ||
     expectedVersion < 1
   ) {
-    issues.push({ field: 'expectedVersion', message: 'Versi Encounter tidak valid' });
+    issues.push({
+      field: 'expectedVersion',
+      message: 'Versi Encounter tidak valid',
+    });
   }
   if (issues.length > 0) {
     throw new EncounterValidationError('Perubahan status tidak valid', issues);

@@ -106,7 +106,9 @@ export class EncounterRepository {
     );
     const value = Number(rows[0]?.value);
     if (!Number.isSafeInteger(value) || value < 1) {
-      throw new Error('Sequence nomor Encounter tidak menghasilkan nilai valid');
+      throw new Error(
+        'Sequence nomor Encounter tidak menghasilkan nilai valid',
+      );
     }
     return `ENC-${year}-${String(value).padStart(6, '0')}`;
   }
@@ -117,7 +119,9 @@ export class EncounterRepository {
     queueDate: Date,
   ): Promise<number> {
     const id = randomUUID();
-    const rows = await transaction.$queryRaw<Array<{ lastIssuedNumber: number }>>(
+    const rows = await transaction.$queryRaw<
+      Array<{ lastIssuedNumber: number }>
+    >(
       Prisma.sql`
         INSERT INTO "EncounterQueueCounter"
           ("id", "locationId", "queueDate", "lastIssuedNumber", "createdAt", "updatedAt")

@@ -1,3 +1,4 @@
+import { PatientNameUse } from '@mitrafaskes/shared';
 import type {
   AddressType,
   AddressUse,
@@ -6,7 +7,6 @@ import type {
   PatientIdentifier,
   PatientIdentifierType,
   PatientName,
-  PatientNameUse,
   PatientTelecom,
   TelecomSystem,
   TelecomUse,
@@ -57,7 +57,13 @@ export function toSatusehatPatientPayload(
   const identifiers = currentIdentifiers.length
     ? currentIdentifiers.map(toIdentifier)
     : patient.nik
-      ? [{ use: 'official' as const, system: PATIENT_NIK_SYSTEM, value: patient.nik }]
+      ? [
+          {
+            use: 'official' as const,
+            system: PATIENT_NIK_SYSTEM,
+            value: patient.nik,
+          },
+        ]
       : [];
   const payload: SatusehatPatientPayload = {
     resourceType: 'Patient',
@@ -79,14 +85,27 @@ export function toSatusehatPatientPayload(
   const telecom = currentTelecoms.length
     ? currentTelecoms.map(toTelecom)
     : patient.phone
-      ? [{ system: 'phone' as const, value: patient.phone, use: 'mobile' as const }]
+      ? [
+          {
+            system: 'phone' as const,
+            value: patient.phone,
+            use: 'mobile' as const,
+          },
+        ]
       : [];
   if (telecom.length > 0) payload.telecom = telecom;
 
   const addresses = currentAddresses.length
     ? currentAddresses.map(toAddress)
     : patient.address
-      ? [{ use: 'home' as const, type: 'physical' as const, text: patient.address, country: 'ID' }]
+      ? [
+          {
+            use: 'home' as const,
+            type: 'physical' as const,
+            text: patient.address,
+            country: 'ID',
+          },
+        ]
       : [];
   if (addresses.length > 0) payload.address = addresses;
 
@@ -169,8 +188,7 @@ function toIdentifier(
 ): SatusehatPatientIdentifierPayload {
   return {
     use: 'official',
-    system:
-      identifierSystems[identifier.type] ?? identifier.system,
+    system: identifierSystems[identifier.type] ?? identifier.system,
     value: identifier.value,
   };
 }
@@ -186,15 +204,11 @@ function toName(name: PatientName): SatusehatPatientNamePayload {
   };
 }
 
-function toTelecom(
-  telecom: PatientTelecom,
-): SatusehatPatientTelecomPayload {
+function toTelecom(telecom: PatientTelecom): SatusehatPatientTelecomPayload {
   return {
     system: telecomSystem(telecom.system),
     value: telecom.value,
-    ...(telecomUse(telecom.use)
-      ? { use: telecomUse(telecom.use) }
-      : {}),
+    ...(telecomUse(telecom.use) ? { use: telecomUse(telecom.use) } : {}),
   };
 }
 
@@ -219,12 +233,7 @@ function toAdministrativeCodeExtension(
   address: PatientAddress,
 ): SatusehatPatientAddressPayload['extension'] {
   type AdministrativeCodeName =
-    | 'province'
-    | 'city'
-    | 'district'
-    | 'village'
-    | 'rt'
-    | 'rw';
+    'province' | 'city' | 'district' | 'village' | 'rt' | 'rw';
 
   const source: Array<{
     url: AdministrativeCodeName;
@@ -246,18 +255,20 @@ function toAdministrativeCodeExtension(
 
 function nameUse(use: PatientNameUse): SatusehatPatientNamePayload['use'] {
   switch (use) {
-    case 'PREFERRED':
+    case PatientNameUse.PREFERRED:
       return 'usual';
-    case 'ALIAS':
+    case PatientNameUse.ALIAS:
       return 'nickname';
-    case 'OLD':
+    case PatientNameUse.OLD:
       return 'old';
     default:
       return 'official';
   }
 }
 
-function telecomSystem(system: TelecomSystem): SatusehatPatientTelecomPayload['system'] {
+function telecomSystem(
+  system: TelecomSystem,
+): SatusehatPatientTelecomPayload['system'] {
   return system.toLowerCase() as SatusehatPatientTelecomPayload['system'];
 }
 
@@ -281,6 +292,8 @@ function addressUse(use: AddressUse): SatusehatPatientAddressPayload['use'] {
     : undefined;
 }
 
-function addressType(type: AddressType): SatusehatPatientAddressPayload['type'] {
+function addressType(
+  type: AddressType,
+): SatusehatPatientAddressPayload['type'] {
   return type.toLowerCase() as SatusehatPatientAddressPayload['type'];
 }

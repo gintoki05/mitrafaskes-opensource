@@ -75,7 +75,10 @@ export class SatusehatReconciliationService {
     }
 
     for (const link of links) {
-      const key = this.reconciliationKey(link.resourceType, link.localResourceId);
+      const key = this.reconciliationKey(
+        link.resourceType,
+        link.localResourceId,
+      );
       const success = successByResource.get(key);
       if (!success) {
         issues.push({
@@ -84,7 +87,8 @@ export class SatusehatReconciliationService {
           resourceType: link.resourceType,
           resourceId: link.localResourceId,
           externalResourceId: link.externalResourceId,
-          message: 'Linkage tersimpan tetapi tidak ditemukan log SUCCESS yang sesuai.',
+          message:
+            'Linkage tersimpan tetapi tidak ditemukan log SUCCESS yang sesuai.',
         });
         continue;
       }
@@ -104,7 +108,10 @@ export class SatusehatReconciliationService {
     }
 
     for (const success of successByResource.values()) {
-      const key = this.reconciliationKey(success.resourceType, success.resourceId);
+      const key = this.reconciliationKey(
+        success.resourceType,
+        success.resourceId,
+      );
       if (linkByResource.has(key)) continue;
       issues.push({
         code: 'SUCCESS_LOG_WITHOUT_LINKAGE',
@@ -130,7 +137,10 @@ export class SatusehatReconciliationService {
     return `${resourceType}\u0000${resourceId}`;
   }
 
-  private logMatchesEnvironment(payload: unknown, environment: string): boolean {
+  private logMatchesEnvironment(
+    payload: unknown,
+    environment: string,
+  ): boolean {
     const record = this.isRecord(payload) ? payload : undefined;
     const metadata =
       record && this.isRecord(record.metadata) ? record.metadata : undefined;

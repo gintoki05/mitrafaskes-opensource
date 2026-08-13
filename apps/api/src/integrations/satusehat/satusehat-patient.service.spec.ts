@@ -23,7 +23,8 @@ const localPatient: Patient = {
       system: 'urn:id:nik',
       value: '7209061211900001',
       normalizedValue: '7209061211900001',
-      verificationStatus: 'UNVERIFIED' as Patient['identifiers'][number]['verificationStatus'],
+      verificationStatus:
+        'UNVERIFIED' as Patient['identifiers'][number]['verificationStatus'],
       isPrimary: true,
       active: true,
     },
@@ -287,7 +288,10 @@ describe('SatusehatPatientService', () => {
     });
     prisma.satusehatSyncLog.create.mockResolvedValue({ id: 'sync-update-1' });
     const fhir = createFhirMock();
-    fhir.patchPatient.mockResolvedValue({ resourceType: 'Patient', id: 'P10000001' });
+    fhir.patchPatient.mockResolvedValue({
+      resourceType: 'Patient',
+      id: 'P10000001',
+    });
     const service = createService(prisma, fhir);
 
     await expect(service.syncPatient(localPatient.id)).resolves.toEqual(
@@ -371,7 +375,10 @@ describe('SatusehatPatientService', () => {
     expect(prisma.externalResourceLink.upsert).toHaveBeenCalled();
     expect(prisma.satusehatSyncLog.update).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: 'SUCCESS', satusehatId: 'P10000001' }),
+        data: expect.objectContaining({
+          status: 'SUCCESS',
+          satusehatId: 'P10000001',
+        }),
       }),
     );
   });

@@ -42,59 +42,28 @@ import {
   readRetryAfterAt,
   readSatusehatFailureMetadata,
 } from './satusehat-sync-log';
+import {
+  localResourceTypes,
+  operations,
+  resources,
+} from './satusehat-integration.catalog';
+import type { SyncLogRecord } from './satusehat-integration.types';
 
 const PROVIDER = 'SATUSEHAT';
 const DEFAULT_ENVIRONMENT = 'sandbox';
 
-const localResourceTypes: Record<string, string> = {
-  Organization: 'HealthcareOrganization',
-  Location: 'Location',
-  Practitioner: 'User',
-  Patient: 'Patient',
-  Encounter: 'Encounter',
-  Condition: 'Diagnosis',
-  Observation: 'ClinicalObservation',
-};
-
-const resources = [
-  'Organization',
-  'Location',
-  'Practitioner',
-  'Patient',
-  'Encounter',
-  'Condition',
-  'Observation',
-];
-const operations = [
-  'search',
-  'import',
-  'preview',
-  'sync',
-  'link',
-  'logs',
-  'reconcile',
-];
-
-interface SyncLogRecord {
-  id: string;
-  resourceType: string;
-  resourceId: string;
-  status: 'PENDING' | 'SUCCESS' | 'FAILED';
-  satusehatId?: string | null;
-  errorMessage?: string | null;
-  updatedAt: Date | string;
-  payload: unknown;
-}
-
 @Injectable()
-export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleInit {
+export class SatusehatIntegrationPlugin
+  implements IntegrationPlugin, OnModuleInit
+{
   readonly provider = PROVIDER;
   readonly descriptor: IntegrationCapability = {
     provider: PROVIDER,
     displayName: 'SATUSEHAT',
     enabled: true,
     status: 'NOT_CONFIGURED',
-    environment: process.env.SATUSEHAT_ENVIRONMENT?.trim() || DEFAULT_ENVIRONMENT,
+    environment:
+      process.env.SATUSEHAT_ENVIRONMENT?.trim() || DEFAULT_ENVIRONMENT,
     resources,
     operations,
   };
@@ -141,35 +110,41 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
           resourceType: 'Practitioner',
           search: (query) => this.searchPractitioner(query),
           lookup: (query) => this.satusehatPractitioners.lookupForDraft(query),
-          link: (id, input) => this.satusehatPractitioners.linkExisting(id, input),
+          link: (id, input) =>
+            this.satusehatPractitioners.linkExisting(id, input),
         },
       ],
       [
         'Organization',
         {
           resourceType: 'Organization',
-          search: (query) => this.satusehatOrganizationImport.searchOrganizations(query),
-          import: (input) => this.satusehatOrganizationImport.importOrganization(input),
+          search: (query) =>
+            this.satusehatOrganizationImport.searchOrganizations(query),
+          import: (input) =>
+            this.satusehatOrganizationImport.importOrganization(input),
           preview: (id) => this.satusehatOrganizations.previewOrganization(id),
           sync: (id, context) =>
             context
               ? this.satusehatOrganizations.syncOrganization(id, context)
               : this.satusehatOrganizations.syncOrganization(id),
-          link: (id, input) => this.satusehatOrganizationLink.linkExistingOrganization(id, input),
+          link: (id, input) =>
+            this.satusehatOrganizationLink.linkExistingOrganization(id, input),
         },
       ],
       [
         'Location',
         {
           resourceType: 'Location',
-          search: (query) => this.satusehatLocationImport.searchLocations(query),
+          search: (query) =>
+            this.satusehatLocationImport.searchLocations(query),
           import: (input) => this.satusehatLocationImport.importLocation(input),
           preview: (id) => this.satusehatLocations.previewLocation(id),
           sync: (id, context) =>
             context
               ? this.satusehatLocations.syncLocation(id, context)
               : this.satusehatLocations.syncLocation(id),
-          link: (id, input) => this.satusehatLocationLink.linkExistingLocation(id, input),
+          link: (id, input) =>
+            this.satusehatLocationLink.linkExistingLocation(id, input),
         },
       ],
       [
@@ -236,7 +211,9 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
         this.prisma.satusehatSyncLog.count(),
       ]);
       return {
-        items: records.map((record) => this.toLog(record, input.includePayload)),
+        items: records.map((record) =>
+          this.toLog(record, input.includePayload),
+        ),
         meta: { page: input.page, pageSize: input.pageSize, total },
       };
     } catch {
@@ -245,7 +222,11 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
         items: records
           .slice((input.page - 1) * input.pageSize, input.page * input.pageSize)
           .map((record) => this.toLog(record, input.includePayload)),
-        meta: { page: input.page, pageSize: input.pageSize, total: records.length },
+        meta: {
+          page: input.page,
+          pageSize: input.pageSize,
+          total: records.length,
+        },
       };
     }
   }
@@ -272,7 +253,8 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
     if (failure.retryable !== true) {
       throw new ConflictException({
         code: 'SYNC_RETRY_NOT_ALLOWED',
-        message: 'Error ini tidak retryable. Jalankan tindakan operator yang ditampilkan.',
+        message:
+          'Error ini tidak retryable. Jalankan tindakan operator yang ditampilkan.',
         classification: {
           category: failure.errorCategory ?? 'UNKNOWN',
           retryable: false,
@@ -330,7 +312,8 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
     }
 
     return {
-      message: 'Retry sinkronisasi dijalankan melalui handler resource SATUSEHAT.',
+      message:
+        'Retry sinkronisasi dijalankan melalui handler resource SATUSEHAT.',
       sourceLogId: log.id,
       log: this.toLog(retryLog, options.includePayload),
     };
@@ -355,7 +338,11 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
           localResourceType,
           localResourceId: { in: [...localResourceIds] },
         },
-        select: { localResourceId: true, externalResourceId: true, lastSyncedAt: true },
+        select: {
+          localResourceId: true,
+          externalResourceId: true,
+          lastSyncedAt: true,
+        },
       }),
       this.prisma.satusehatSyncLog.findMany({
         where: { resourceType, resourceId: { in: [...localResourceIds] } },
@@ -385,7 +372,10 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
           provider: PROVIDER,
           environment,
           linkage: link
-            ? { externalResourceId: link.externalResourceId, lastSyncedAt: link.lastSyncedAt?.toISOString() }
+            ? {
+                externalResourceId: link.externalResourceId,
+                lastSyncedAt: link.lastSyncedAt?.toISOString(),
+              }
             : undefined,
           latestSync: log
             ? {
@@ -405,7 +395,9 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
     return this.reconciliation.reconcile(this.readEnvironment());
   }
 
-  getResourceHandler(resourceType: string): IntegrationResourceHandler | undefined {
+  getResourceHandler(
+    resourceType: string,
+  ): IntegrationResourceHandler | undefined {
     return this.handlers.get(resourceType);
   }
 
@@ -483,13 +475,17 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
 
   private readLogEnvironment(payload: unknown): string {
     const record = this.isRecord(payload) ? payload : undefined;
-    const metadata = record && this.isRecord(record.metadata) ? record.metadata : undefined;
+    const metadata =
+      record && this.isRecord(record.metadata) ? record.metadata : undefined;
     return typeof metadata?.environment === 'string'
       ? metadata.environment
       : this.readEnvironment();
   }
 
-  private logMatchesEnvironment(payload: unknown, environment: string): boolean {
+  private logMatchesEnvironment(
+    payload: unknown,
+    environment: string,
+  ): boolean {
     return this.readLogEnvironment(payload) === environment;
   }
 

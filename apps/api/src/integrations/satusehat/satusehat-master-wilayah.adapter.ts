@@ -83,13 +83,7 @@ export class SatusehatMasterWilayahAdapter implements MasterWilayahProvider {
 
     for (const chunk of chunks) {
       records.push(
-        ...(await this.fetchRegions(
-          token,
-          path,
-          parentQueryKey,
-          chunk,
-          level,
-        )),
+        ...(await this.fetchRegions(token, path, parentQueryKey, chunk, level)),
       );
     }
 
@@ -120,7 +114,7 @@ export class SatusehatMasterWilayahAdapter implements MasterWilayahProvider {
         },
         signal: controller.signal,
       });
-    } catch (error) {
+    } catch {
       if (controller.signal.aborted) {
         throw new MasterDataProviderError(
           'MASTER_DATA_PROVIDER_TIMEOUT',
@@ -141,7 +135,9 @@ export class SatusehatMasterWilayahAdapter implements MasterWilayahProvider {
     const body = await this.readBody(response);
     if (!response.ok) {
       if (response.status === 429) {
-        const retryAfter = this.readRetryAfter(response.headers.get('retry-after'));
+        const retryAfter = this.readRetryAfter(
+          response.headers.get('retry-after'),
+        );
         throw new MasterDataProviderError(
           'MASTER_DATA_PROVIDER_RATE_LIMITED',
           retryAfter
@@ -166,12 +162,13 @@ export class SatusehatMasterWilayahAdapter implements MasterWilayahProvider {
       );
     }
 
-    return body.data.map((item: unknown) =>
-      this.toRecord(item, level),
-    );
+    return body.data.map((item: unknown) => this.toRecord(item, level));
   }
 
-  private toRecord(item: unknown, level: RegionLevel): MasterWilayahProviderRecord {
+  private toRecord(
+    item: unknown,
+    level: RegionLevel,
+  ): MasterWilayahProviderRecord {
     if (!this.isRecord(item)) {
       throw new MasterDataProviderError(
         'MASTER_DATA_PROVIDER_RESPONSE_INVALID',

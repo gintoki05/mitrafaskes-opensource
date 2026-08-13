@@ -10,7 +10,10 @@ import {
   OBSERVATION_LOINC_SYSTEM,
   OBSERVATION_UCUM_SYSTEM,
 } from './satusehat-observation.constants';
-import type { ClinicalObservationStatus, ClinicalObservationValueType } from '@mitrafaskes/shared';
+import type {
+  ClinicalObservationStatus,
+  ClinicalObservationValueType,
+} from '@mitrafaskes/shared';
 
 export interface ClinicalObservationSource {
   id: string;
@@ -209,7 +212,8 @@ function valuePayload(
           {
             system: observation.valueCodeSystem ?? 'urn:mitrafaskes:local-code',
             code: observation.valueCode ?? '',
-            display: observation.valueCodeDisplay ?? observation.valueCode ?? '',
+            display:
+              observation.valueCodeDisplay ?? observation.valueCode ?? '',
           },
         ],
       },

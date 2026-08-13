@@ -133,7 +133,7 @@ function sanitizeErrorText(value: unknown): string | undefined {
     /\b(?:resourceType|identifier|telecom|address|birthDate|nik)\s*[:=]/i.test(
       text,
     ) ||
-    /[\[{][\s\S]*["'](?:resourceType|identifier|telecom|address)["']\s*:/i.test(
+    /(?:\[|\{)[\s\S]*["'](?:resourceType|identifier|telecom|address)["']\s*:/i.test(
       text,
     )
   ) {

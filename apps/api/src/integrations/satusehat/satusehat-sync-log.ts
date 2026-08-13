@@ -175,7 +175,9 @@ function calculateBackoffMs(
   return Math.max(exponentialDelay, retryAfterDelay);
 }
 
-function readClassification(value: unknown): SatusehatFhirErrorClassification | undefined {
+function readClassification(
+  value: unknown,
+): SatusehatFhirErrorClassification | undefined {
   if (!isRecord(value)) return undefined;
   if (
     !isFailureCategory(value.category) ||
@@ -191,7 +193,9 @@ function readClassification(value: unknown): SatusehatFhirErrorClassification | 
   };
 }
 
-function isFailureCategory(value: unknown): value is IntegrationFailureCategory {
+function isFailureCategory(
+  value: unknown,
+): value is IntegrationFailureCategory {
   return (
     value === 'AUTH' ||
     value === 'RATE_LIMIT' ||

@@ -48,13 +48,16 @@ export class EncountersController {
     @Req() request: { user: AuthenticatedUser },
   ) {
     try {
-      return await this.encounters.findMany({
-        page: parsePositiveInteger(query.page, 1),
-        pageSize: parsePositiveInteger(query.pageSize, 25),
-        queueDate: query.queueDate,
-        locationId: query.locationId,
-        status: parseEncounterStatus(query.status),
-      }, request.user);
+      return await this.encounters.findMany(
+        {
+          page: parsePositiveInteger(query.page, 1),
+          pageSize: parsePositiveInteger(query.pageSize, 25),
+          queueDate: query.queueDate,
+          locationId: query.locationId,
+          status: parseEncounterStatus(query.status),
+        },
+        request.user,
+      );
     } catch (error) {
       this.throwHttpError(error);
     }
@@ -62,10 +65,7 @@ export class EncountersController {
 
   @Post()
   @RequirePermission(AccessPermission.QUEUE_CREATE)
-  create(
-    @Body() body: unknown,
-    @Req() request: { user: AuthenticatedUser },
-  ) {
+  create(@Body() body: unknown, @Req() request: { user: AuthenticatedUser }) {
     return this.encounters.create(body, request.user).catch((error) => {
       this.throwHttpError(error);
     });
@@ -78,9 +78,10 @@ export class EncountersController {
     @Body() body: unknown,
     @Req() request: { user: AuthenticatedUser },
   ) {
-    const status = typeof body === 'object' && body !== null
-      ? (body as { status?: string }).status
-      : undefined;
+    const status =
+      typeof body === 'object' && body !== null
+        ? (body as { status?: string }).status
+        : undefined;
     const requiredPermission =
       status === 'IN_PROGRESS'
         ? AccessPermission.QUEUE_START
@@ -100,9 +101,11 @@ export class EncountersController {
         message: 'Peran Anda tidak memiliki izin untuk tindakan ini',
       });
     }
-    return this.encounters.updateStatus(id, body, request.user).catch((error) => {
-      this.throwHttpError(error);
-    });
+    return this.encounters
+      .updateStatus(id, body, request.user)
+      .catch((error) => {
+        this.throwHttpError(error);
+      });
   }
 
   private throwHttpError(error: unknown): never {
@@ -117,7 +120,13 @@ export class EncountersController {
       throw new NotFoundException(error.message);
     }
     if (error instanceof EncounterContextError) {
-      const status = error.code === 'PATIENT_NOT_FOUND' || error.code === 'LOCATION_NOT_FOUND' || error.code === 'ORGANIZATION_NOT_FOUND' || error.code === 'PRACTITIONER_NOT_FOUND' ? 404 : 409;
+      const status =
+        error.code === 'PATIENT_NOT_FOUND' ||
+        error.code === 'LOCATION_NOT_FOUND' ||
+        error.code === 'ORGANIZATION_NOT_FOUND' ||
+        error.code === 'PRACTITIONER_NOT_FOUND'
+          ? 404
+          : 409;
       const exception = status === 404 ? NotFoundException : ConflictException;
       throw new exception({ code: error.code, message: error.message });
     }

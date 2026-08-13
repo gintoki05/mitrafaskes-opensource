@@ -24,13 +24,29 @@ export type MedicalRecordWithRelations = Prisma.MedicalRecordGetPayload<{
 
 export function toMedicalRecord(
   record: MedicalRecordWithRelations,
-  conditionIntegrations: ReadonlyMap<string, ResourceIntegrationSummary[]> = new Map(),
-  icd10ByCode: ReadonlyMap<string, Prisma.MasterIcd10GetPayload<Prisma.MasterIcd10DefaultArgs>> = new Map(),
-  observationIntegrations: ReadonlyMap<string, ResourceIntegrationSummary[]> = new Map(),
+  conditionIntegrations: ReadonlyMap<
+    string,
+    ResourceIntegrationSummary[]
+  > = new Map(),
+  icd10ByCode: ReadonlyMap<
+    string,
+    Prisma.MasterIcd10GetPayload<Prisma.MasterIcd10DefaultArgs>
+  > = new Map(),
+  observationIntegrations: ReadonlyMap<
+    string,
+    ResourceIntegrationSummary[]
+  > = new Map(),
 ): MedicalRecord {
+  const serviceProfile = String(record.serviceProfile);
+  const validationProfile = String(record.validationProfile);
   if (
-    record.serviceProfile !== MedicalRecordServiceProfile.OUTPATIENT_GENERAL ||
-    record.validationProfile !== MEDICAL_RECORD_VALIDATION_PROFILE[MedicalRecordServiceProfile.OUTPATIENT_GENERAL]
+    serviceProfile !== String(MedicalRecordServiceProfile.OUTPATIENT_GENERAL) ||
+    validationProfile !==
+      String(
+        MEDICAL_RECORD_VALIDATION_PROFILE[
+          MedicalRecordServiceProfile.OUTPATIENT_GENERAL
+        ],
+      )
   ) {
     throw new Error('Konfigurasi profil layanan RME tidak konsisten');
   }
@@ -44,15 +60,20 @@ export function toMedicalRecord(
     authoredAt: record.authoredAt?.toISOString(),
     finalizedBy: record.finalizedBy ?? undefined,
     finalizedAt: record.finalizedAt?.toISOString(),
-    validationProfile: MEDICAL_RECORD_VALIDATION_PROFILE[MedicalRecordServiceProfile.OUTPATIENT_GENERAL],
+    validationProfile:
+      MEDICAL_RECORD_VALIDATION_PROFILE[
+        MedicalRecordServiceProfile.OUTPATIENT_GENERAL
+      ],
     chiefComplaint: record.chiefComplaint ?? undefined,
     presentIllness: record.presentIllness ?? undefined,
-    allergyReviewStatus: (record.allergyReviewStatus as AllergyReviewStatus | null) ?? undefined,
+    allergyReviewStatus:
+      (record.allergyReviewStatus as AllergyReviewStatus | null) ?? undefined,
     allergyDetails: record.allergyDetails ?? undefined,
     physicalExam: record.physicalExam ?? undefined,
     education: record.education ?? undefined,
     carePlan: record.carePlan ?? undefined,
-    disposition: (record.disposition as OutpatientDisposition | null) ?? undefined,
+    disposition:
+      (record.disposition as OutpatientDisposition | null) ?? undefined,
     anamnesis: record.anamnesis ?? undefined,
     systolic: record.systolic ?? undefined,
     diastolic: record.diastolic ?? undefined,
@@ -74,12 +95,12 @@ export function toMedicalRecord(
       icd10: (() => {
         const catalog = icd10ByCode.get(diagnosis.icd10Code);
         return catalog
-        ? {
+          ? {
               code: catalog.code,
               display: catalog.display,
               nameIndo: catalog.nameIndo ?? undefined,
               nameEng: catalog.nameEng,
-          }
+            }
           : undefined;
       })(),
     })),
@@ -101,36 +122,40 @@ function toClinicalObservation(
   observation: Prisma.ClinicalObservationGetPayload<Prisma.ClinicalObservationDefaultArgs>,
   integrations: ResourceIntegrationSummary[],
 ): ClinicalObservation {
-  const value = observation.valueType === 'quantity'
-    ? {
-        type: 'quantity' as const,
-        value: observation.valueQuantityValue ?? 0,
-        unit: observation.valueQuantityUnit ?? '',
-        ...(observation.valueQuantitySystem
-          ? { system: observation.valueQuantitySystem }
-          : {}),
-        ...(observation.valueQuantityCode
-          ? { code: observation.valueQuantityCode }
-          : {}),
-      }
-    : observation.valueType === 'code'
+  const value =
+    observation.valueType === 'quantity'
       ? {
-          type: 'code' as const,
-          coding: [
-            {
-              ...(observation.valueCodeSystem
-                ? { system: observation.valueCodeSystem }
-                : {}),
-              code: observation.valueCode ?? '',
-              ...(observation.valueCodeDisplay
-                ? { display: observation.valueCodeDisplay }
-                : {}),
-            },
-          ],
+          type: 'quantity' as const,
+          value: observation.valueQuantityValue ?? 0,
+          unit: observation.valueQuantityUnit ?? '',
+          ...(observation.valueQuantitySystem
+            ? { system: observation.valueQuantitySystem }
+            : {}),
+          ...(observation.valueQuantityCode
+            ? { code: observation.valueQuantityCode }
+            : {}),
         }
-      : observation.valueType === 'boolean'
-        ? { type: 'boolean' as const, value: observation.valueBoolean ?? false }
-        : { type: 'string' as const, value: observation.valueString ?? '' };
+      : observation.valueType === 'code'
+        ? {
+            type: 'code' as const,
+            coding: [
+              {
+                ...(observation.valueCodeSystem
+                  ? { system: observation.valueCodeSystem }
+                  : {}),
+                code: observation.valueCode ?? '',
+                ...(observation.valueCodeDisplay
+                  ? { display: observation.valueCodeDisplay }
+                  : {}),
+              },
+            ],
+          }
+        : observation.valueType === 'boolean'
+          ? {
+              type: 'boolean' as const,
+              value: observation.valueBoolean ?? false,
+            }
+          : { type: 'string' as const, value: observation.valueString ?? '' };
 
   return {
     id: observation.id,
@@ -142,11 +167,14 @@ function toClinicalObservation(
     },
     value,
     effectiveAt: observation.effectiveAt.toISOString(),
-    ...(observation.performerId ? { performerId: observation.performerId } : {}),
+    ...(observation.performerId
+      ? { performerId: observation.performerId }
+      : {}),
     status: observation.status as ClinicalObservationStatus,
     provenance: observation.provenance as ClinicalObservationProvenance,
     derivedFromObservationIds: observation.derivedFromObservationIds,
-    ...(observation.referenceRangeLow !== null || observation.referenceRangeHigh !== null
+    ...(observation.referenceRangeLow !== null ||
+    observation.referenceRangeHigh !== null
       ? {
           referenceRange: {
             ...(observation.referenceRangeLow === null

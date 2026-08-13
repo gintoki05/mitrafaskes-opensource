@@ -23,7 +23,10 @@ export interface IntegrationResourceHandler {
   lookup?(query: IntegrationQuery): Promise<unknown>;
   import?(input: unknown): Promise<unknown>;
   preview?(localResourceId: string): Promise<unknown>;
-  sync?(localResourceId: string, context?: IntegrationSyncContext): Promise<unknown>;
+  sync?(
+    localResourceId: string,
+    context?: IntegrationSyncContext,
+  ): Promise<unknown>;
   link?(localResourceId: string, input: unknown): Promise<unknown>;
 }
 
@@ -42,7 +45,9 @@ export interface IntegrationPlugin {
     resourceType: string,
     localResourceIds: readonly string[],
   ): Promise<ReadonlyMap<string, ResourceIntegrationSummary[]>>;
-  getResourceHandler(resourceType: string): IntegrationResourceHandler | undefined;
+  getResourceHandler(
+    resourceType: string,
+  ): IntegrationResourceHandler | undefined;
   refreshMasterData?(domain: string): Promise<unknown>;
   fetchMasterDataSnapshot?(domain: string): Promise<unknown>;
 }

@@ -73,16 +73,20 @@ describe('SatusehatFhirClient', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 201,
-        text: jest.fn().mockResolvedValue(
-          JSON.stringify({ resourceType: 'Location', id: 'location-1' }),
-        ),
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            JSON.stringify({ resourceType: 'Location', id: 'location-1' }),
+          ),
       })
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        text: jest.fn().mockResolvedValue(
-          JSON.stringify({ resourceType: 'Location', id: 'location-1' }),
-        ),
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            JSON.stringify({ resourceType: 'Location', id: 'location-1' }),
+          ),
       });
     const auth = {
       getAccessToken: jest.fn().mockResolvedValue('access-token'),
@@ -98,7 +102,10 @@ describe('SatusehatFhirClient', () => {
       new URL('https://satusehat.example.test/fhir-r4/v1/Location'),
     );
     expect(requestCalls[0]?.[1]).toEqual(
-      expect.objectContaining({ method: 'POST', body: JSON.stringify(payload) }),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
     );
     expect(requestCalls[1]?.[0]).toEqual(
       new URL('https://satusehat.example.test/fhir-r4/v1/Location/location-1'),
@@ -162,9 +169,11 @@ describe('SatusehatFhirClient', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        text: jest.fn().mockResolvedValue(
-          JSON.stringify({ resourceType: 'Location', id: 'location-1' }),
-        ),
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            JSON.stringify({ resourceType: 'Location', id: 'location-1' }),
+          ),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -174,7 +183,9 @@ describe('SatusehatFhirClient', () => {
             resourceType: 'Bundle',
             type: 'searchset',
             total: 1,
-            entry: [{ resource: { resourceType: 'Location', id: 'location-1' } }],
+            entry: [
+              { resource: { resourceType: 'Location', id: 'location-1' } },
+            ],
           }),
         ),
       });
@@ -208,9 +219,11 @@ describe('SatusehatFhirClient', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        text: jest.fn().mockResolvedValue(
-          JSON.stringify({ resourceType: 'Practitioner', id: '10009880728' }),
-        ),
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            JSON.stringify({ resourceType: 'Practitioner', id: '10009880728' }),
+          ),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -254,9 +267,11 @@ describe('SatusehatFhirClient', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 201,
-        text: jest.fn().mockResolvedValue(
-          JSON.stringify({ resourceType: 'Patient', id: 'P10000001' }),
-        ),
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            JSON.stringify({ resourceType: 'Patient', id: 'P10000001' }),
+          ),
       })
       .mockResolvedValueOnce({
         ok: true,
@@ -273,9 +288,11 @@ describe('SatusehatFhirClient', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        text: jest.fn().mockResolvedValue(
-          JSON.stringify({ resourceType: 'Patient', id: 'P10000001' }),
-        ),
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            JSON.stringify({ resourceType: 'Patient', id: 'P10000001' }),
+          ),
       });
     const auth = {
       getAccessToken: jest.fn().mockResolvedValue('access-token'),
@@ -295,7 +312,10 @@ describe('SatusehatFhirClient', () => {
       new URL('https://satusehat.example.test/fhir-r4/v1/Patient'),
     );
     expect(requestCalls[0]?.[1]).toEqual(
-      expect.objectContaining({ method: 'POST', body: JSON.stringify(payload) }),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
     );
     const searchUrl = requestCalls[1]?.[0] as URL;
     expect(searchUrl.searchParams.get('identifier')).toBe(
@@ -314,16 +334,20 @@ describe('SatusehatFhirClient', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 201,
-        text: jest.fn().mockResolvedValue(
-          JSON.stringify({ resourceType: 'Condition', id: 'condition-1' }),
-        ),
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            JSON.stringify({ resourceType: 'Condition', id: 'condition-1' }),
+          ),
       })
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        text: jest.fn().mockResolvedValue(
-          JSON.stringify({ resourceType: 'Condition', id: 'condition-1' }),
-        ),
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            JSON.stringify({ resourceType: 'Condition', id: 'condition-1' }),
+          ),
       });
     const auth = {
       getAccessToken: jest.fn().mockResolvedValue('access-token'),
@@ -338,10 +362,15 @@ describe('SatusehatFhirClient', () => {
       new URL('https://satusehat.example.test/fhir-r4/v1/Condition'),
     );
     expect(fetchMock.mock.calls[0]?.[1]).toEqual(
-      expect.objectContaining({ method: 'POST', body: JSON.stringify(payload) }),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
     );
     expect(fetchMock.mock.calls[1]?.[0]).toEqual(
-      new URL('https://satusehat.example.test/fhir-r4/v1/Condition/condition-1'),
+      new URL(
+        'https://satusehat.example.test/fhir-r4/v1/Condition/condition-1',
+      ),
     );
     expect(fetchMock.mock.calls[1]?.[1]).toEqual(
       expect.objectContaining({ method: 'PUT', body: JSON.stringify(payload) }),
@@ -354,14 +383,20 @@ describe('SatusehatFhirClient', () => {
         ok: true,
         status: 201,
         text: jest.fn().mockResolvedValue(
-          JSON.stringify({ resourceType: 'Observation', id: 'observation-1' }),
+          JSON.stringify({
+            resourceType: 'Observation',
+            id: 'observation-1',
+          }),
         ),
       })
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
         text: jest.fn().mockResolvedValue(
-          JSON.stringify({ resourceType: 'Observation', id: 'observation-1' }),
+          JSON.stringify({
+            resourceType: 'Observation',
+            id: 'observation-1',
+          }),
         ),
       });
     const auth = {
@@ -377,10 +412,15 @@ describe('SatusehatFhirClient', () => {
       new URL('https://satusehat.example.test/fhir-r4/v1/Observation'),
     );
     expect(fetchMock.mock.calls[0]?.[1]).toEqual(
-      expect.objectContaining({ method: 'POST', body: JSON.stringify(payload) }),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
     );
     expect(fetchMock.mock.calls[1]?.[0]).toEqual(
-      new URL('https://satusehat.example.test/fhir-r4/v1/Observation/observation-1'),
+      new URL(
+        'https://satusehat.example.test/fhir-r4/v1/Observation/observation-1',
+      ),
     );
     expect(fetchMock.mock.calls[1]?.[1]).toEqual(
       expect.objectContaining({ method: 'PUT', body: JSON.stringify(payload) }),
@@ -551,13 +591,15 @@ describe('SatusehatFhirClient', () => {
 
   it('maps token authentication failures to the same non-retryable auth classification', async () => {
     const auth = {
-      getAccessToken: jest.fn().mockRejectedValue(
-        new SatusehatAuthError(
-          'SATUSEHAT_TOKEN_REQUEST_FAILED',
-          'invalid credentials',
-          401,
+      getAccessToken: jest
+        .fn()
+        .mockRejectedValue(
+          new SatusehatAuthError(
+            'SATUSEHAT_TOKEN_REQUEST_FAILED',
+            'invalid credentials',
+            401,
+          ),
         ),
-      ),
     } as unknown as SatusehatAuthService;
     const client = new SatusehatFhirClient(auth);
 

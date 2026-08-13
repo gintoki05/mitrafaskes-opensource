@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access -- Jest matcher and mock-call APIs intentionally expose any in this isolated unit test. */
 import { BadGatewayException, ConflictException } from '@nestjs/common';
 import type { SatusehatObservationPreview } from './satusehat-observation.contract';
 import { SatusehatObservationService } from './satusehat-observation.service';
@@ -39,7 +38,9 @@ function preview(
 }
 
 function buildService(prepared = preview()) {
-  const syncLogCreate = jest.fn().mockResolvedValue({ id: 'observation-sync-1' });
+  const syncLogCreate = jest
+    .fn()
+    .mockResolvedValue({ id: 'observation-sync-1' });
   const syncLogUpdate = jest.fn().mockResolvedValue({});
   const linkUpsert = jest.fn().mockResolvedValue({});
   const transaction = jest.fn(async (actions: Promise<unknown>[]) =>
@@ -219,7 +220,9 @@ describe('SatusehatObservationService sync', () => {
 
   it('preserves a previous linkage when a repeat update fails', async () => {
     const context = buildService(preview('UPDATE'));
-    context.fhir.updateObservation.mockRejectedValue(new Error('remote failure'));
+    context.fhir.updateObservation.mockRejectedValue(
+      new Error('remote failure'),
+    );
 
     await expect(
       context.service.syncObservation(localResourceId),
@@ -227,7 +230,9 @@ describe('SatusehatObservationService sync', () => {
 
     expect(context.linkUpsert).not.toHaveBeenCalled();
     expect(context.syncLogUpdate).toHaveBeenLastCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: 'FAILED' }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'FAILED' }),
+      }),
     );
   });
 

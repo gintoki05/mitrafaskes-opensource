@@ -17,7 +17,6 @@ import type {
   IntegrationCoreOptions,
   IntegrationPlugin,
   IntegrationProviderDefinition,
-  IntegrationQuery,
   IntegrationRetryOptions,
   IntegrationResourceHandler,
 } from './integration.types';
@@ -42,7 +41,10 @@ export class IntegrationDisabledError extends ServiceUnavailableException {
 
 @Injectable()
 export class IntegrationRegistry {
-  private readonly definitions = new Map<string, IntegrationProviderDefinition>();
+  private readonly definitions = new Map<
+    string,
+    IntegrationProviderDefinition
+  >();
   private readonly plugins = new Map<string, IntegrationPlugin>();
 
   constructor(
@@ -61,7 +63,9 @@ export class IntegrationRegistry {
   async getCapabilities(): Promise<IntegrationCapabilitiesResponse> {
     const integrations: IntegrationCapability[] = [];
     for (const definition of this.definitions.values()) {
-      const plugin = this.plugins.get(this.normalizeProvider(definition.provider));
+      const plugin = this.plugins.get(
+        this.normalizeProvider(definition.provider),
+      );
       integrations.push(
         plugin
           ? await plugin.getConnectionStatus()
@@ -90,7 +94,9 @@ export class IntegrationRegistry {
     return plugin;
   }
 
-  async getConnectionStatus(provider: string): Promise<IntegrationConnectionResponse> {
+  async getConnectionStatus(
+    provider: string,
+  ): Promise<IntegrationConnectionResponse> {
     return this.getPlugin(provider).getConnectionStatus();
   }
 

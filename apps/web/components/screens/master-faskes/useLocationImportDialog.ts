@@ -8,6 +8,10 @@ import type {
 } from '@mitrafaskes/shared';
 import { toast } from 'sonner';
 import { useSatusehatLocations } from '@/hooks/useSatusehatLocations';
+import {
+  defaultLocationCode,
+  isValidLocationCode,
+} from './location-import.helpers';
 
 export const LOCATION_IMPORT_PAGE_SIZE = 8;
 
@@ -492,18 +496,4 @@ export function useLocationImportDialog({
     setParentIds,
     resetSelection,
   };
-}
-
-function defaultLocationCode(item: SatusehatLocationRemoteSummary): string {
-  const raw = item.identifierValue || item.name || item.externalResourceId;
-  const normalized = raw
-    .toUpperCase()
-    .replace(/[^A-Z0-9._-]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 64);
-  return normalized || `LOCATION-${item.externalResourceId.slice(0, 8).toUpperCase()}`;
-}
-
-function isValidLocationCode(value: string): boolean {
-  return /^[A-Z0-9][A-Z0-9._-]*$/.test(value);
 }

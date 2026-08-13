@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import {
   LOCAL_OBSERVATION_CODE_SYSTEM,
   OBSERVATION_MAPPINGS,
@@ -35,7 +39,9 @@ type ObservationWithContext = ClinicalObservationSource & {
 export class SatusehatObservationPreflightService {
   constructor(private readonly prisma: PrismaService) {}
 
-  previewObservation(localResourceId: string): Promise<SatusehatObservationPreview> {
+  previewObservation(
+    localResourceId: string,
+  ): Promise<SatusehatObservationPreview> {
     return this.preparePreview(localResourceId, this.readEnvironment());
   }
 
@@ -53,12 +59,14 @@ export class SatusehatObservationPreflightService {
 
     if (!observation.performerId) {
       throw this.missingDependency(
-        [{
-          name: 'Practitioner',
-          resourceType: 'Practitioner',
-          localResourceType: 'User',
-          localResourceId: '',
-        }],
+        [
+          {
+            name: 'Practitioner',
+            resourceType: 'Practitioner',
+            localResourceType: 'User',
+            localResourceId: '',
+          },
+        ],
         environment,
         'Observation belum memiliki performer Practitioner lokal.',
       );
@@ -127,10 +135,7 @@ export class SatusehatObservationPreflightService {
         mappingStatus: 'MAPPED',
         provenance: observation.provenance as 'original' | 'derived',
         valueType: observation.valueType as
-          | 'quantity'
-          | 'code'
-          | 'boolean'
-          | 'string',
+          'quantity' | 'code' | 'boolean' | 'string',
         payload: toSatusehatObservationPayload(
           observation,
           {
@@ -335,7 +340,8 @@ export class SatusehatObservationPreflightService {
 
   private readEnvironment(): string {
     return (
-      process.env.SATUSEHAT_ENVIRONMENT?.trim() || DEFAULT_OBSERVATION_ENVIRONMENT
+      process.env.SATUSEHAT_ENVIRONMENT?.trim() ||
+      DEFAULT_OBSERVATION_ENVIRONMENT
     );
   }
 }

@@ -21,18 +21,16 @@ import type { IntegrationResourceHandler } from './integration.types';
 
 type IntegrationHttpQuery = Record<string, string | undefined>;
 
-const positiveInteger = (value: string | undefined, fallback: number): number => {
+const positiveInteger = (
+  value: string | undefined,
+  fallback: number,
+): number => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
 type ResourceOperation =
-  | 'search'
-  | 'lookup'
-  | 'import'
-  | 'preview'
-  | 'sync'
-  | 'link';
+  'search' | 'lookup' | 'import' | 'preview' | 'sync' | 'link';
 
 type IntegrationOperationCallback = (...args: unknown[]) => Promise<unknown>;
 
@@ -47,7 +45,7 @@ function requireOperation(
       message: `Operasi ${operation} tidak didukung untuk resource ${handler.resourceType}`,
     });
   }
-  return callback as unknown as IntegrationOperationCallback;
+  return callback;
 }
 
 @Controller('api/integrations')
@@ -113,8 +111,14 @@ export class IntegrationGatewayController {
     @Param('resourceType') resourceType: string,
     @Query() query: IntegrationHttpQuery,
   ) {
-    const handler = this.integrations.getResourceHandler(provider, resourceType);
-    return requireOperation(handler, handler.search ? 'search' : 'lookup')(query);
+    const handler = this.integrations.getResourceHandler(
+      provider,
+      resourceType,
+    );
+    return requireOperation(
+      handler,
+      handler.search ? 'search' : 'lookup',
+    )(query);
   }
 
   @Get(':provider/resources/:resourceType/lookup')
@@ -124,8 +128,14 @@ export class IntegrationGatewayController {
     @Param('resourceType') resourceType: string,
     @Query() query: IntegrationHttpQuery,
   ) {
-    const handler = this.integrations.getResourceHandler(provider, resourceType);
-    return requireOperation(handler, handler.lookup ? 'lookup' : 'search')(query);
+    const handler = this.integrations.getResourceHandler(
+      provider,
+      resourceType,
+    );
+    return requireOperation(
+      handler,
+      handler.lookup ? 'lookup' : 'search',
+    )(query);
   }
 
   @Post(':provider/resources/:resourceType/import')
@@ -135,7 +145,10 @@ export class IntegrationGatewayController {
     @Param('resourceType') resourceType: string,
     @Body() body: unknown,
   ) {
-    const handler = this.integrations.getResourceHandler(provider, resourceType);
+    const handler = this.integrations.getResourceHandler(
+      provider,
+      resourceType,
+    );
     return requireOperation(handler, 'import')(body);
   }
 
@@ -147,7 +160,10 @@ export class IntegrationGatewayController {
     @Param('localResourceId') localResourceId: string,
     @Req() request: { user: AuthenticatedUser },
   ) {
-    const handler = this.integrations.getResourceHandler(provider, resourceType);
+    const handler = this.integrations.getResourceHandler(
+      provider,
+      resourceType,
+    );
     const result = await requireOperation(handler, 'preview')(localResourceId);
     return redactRawIntegrationResponse(
       result,
@@ -164,7 +180,10 @@ export class IntegrationGatewayController {
     @Param('localResourceId') localResourceId: string,
     @Req() request: { user: AuthenticatedUser },
   ) {
-    const handler = this.integrations.getResourceHandler(provider, resourceType);
+    const handler = this.integrations.getResourceHandler(
+      provider,
+      resourceType,
+    );
     const result = await requireOperation(handler, 'sync')(localResourceId);
     return redactRawIntegrationResponse(
       result,
@@ -181,7 +200,10 @@ export class IntegrationGatewayController {
     @Param('localResourceId') localResourceId: string,
     @Body() body: unknown,
   ) {
-    const handler = this.integrations.getResourceHandler(provider, resourceType);
+    const handler = this.integrations.getResourceHandler(
+      provider,
+      resourceType,
+    );
     return requireOperation(handler, 'link')(localResourceId, body);
   }
 
