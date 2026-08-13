@@ -9,7 +9,12 @@ type RmeVitalSignsProps = {
   diastolic: string;
   temperature: string;
   heartRate: string;
-  onChange: (field: 'systolic' | 'diastolic' | 'temperature' | 'heartRate', value: string) => void;
+  weight: string;
+  height: string;
+  onChange: (
+    field: 'systolic' | 'diastolic' | 'temperature' | 'heartRate' | 'weight' | 'height',
+    value: string,
+  ) => void;
 };
 
 export function RmeVitalSigns({
@@ -17,6 +22,8 @@ export function RmeVitalSigns({
   diastolic,
   temperature,
   heartRate,
+  weight,
+  height,
   onChange,
 }: RmeVitalSignsProps) {
   return (
@@ -28,7 +35,7 @@ export function RmeVitalSigns({
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
           <div>
             <label htmlFor="systolic" className="mb-1 block text-[11px] font-medium text-muted-foreground">Sistolik (mmHg)</label>
             <Input id="systolic" type="number" value={systolic} onChange={(event) => onChange('systolic', event.target.value)} className="text-xs font-mono" />
@@ -44,6 +51,14 @@ export function RmeVitalSigns({
           <div>
             <label htmlFor="heart-rate" className="mb-1 block text-[11px] font-medium text-muted-foreground">Denyut Nadi (bpm)</label>
             <Input id="heart-rate" type="number" value={heartRate} onChange={(event) => onChange('heartRate', event.target.value)} className="text-xs font-mono" />
+          </div>
+          <div>
+            <label htmlFor="weight" className="mb-1 block text-[11px] font-medium text-muted-foreground">Berat (kg)</label>
+            <Input id="weight" type="number" step="0.01" value={weight} onChange={(event) => onChange('weight', event.target.value)} className="text-xs font-mono" />
+          </div>
+          <div>
+            <label htmlFor="height" className="mb-1 block text-[11px] font-medium text-muted-foreground">Tinggi (cm)</label>
+            <Input id="height" type="number" step="0.1" value={height} onChange={(event) => onChange('height', event.target.value)} className="text-xs font-mono" />
           </div>
         </div>
       </CardContent>

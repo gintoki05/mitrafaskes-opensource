@@ -15,6 +15,99 @@ export interface DiagnosisDto {
   notes?: string;
 }
 
+export type ClinicalObservationValueType =
+  | 'quantity'
+  | 'code'
+  | 'boolean'
+  | 'string';
+
+export type ClinicalObservationStatus =
+  | 'preliminary'
+  | 'final'
+  | 'amended'
+  | 'corrected'
+  | 'cancelled'
+  | 'entered-in-error'
+  | 'unknown';
+
+export type ClinicalObservationProvenance = 'original' | 'derived';
+
+export interface ClinicalObservationCode {
+  system?: string;
+  code: string;
+  display?: string;
+}
+
+export interface ClinicalObservationQuantityValue {
+  type: 'quantity';
+  value: number;
+  unit: string;
+  system?: string;
+  code?: string;
+}
+
+export interface ClinicalObservationCodeValue {
+  type: 'code';
+  coding: ClinicalObservationCode[];
+  text?: string;
+}
+
+export interface ClinicalObservationBooleanValue {
+  type: 'boolean';
+  value: boolean;
+}
+
+export interface ClinicalObservationStringValue {
+  type: 'string';
+  value: string;
+}
+
+export type ClinicalObservationValue =
+  | ClinicalObservationQuantityValue
+  | ClinicalObservationCodeValue
+  | ClinicalObservationBooleanValue
+  | ClinicalObservationStringValue;
+
+export interface ClinicalObservationReferenceRange {
+  low?: number;
+  high?: number;
+}
+
+export interface ClinicalObservationInterpretation {
+  code: string;
+  display?: string;
+}
+
+export interface ClinicalObservationDto {
+  /** Existing child ID is echoed by the client so provider linkage stays per item. */
+  id?: string;
+  category?: string;
+  code: ClinicalObservationCode | string;
+  value: ClinicalObservationValue;
+  effectiveAt?: string;
+  performerId?: string;
+  status?: ClinicalObservationStatus;
+  provenance?: ClinicalObservationProvenance;
+  derivedFromObservationIds?: string[];
+  referenceRange?: ClinicalObservationReferenceRange;
+  interpretation?: ClinicalObservationInterpretation;
+}
+
+export interface ClinicalObservation {
+  id: string;
+  category: string;
+  code: ClinicalObservationCode;
+  value: ClinicalObservationValue;
+  effectiveAt: string;
+  performerId?: string;
+  status: ClinicalObservationStatus;
+  provenance: ClinicalObservationProvenance;
+  derivedFromObservationIds: string[];
+  referenceRange?: ClinicalObservationReferenceRange;
+  interpretation?: ClinicalObservationInterpretation;
+  integrations?: ResourceIntegrationSummary[];
+}
+
 export interface PrescriptionDto {
   medicineName: string;
   kfaCode?: string;
@@ -103,6 +196,7 @@ export interface MedicalRecord {
   temperature?: number;
   weight?: number;
   height?: number;
+  observations: ClinicalObservation[];
   diagnoses: {
     id: string;
     icd10Code: string;
@@ -143,6 +237,7 @@ export interface SaveMedicalRecordDraftDto {
   temperature?: number;
   weight?: number;
   height?: number;
+  observations?: ClinicalObservationDto[];
   diagnoses: DiagnosisDto[];
   prescriptions: PrescriptionDto[];
 }

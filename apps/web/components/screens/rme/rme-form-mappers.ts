@@ -18,6 +18,8 @@ export function formValuesFrom(record: MedicalRecord | null): RmeFormValues {
     heartRate: record.heartRate === undefined ? '' : String(record.heartRate),
     temperature:
       record.temperature === undefined ? '' : String(record.temperature),
+    weight: record.weight === undefined ? '' : String(record.weight),
+    height: record.height === undefined ? '' : String(record.height),
     diagnoses: record.diagnoses.map((diagnosis) => ({
       id: diagnosis.id,
       icd10Code: diagnosis.icd10Code,

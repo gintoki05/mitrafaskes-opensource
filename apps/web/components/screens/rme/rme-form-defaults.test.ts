@@ -17,6 +17,8 @@ test('RME form starts without invented clinical data', () => {
     diastolic: '',
     heartRate: '',
     temperature: '',
+    weight: '',
+    height: '',
     diagnoses: [],
     prescriptions: [],
   });

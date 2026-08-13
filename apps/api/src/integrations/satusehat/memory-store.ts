@@ -6,7 +6,8 @@ export interface SatusehatSyncLog {
     | 'Practitioner'
     | 'Patient'
     | 'Encounter'
-    | 'Condition';
+    | 'Condition'
+    | 'Observation';
   resourceId: string;
   status: 'PENDING' | 'SUCCESS' | 'FAILED';
   payload: unknown;

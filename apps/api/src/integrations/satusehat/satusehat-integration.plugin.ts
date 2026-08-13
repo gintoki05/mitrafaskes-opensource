@@ -27,6 +27,7 @@ import { SatusehatPatientService } from './satusehat-patient.service';
 import { SatusehatPractitionerService } from './satusehat-practitioner.service';
 import { SatusehatEncounterService } from './satusehat-encounter.service';
 import { SatusehatConditionService } from './satusehat-condition.service';
+import { SatusehatObservationService } from './satusehat-observation.service';
 import { SatusehatReconciliationService } from './satusehat-reconciliation.service';
 import { MemoryStore } from './memory-store';
 import { IntegrationRegistry } from '../integration-registry';
@@ -52,6 +53,7 @@ const localResourceTypes: Record<string, string> = {
   Patient: 'Patient',
   Encounter: 'Encounter',
   Condition: 'Diagnosis',
+  Observation: 'ClinicalObservation',
 };
 
 const resources = [
@@ -61,6 +63,7 @@ const resources = [
   'Patient',
   'Encounter',
   'Condition',
+  'Observation',
 ];
 const operations = [
   'search',
@@ -115,6 +118,7 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
     private readonly reconciliation: SatusehatReconciliationService,
     private readonly masterWilayah: SatusehatMasterWilayahAdapter,
     private readonly satusehatConditions?: SatusehatConditionService,
+    private readonly satusehatObservations?: SatusehatObservationService,
   ) {
     const handlers = new Map<string, IntegrationResourceHandler>([
       [
@@ -188,6 +192,16 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
           context
             ? this.satusehatConditions!.syncCondition(id, context)
             : this.satusehatConditions!.syncCondition(id),
+      });
+    }
+    if (this.satusehatObservations) {
+      handlers.set('Observation', {
+        resourceType: 'Observation',
+        preview: (id) => this.satusehatObservations!.previewObservation(id),
+        sync: (id, context) =>
+          context
+            ? this.satusehatObservations!.syncObservation(id, context)
+            : this.satusehatObservations!.syncObservation(id),
       });
     }
     this.handlers = handlers;

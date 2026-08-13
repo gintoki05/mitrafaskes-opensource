@@ -550,4 +550,110 @@ describe('RmeService lifecycle', () => {
     expect(transaction.diagnosis.deleteMany).not.toHaveBeenCalled();
     expect(result.diagnoses[0]?.id).toBe(existingDiagnosis.id);
   });
+
+  it('preserves an Observation child id when a typed draft is edited', async () => {
+    const existingObservation = {
+      id: 'observation-1',
+      medicalRecordId: 'rme-1',
+      category: 'vital-signs',
+      codeSystem: 'http://loinc.org',
+      code: '8480-6',
+      codeDisplay: 'Systolic blood pressure',
+      valueType: 'quantity',
+      valueQuantityValue: 120,
+      valueQuantityUnit: 'mmHg',
+      valueQuantitySystem: 'http://unitsofmeasure.org',
+      valueQuantityCode: 'mm[Hg]',
+      valueCodeSystem: null,
+      valueCode: null,
+      valueCodeDisplay: null,
+      valueBoolean: null,
+      valueString: null,
+      effectiveAt: now,
+      performerId: 'doctor-1',
+      status: 'final',
+      provenance: 'original',
+      derivedFromObservationIds: [],
+      referenceRangeLow: null,
+      referenceRangeHigh: null,
+      interpretationCode: null,
+      interpretationDisplay: null,
+      createdAt: now,
+      updatedAt: now,
+    };
+    const saved = { ...medicalRecord(), observations: [existingObservation] };
+    const transaction = {
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            id: 'encounter-1',
+            status: 'IN_PROGRESS',
+            version: 1,
+            doctorId: 'doctor-1',
+            organizationId: 'organization-1',
+            locationId: 'location-1',
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            id: 'rme-1',
+            status: MedicalRecordStatus.DRAFT,
+            version: 1,
+          },
+        ]),
+      medicalRecord: {
+        update: jest.fn().mockResolvedValue(saved),
+        findUnique: jest.fn().mockResolvedValue(saved),
+      },
+      clinicalObservation: {
+        findMany: jest.fn().mockResolvedValue([
+          { id: existingObservation.id, code: existingObservation.code },
+        ]),
+        update: jest.fn().mockResolvedValue(existingObservation),
+        create: jest.fn(),
+        deleteMany: jest.fn(),
+      },
+    };
+    const { service } = createHarness(transaction);
+
+    const result = await service.saveDraft(
+      {
+        encounterId: 'encounter-1',
+        expectedVersion: 1,
+        observations: [
+          {
+            code: {
+              system: 'http://loinc.org',
+              code: '8480-6',
+              display: 'Systolic blood pressure',
+            },
+            value: {
+              type: 'quantity',
+              value: 122,
+              unit: 'mmHg',
+              system: 'http://unitsofmeasure.org',
+              code: 'mm[Hg]',
+            },
+          },
+        ],
+        diagnoses: [],
+        prescriptions: [],
+      },
+      actor,
+    );
+
+    expect(transaction.clinicalObservation.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: existingObservation.id },
+        data: expect.objectContaining({
+          code: '8480-6',
+          valueQuantityValue: 122,
+        }),
+      }),
+    );
+    expect(transaction.clinicalObservation.create).not.toHaveBeenCalled();
+    expect(transaction.clinicalObservation.deleteMany).not.toHaveBeenCalled();
+    expect(result.observations[0]?.id).toBe(existingObservation.id);
+  });
 });

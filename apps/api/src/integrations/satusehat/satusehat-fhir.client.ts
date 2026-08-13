@@ -174,6 +174,14 @@ export class SatusehatFhirClient {
     return this.request('PUT', ['Condition', id], payload);
   }
 
+  createObservation(payload: unknown): Promise<unknown> {
+    return this.request('POST', ['Observation'], payload);
+  }
+
+  updateObservation(id: string, payload: unknown): Promise<unknown> {
+    return this.request('PUT', ['Observation', id], payload);
+  }
+
   private async request(
     method: FhirRequestMethod,
     pathSegments: string[],

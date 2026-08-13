@@ -21,6 +21,8 @@ export const rmeFormSchema = z.object({
   diastolic: z.string(),
   heartRate: z.string(),
   temperature: z.string(),
+  weight: z.string(),
+  height: z.string(),
   diagnoses: z.array(
     z.object({
       id: z.string().optional(),
@@ -56,6 +58,8 @@ export function emptyRmeFormValues(): RmeFormValues {
     diastolic: '',
     heartRate: '',
     temperature: '',
+    weight: '',
+    height: '',
     diagnoses: [],
     prescriptions: [],
   };

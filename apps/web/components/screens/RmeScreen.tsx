@@ -19,6 +19,7 @@ import { RmeWorkspaceContext } from './rme/RmeWorkspaceContext';
 import { resolveRmeWorkspaceViewState } from './rme/rme-workspace-model';
 import type { RmeFormValues } from './rme/rme-form-schema';
 import { useConditionActions } from './rme/useConditionActions';
+import { useObservationActions } from './rme/useObservationActions';
 
 function errorDescription(error: unknown): string {
   if (error instanceof RmeApiError && error.issues.length > 0) {
@@ -30,6 +31,9 @@ function errorDescription(error: unknown): string {
 export default function RmePage() {
   const [icdSearch, setIcdSearch] = useState('');
   const [syncingDiagnosisId, setSyncingDiagnosisId] = useState<string | null>(
+    null,
+  );
+  const [syncingObservationId, setSyncingObservationId] = useState<string | null>(
     null,
   );
   const session = useSession();
@@ -46,7 +50,12 @@ export default function RmePage() {
   } = useRmeResources();
   const lifecycle = useRmeLifecycle(selectedEncounter?.id ?? null);
   const conditionActions = useConditionActions();
+  const observationActions = useObservationActions();
   const canSyncDiagnosis = can(
+    session?.user ?? null,
+    AccessPermission.SYNC_RETRY,
+  );
+  const canSyncObservation = can(
     session?.user ?? null,
     AccessPermission.SYNC_RETRY,
   );
@@ -138,6 +147,27 @@ export default function RmePage() {
     }
   };
 
+  const handleSyncObservation = async (observationId: string) => {
+    if (syncingObservationId) return;
+    setSyncingObservationId(observationId);
+    try {
+      await observationActions.syncSatusehat(observationId);
+      lifecycle.reload();
+      toast.success('Observation tersinkron ke SATUSEHAT', {
+        description:
+          'Linkage dan status sinkronisasi terbaru sudah dimuat ulang.',
+      });
+    } catch (error) {
+      lifecycle.reload();
+      toast.error('Observation gagal disinkronkan', {
+        description: errorDescription(error),
+        duration: 9000,
+      });
+    } finally {
+      setSyncingObservationId(null);
+    }
+  };
+
   return (
     <RouteGuard permission={AccessPermission.RME_READ}>
       <div className="min-w-0 space-y-6 sm:space-y-8">
@@ -212,6 +242,11 @@ export default function RmePage() {
                 syncingDiagnosisId={syncingDiagnosisId}
                 onSyncDiagnosis={(diagnosisId) =>
                   void handleSyncDiagnosis(diagnosisId)
+                }
+                canSyncObservation={canSyncObservation}
+                syncingObservationId={syncingObservationId}
+                onSyncObservation={(observationId) =>
+                  void handleSyncObservation(observationId)
                 }
                 onIcdSearchChange={(value) => {
                   setIcdSearch(value);

@@ -65,7 +65,104 @@ function draftPayload(
   encounterId: string,
   expectedVersion: number,
   values: RmeFormValues,
+  record: MedicalRecord | null,
 ): SaveMedicalRecordDraftDto {
+  const observationDefinitions = [
+    {
+      field: 'systolic' as const,
+      code: '8480-6',
+      display: 'Systolic blood pressure',
+      unit: 'mmHg',
+      unitCode: 'mm[Hg]',
+    },
+    {
+      field: 'diastolic' as const,
+      code: '8462-4',
+      display: 'Diastolic blood pressure',
+      unit: 'mmHg',
+      unitCode: 'mm[Hg]',
+    },
+    {
+      field: 'heartRate' as const,
+      code: '8867-4',
+      display: 'Heart rate',
+      unit: 'per minute',
+      unitCode: '/min',
+    },
+    {
+      field: 'temperature' as const,
+      code: '8310-5',
+      display: 'Body temperature',
+      unit: 'Cel',
+      unitCode: 'Cel',
+    },
+    {
+      field: 'weight' as const,
+      code: '29463-7',
+      display: 'Body weight',
+      unit: 'kg',
+      unitCode: 'kg',
+    },
+    {
+      field: 'height' as const,
+      code: '8302-2',
+      display: 'Body height',
+      unit: 'cm',
+      unitCode: 'cm',
+    },
+  ] as const;
+  const knownCodes = new Set<string>(
+    observationDefinitions
+      .map((definition) => definition.code)
+      .concat(['39156-5', 'body-mass-index']),
+  );
+  const observations = observationDefinitions.flatMap((definition) => {
+    const rawValue = values[definition.field];
+    if (!rawValue.trim()) return [];
+    const existing = (record?.observations ?? []).find(
+      (observation) => observation.code.code === definition.code,
+    );
+    return [{
+      ...(existing?.id ? { id: existing.id } : {}),
+      category: 'vital-signs',
+      code: {
+        system: 'http://loinc.org',
+        code: definition.code,
+        display: definition.display,
+      },
+      value: {
+        type: 'quantity' as const,
+        value: Number(rawValue),
+        unit: definition.unit,
+        system: 'http://unitsofmeasure.org',
+        code: definition.unitCode,
+      },
+      ...(existing?.effectiveAt ? { effectiveAt: existing.effectiveAt } : {}),
+      ...(existing?.performerId ? { performerId: existing.performerId } : {}),
+      ...(existing?.status ? { status: existing.status } : {}),
+      ...(existing?.provenance ? { provenance: existing.provenance } : {}),
+      ...(existing?.derivedFromObservationIds
+        ? { derivedFromObservationIds: existing.derivedFromObservationIds }
+        : {}),
+      ...(existing?.referenceRange ? { referenceRange: existing.referenceRange } : {}),
+      ...(existing?.interpretation ? { interpretation: existing.interpretation } : {}),
+    }];
+  });
+  const untouchedObservations = (record?.observations ?? [])
+    .filter((observation) => !knownCodes.has(observation.code.code))
+    .map((observation) => ({
+      id: observation.id,
+      category: observation.category,
+      code: observation.code,
+      value: observation.value,
+      effectiveAt: observation.effectiveAt,
+      ...(observation.performerId ? { performerId: observation.performerId } : {}),
+      status: observation.status,
+      provenance: observation.provenance,
+      derivedFromObservationIds: observation.derivedFromObservationIds,
+      ...(observation.referenceRange ? { referenceRange: observation.referenceRange } : {}),
+      ...(observation.interpretation ? { interpretation: observation.interpretation } : {}),
+    }));
   return {
     encounterId,
     expectedVersion,
@@ -83,6 +180,9 @@ function draftPayload(
     diastolic: values.diastolic ? Number(values.diastolic) : undefined,
     heartRate: values.heartRate ? Number(values.heartRate) : undefined,
     temperature: values.temperature ? Number(values.temperature) : undefined,
+    weight: values.weight ? Number(values.weight) : undefined,
+    height: values.height ? Number(values.height) : undefined,
+    observations: [...observations, ...untouchedObservations],
   };
 }
 
@@ -184,7 +284,7 @@ export function useRmeLifecycle(encounterId: string | null) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(
-            draftPayload(encounterId, record?.version ?? 0, values),
+            draftPayload(encounterId, record?.version ?? 0, values, record),
           ),
         });
         const saved = await readResponse<MedicalRecord>(response);

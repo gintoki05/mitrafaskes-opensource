@@ -296,6 +296,7 @@ model User {
   locationAssignments PractitionerLocationAssignment[] @relation("PractitionerLocationAssignments")
   encounters   Encounter[] @relation("DoctorEncounters")
   encounterStatusHistory EncounterStatusHistory[] @relation("EncounterStatusActor")
+  clinicalObservations ClinicalObservation[] @relation("ObservationPerformer")
 
   @@index([role, active, fullName])
   @@index([organizationId, active, fullName])
@@ -549,11 +550,51 @@ model MedicalRecord {
   weight            Float?
   height            Float?
   encounter         Encounter           @relation(fields: [encounterId], references: [id])
+  observations      ClinicalObservation[]
   diagnoses         Diagnosis[]
   prescriptions     Prescription[]
   auditEvents       MedicalRecordAuditEvent[]
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
+}
+
+// Typed clinical child records remain local-first. Provider adapters translate
+// their code/value representation into the remote resource contract.
+model ClinicalObservation {
+  id                        String         @id @default(uuid())
+  medicalRecordId           String
+  category                  String         @db.VarChar(64)
+  codeSystem                String?        @db.VarChar(255)
+  code                      String         @db.VarChar(128)
+  codeDisplay               String?        @db.VarChar(255)
+  valueType                 String         @db.VarChar(32)
+  valueQuantityValue        Float?
+  valueQuantityUnit         String?        @db.VarChar(64)
+  valueQuantitySystem       String?        @db.VarChar(255)
+  valueQuantityCode         String?        @db.VarChar(64)
+  valueCodeSystem           String?        @db.VarChar(255)
+  valueCode                 String?        @db.VarChar(128)
+  valueCodeDisplay          String?        @db.VarChar(255)
+  valueBoolean              Boolean?
+  valueString               String?
+  effectiveAt               DateTime
+  performerId               String?
+  status                    String         @default("final") @db.VarChar(32)
+  provenance                String         @default("original") @db.VarChar(32)
+  derivedFromObservationIds String[]       @default([])
+  referenceRangeLow         Float?
+  referenceRangeHigh        Float?
+  interpretationCode        String?        @db.VarChar(128)
+  interpretationDisplay     String?        @db.VarChar(255)
+  medicalRecord             MedicalRecord  @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+  performer                 User?          @relation("ObservationPerformer", fields: [performerId], references: [id], onDelete: Restrict)
+  createdAt                 DateTime       @default(now())
+  updatedAt                 DateTime       @updatedAt
+
+  @@index([medicalRecordId, effectiveAt])
+  @@index([medicalRecordId, code])
+  @@index([codeSystem, code])
+  @@index([performerId])
 }
 
 model MedicalRecordAuditEvent {

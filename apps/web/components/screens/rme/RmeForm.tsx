@@ -12,6 +12,7 @@ import { RmeDiagnosisSection } from './RmeDiagnosisSection';
 import { RmeConflictNotice } from './RmeConflictNotice';
 import { RmePrescriptionSection } from './RmePrescriptionSection';
 import { RmeVitalSigns } from './RmeVitalSigns';
+import { RmeObservationSection } from './RmeObservationSection';
 import {
   emptyRmeFormValues,
   rmeFormSchema,
@@ -54,6 +55,9 @@ type RmeFormProps = {
   canSyncDiagnosis: boolean;
   syncingDiagnosisId: string | null;
   onSyncDiagnosis: (id: string) => void;
+  canSyncObservation: boolean;
+  syncingObservationId: string | null;
+  onSyncObservation: (id: string) => void;
 };
 
 export function RmeForm({
@@ -73,6 +77,9 @@ export function RmeForm({
   canSyncDiagnosis,
   syncingDiagnosisId,
   onSyncDiagnosis,
+  canSyncObservation,
+  syncingObservationId,
+  onSyncObservation,
 }: RmeFormProps) {
   const {
     control,
@@ -92,6 +99,8 @@ export function RmeForm({
   const diastolic = useWatch({ control, name: 'diastolic' });
   const heartRate = useWatch({ control, name: 'heartRate' });
   const temperature = useWatch({ control, name: 'temperature' });
+  const weight = useWatch({ control, name: 'weight' });
+  const height = useWatch({ control, name: 'height' });
   const allergyReviewStatus = useWatch({
     control,
     name: 'allergyReviewStatus',
@@ -130,7 +139,7 @@ export function RmeForm({
   }, [finalizationIssues]);
 
   const updateStringValue = (
-    field: 'systolic' | 'diastolic' | 'temperature' | 'heartRate',
+    field: 'systolic' | 'diastolic' | 'temperature' | 'heartRate' | 'weight' | 'height',
     value: string,
   ) => {
     setValue(field, value, { shouldDirty: true, shouldValidate: true });
@@ -213,6 +222,8 @@ export function RmeForm({
             diastolic={diastolic}
             temperature={temperature}
             heartRate={heartRate}
+            weight={weight}
+            height={height}
             onChange={(field, value) => updateStringValue(field, value)}
           />
           <RmeSectionIssues issues={finalizationIssues} section="vitalSigns" />
@@ -222,6 +233,18 @@ export function RmeForm({
           issues={finalizationIssues}
         />
       </fieldset>
+      <RmeObservationSection
+        observations={record?.observations ?? []}
+        syncDisabled={isDirty || busy}
+        syncDisabledReason={
+          busy
+            ? 'Tunggu proses RME selesai.'
+            : 'Simpan perubahan lokal sebelum sinkronisasi.'
+        }
+        canSyncObservation={canSyncObservation}
+        syncingObservationId={syncingObservationId}
+        onSyncObservation={onSyncObservation}
+      />
       <div data-rme-section="diagnoses" tabIndex={-1}>
         <RmeDiagnosisSection
           icdSearch={icdSearch}

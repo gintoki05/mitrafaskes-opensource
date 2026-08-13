@@ -6,12 +6,16 @@ import {
   MedicalRecordStatus,
   OutpatientDisposition,
   type MedicalRecord,
+  type ClinicalObservation,
+  type ClinicalObservationProvenance,
+  type ClinicalObservationStatus,
   type ResourceIntegrationSummary,
 } from '@mitrafaskes/shared';
 
 export const medicalRecordInclude = {
   diagnoses: true,
   prescriptions: true,
+  observations: true,
 } satisfies Prisma.MedicalRecordInclude;
 
 export type MedicalRecordWithRelations = Prisma.MedicalRecordGetPayload<{
@@ -22,6 +26,7 @@ export function toMedicalRecord(
   record: MedicalRecordWithRelations,
   conditionIntegrations: ReadonlyMap<string, ResourceIntegrationSummary[]> = new Map(),
   icd10ByCode: ReadonlyMap<string, Prisma.MasterIcd10GetPayload<Prisma.MasterIcd10DefaultArgs>> = new Map(),
+  observationIntegrations: ReadonlyMap<string, ResourceIntegrationSummary[]> = new Map(),
 ): MedicalRecord {
   if (
     record.serviceProfile !== MedicalRecordServiceProfile.OUTPATIENT_GENERAL ||
@@ -55,6 +60,12 @@ export function toMedicalRecord(
     temperature: record.temperature ?? undefined,
     weight: record.weight ?? undefined,
     height: record.height ?? undefined,
+    observations: (record.observations ?? []).map((observation) =>
+      toClinicalObservation(
+        observation,
+        observationIntegrations.get(observation.id) ?? [],
+      ),
+    ),
     diagnoses: record.diagnoses.map((diagnosis) => ({
       id: diagnosis.id,
       icd10Code: diagnosis.icd10Code,
@@ -83,5 +94,80 @@ export function toMedicalRecord(
     })),
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+function toClinicalObservation(
+  observation: Prisma.ClinicalObservationGetPayload<Prisma.ClinicalObservationDefaultArgs>,
+  integrations: ResourceIntegrationSummary[],
+): ClinicalObservation {
+  const value = observation.valueType === 'quantity'
+    ? {
+        type: 'quantity' as const,
+        value: observation.valueQuantityValue ?? 0,
+        unit: observation.valueQuantityUnit ?? '',
+        ...(observation.valueQuantitySystem
+          ? { system: observation.valueQuantitySystem }
+          : {}),
+        ...(observation.valueQuantityCode
+          ? { code: observation.valueQuantityCode }
+          : {}),
+      }
+    : observation.valueType === 'code'
+      ? {
+          type: 'code' as const,
+          coding: [
+            {
+              ...(observation.valueCodeSystem
+                ? { system: observation.valueCodeSystem }
+                : {}),
+              code: observation.valueCode ?? '',
+              ...(observation.valueCodeDisplay
+                ? { display: observation.valueCodeDisplay }
+                : {}),
+            },
+          ],
+        }
+      : observation.valueType === 'boolean'
+        ? { type: 'boolean' as const, value: observation.valueBoolean ?? false }
+        : { type: 'string' as const, value: observation.valueString ?? '' };
+
+  return {
+    id: observation.id,
+    category: observation.category,
+    code: {
+      ...(observation.codeSystem ? { system: observation.codeSystem } : {}),
+      code: observation.code,
+      ...(observation.codeDisplay ? { display: observation.codeDisplay } : {}),
+    },
+    value,
+    effectiveAt: observation.effectiveAt.toISOString(),
+    ...(observation.performerId ? { performerId: observation.performerId } : {}),
+    status: observation.status as ClinicalObservationStatus,
+    provenance: observation.provenance as ClinicalObservationProvenance,
+    derivedFromObservationIds: observation.derivedFromObservationIds,
+    ...(observation.referenceRangeLow !== null || observation.referenceRangeHigh !== null
+      ? {
+          referenceRange: {
+            ...(observation.referenceRangeLow === null
+              ? {}
+              : { low: observation.referenceRangeLow }),
+            ...(observation.referenceRangeHigh === null
+              ? {}
+              : { high: observation.referenceRangeHigh }),
+          },
+        }
+      : {}),
+    ...(observation.interpretationCode
+      ? {
+          interpretation: {
+            code: observation.interpretationCode,
+            ...(observation.interpretationDisplay
+              ? { display: observation.interpretationDisplay }
+              : {}),
+          },
+        }
+      : {}),
+    integrations,
   };
 }

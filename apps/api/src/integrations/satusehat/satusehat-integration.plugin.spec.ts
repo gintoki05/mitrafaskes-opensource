@@ -6,6 +6,7 @@ function buildPlugin(
   input: {
     encounters?: { previewEncounter: jest.Mock; syncEncounter: jest.Mock };
     conditions?: { previewCondition: jest.Mock; syncCondition: jest.Mock };
+    observations?: { previewObservation: jest.Mock; syncObservation: jest.Mock };
     reconciliation?: { reconcile: jest.Mock };
     prisma?: unknown;
   } = {},
@@ -31,6 +32,7 @@ function buildPlugin(
     (input.reconciliation ?? { reconcile: jest.fn() }) as never,
     unused,
     input.conditions as never,
+    input.observations as never,
   );
 }
 
@@ -331,6 +333,37 @@ describe('SatusehatIntegrationPlugin Condition handler', () => {
     expect(syncCondition).toHaveBeenCalledWith('diagnosis-local-1', {
       retryAttempt: 1,
       retryOfLogId: 'sync-condition-failed-1',
+    });
+  });
+});
+
+describe('SatusehatIntegrationPlugin Observation handler', () => {
+  it('registers Observation preview and sync through the generic handler', async () => {
+    const previewObservation = jest
+      .fn()
+      .mockResolvedValue({ operation: 'CREATE', valueType: 'quantity' });
+    const syncObservation = jest
+      .fn()
+      .mockResolvedValue({ syncedRemotely: true });
+    const plugin = buildPlugin({
+      observations: { previewObservation, syncObservation },
+    });
+    const handler = plugin.getResourceHandler('Observation');
+
+    await expect(handler?.preview?.('observation-local-1')).resolves.toEqual({
+      operation: 'CREATE',
+      valueType: 'quantity',
+    });
+    await expect(
+      handler?.sync?.('observation-local-1', {
+        retryAttempt: 1,
+        retryOfLogId: 'sync-observation-failed-1',
+      }),
+    ).resolves.toEqual({ syncedRemotely: true });
+    expect(previewObservation).toHaveBeenCalledWith('observation-local-1');
+    expect(syncObservation).toHaveBeenCalledWith('observation-local-1', {
+      retryAttempt: 1,
+      retryOfLogId: 'sync-observation-failed-1',
     });
   });
 });

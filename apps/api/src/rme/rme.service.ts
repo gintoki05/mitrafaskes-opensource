@@ -15,6 +15,13 @@ import { IntegrationRegistry } from '../integrations/integration-registry';
 import { validateFinalization } from './rme.finalization-profile';
 import { medicalRecordInclude, toMedicalRecord, type MedicalRecordWithRelations } from './rme.mapper';
 import {
+  buildObservationDrafts,
+  observationInputId,
+  projectLegacyVitals,
+  sourceObservationIdsForDerived,
+  type RmeObservationDraft,
+} from './rme.observation';
+import {
   parseDraftInput,
   parseFinalizeInput,
   parsePreflightInput,
@@ -99,6 +106,20 @@ export class RmeService {
       this.assertExpectedVersion(current?.version ?? 0, draft.expectedVersion);
 
       const now = new Date();
+      const observations = buildObservationDrafts(
+        draft.observations,
+        {
+          systolic: draft.systolic,
+          diastolic: draft.diastolic,
+          heartRate: draft.heartRate,
+          temperature: draft.temperature,
+          weight: draft.weight,
+          height: draft.height,
+        },
+        now,
+        actorUserId,
+      );
+      const projectedVitals = projectLegacyVitals(observations);
       const clinicalData = {
         chiefComplaint: draft.chiefComplaint ?? null,
         presentIllness: draft.presentIllness ?? null,
@@ -109,31 +130,40 @@ export class RmeService {
         carePlan: draft.carePlan ?? null,
         disposition: draft.disposition ?? null,
         anamnesis: draft.anamnesis ?? null,
-        systolic: draft.systolic ?? null,
-        diastolic: draft.diastolic ?? null,
-        heartRate: draft.heartRate ?? null,
-        temperature: draft.temperature ?? null,
-        weight: draft.weight ?? null,
-        height: draft.height ?? null,
+        systolic: projectedVitals.systolic ?? draft.systolic ?? null,
+        diastolic: projectedVitals.diastolic ?? draft.diastolic ?? null,
+        heartRate: projectedVitals.heartRate ?? draft.heartRate ?? null,
+        temperature: projectedVitals.temperature ?? draft.temperature ?? null,
+        weight: projectedVitals.weight ?? draft.weight ?? null,
+        height: projectedVitals.height ?? draft.height ?? null,
         authoredBy: actor.username,
         authoredAt: now,
         serviceProfile: draft.serviceProfile,
         validationProfile: draft.validationProfile,
       };
       if (!current) {
-        return transaction.medicalRecord.create({
+        const created = await transaction.medicalRecord.create({
           data: {
             encounterId: draft.encounterId,
             ...clinicalData,
             status: PrismaMedicalRecordStatus.DRAFT,
             version: 1,
             diagnoses: {
-              create: draft.diagnoses.map(({ id: _id, notes: _notes, ...diagnosis }) => diagnosis),
+              create: draft.diagnoses.map((diagnosis) => ({
+                icd10Code: diagnosis.icd10Code,
+                isPrimary: diagnosis.isPrimary,
+              })),
             },
             prescriptions: { create: draft.prescriptions },
           },
           include: medicalRecordInclude,
         });
+        await this.replaceDraftObservations(transaction, created.id, observations);
+        return this.readMedicalRecordAfterChildReplacement(
+          transaction,
+          created.id,
+          created,
+        );
       }
 
       const updated = await transaction.medicalRecord.update({
@@ -146,12 +176,12 @@ export class RmeService {
         include: medicalRecordInclude,
       });
       await this.replaceDraftDiagnoses(transaction, current.id, draft.diagnoses);
-      if (!transaction.diagnosis) return updated;
-      const refreshed = await transaction.medicalRecord.findUnique({
-        where: { id: current.id },
-        include: medicalRecordInclude,
-    });
-      return refreshed ?? updated;
+      await this.replaceDraftObservations(transaction, current.id, observations);
+      return this.readMedicalRecordAfterChildReplacement(
+        transaction,
+        current.id,
+        updated,
+      );
     });
     return this.toResponse(record);
   }
@@ -266,13 +296,26 @@ export class RmeService {
           record.diagnoses.map((diagnosis) => diagnosis.id),
         )
       : new Map();
+    const observationIntegrations = this.integrations
+      ? await this.integrations.findResourceSummaries(
+          'Observation',
+          (record.observations ?? []).map(
+            (observation) => observation.id,
+          ),
+        )
+      : new Map();
     const catalogClient = this.prisma.masterIcd10;
     const codes = record.diagnoses.map((diagnosis) => diagnosis.icd10Code);
     const catalogEntries =
       catalogClient && typeof catalogClient.findMany === 'function'
         ? await catalogClient.findMany({ where: { code: { in: codes } } })
         : [];
-    return toMedicalRecord(record, conditionIntegrations, new Map(catalogEntries.map((entry) => [entry.code, entry])));
+    return toMedicalRecord(
+      record,
+      conditionIntegrations,
+      new Map(catalogEntries.map((entry) => [entry.code, entry])),
+      observationIntegrations,
+    );
   }
 
   /**
@@ -323,6 +366,119 @@ export class RmeService {
     if (removedIds.length > 0) {
       await delegate.deleteMany({ where: { id: { in: removedIds } } });
     }
+  }
+
+  private async replaceDraftObservations(
+    transaction: Prisma.TransactionClient,
+    medicalRecordId: string,
+    observations: readonly RmeObservationDraft[],
+  ): Promise<void> {
+    const delegate = transaction.clinicalObservation;
+    if (!delegate || typeof delegate.findMany !== 'function') return;
+
+    const existing = await delegate.findMany({
+      where: { medicalRecordId },
+      select: { id: true, code: true },
+    });
+    const existingById = new Map(existing.map((observation) => [observation.id, observation]));
+    const existingByCode = new Map<string, (typeof existing)[number]>();
+    for (const observation of existing) {
+      if (!existingByCode.has(observation.code)) {
+        existingByCode.set(observation.code, observation);
+      }
+    }
+    const keptIds = new Set<string>();
+    const prepared = observations.map((observation) => {
+      const matched =
+        (observation.id ? existingById.get(observation.id) : undefined) ??
+        (!observation.id ? existingByCode.get(observation.code) : undefined);
+      // Only reuse an id that belongs to this MedicalRecord. A caller-provided
+      // id for a different record must not be able to move or collide with a
+      // child row outside the current draft.
+      const id = matched?.id ?? observationInputId();
+      keptIds.add(id);
+      if (existingByCode.get(observation.code)?.id === id) {
+        existingByCode.delete(observation.code);
+      }
+      return { ...observation, id };
+    });
+
+    for (const observation of prepared) {
+      const derivedFromObservationIds = sourceObservationIdsForDerived(
+        observation,
+        prepared,
+      );
+      const data = this.observationData({
+        ...observation,
+        derivedFromObservationIds,
+      });
+      const existed = existingById.has(observation.id);
+      if (existed) {
+        await delegate.update({ where: { id: observation.id }, data });
+      } else {
+        await delegate.create({
+          data: { id: observation.id, medicalRecordId, ...data },
+        });
+      }
+    }
+
+    const removedIds = existing
+      .map((observation) => observation.id)
+      .filter((id) => !keptIds.has(id));
+    if (removedIds.length > 0 && typeof delegate.deleteMany === 'function') {
+      await delegate.deleteMany({ where: { id: { in: removedIds } } });
+    }
+  }
+
+  private observationData(
+    observation: RmeObservationDraft,
+  ): Omit<
+    Prisma.ClinicalObservationUncheckedCreateInput,
+    'id' | 'medicalRecordId'
+  > {
+    return {
+      category: observation.category,
+      codeSystem: observation.codeSystem ?? null,
+      code: observation.code,
+      codeDisplay: observation.codeDisplay ?? null,
+      valueType: observation.valueType,
+      valueQuantityValue: observation.valueQuantityValue ?? null,
+      valueQuantityUnit: observation.valueQuantityUnit ?? null,
+      valueQuantitySystem: observation.valueQuantitySystem ?? null,
+      valueQuantityCode: observation.valueQuantityCode ?? null,
+      valueCodeSystem: observation.valueCodeSystem ?? null,
+      valueCode: observation.valueCode ?? null,
+      valueCodeDisplay: observation.valueCodeDisplay ?? null,
+      valueBoolean: observation.valueBoolean ?? null,
+      valueString: observation.valueString ?? null,
+      effectiveAt: observation.effectiveAt ?? new Date(),
+      performerId: observation.performerId ?? null,
+      status: observation.status,
+      provenance: observation.provenance,
+      derivedFromObservationIds: observation.derivedFromObservationIds,
+      referenceRangeLow: observation.referenceRangeLow ?? null,
+      referenceRangeHigh: observation.referenceRangeHigh ?? null,
+      interpretationCode: observation.interpretationCode ?? null,
+      interpretationDisplay: observation.interpretationDisplay ?? null,
+    };
+  }
+
+  private async readMedicalRecordAfterChildReplacement(
+    transaction: Prisma.TransactionClient,
+    id: string,
+    fallback: MedicalRecordWithRelations,
+  ): Promise<MedicalRecordWithRelations> {
+    if (
+      !transaction.diagnosis &&
+      !transaction.clinicalObservation
+    ) {
+      return fallback;
+    }
+    const refreshed = await transaction.medicalRecord.findUnique({
+      where: { id },
+      include: medicalRecordInclude,
+    });
+    return refreshed ?? fallback;
   }
 
   private async requireDraft(transaction: Prisma.TransactionClient, encounterId: string): Promise<LockedMedicalRecord> {
