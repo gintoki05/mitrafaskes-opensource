@@ -41,6 +41,29 @@ type EncounterHttpQuery = Record<string, string | undefined>;
 export class EncountersController {
   constructor(private readonly encounters: EncountersService) {}
 
+  @Get('history')
+  @RequirePermission(AccessPermission.QUEUE_READ)
+  async findHistory(
+    @Query() query: EncounterHttpQuery,
+    @Req() request: { user: AuthenticatedUser },
+  ) {
+    try {
+      return await this.encounters.findHistory(
+        {
+          page: parsePositiveInteger(query.page, 1),
+          pageSize: parsePositiveInteger(query.pageSize, 25),
+          fromDate: query.fromDate,
+          toDate: query.toDate,
+          search: query.search,
+          status: parseEncounterStatus(query.status),
+        },
+        request.user,
+      );
+    } catch (error) {
+      this.throwHttpError(error);
+    }
+  }
+
   @Get()
   @RequirePermission(AccessPermission.QUEUE_READ)
   async findMany(

@@ -9,6 +9,7 @@ import {
   Database,
   ChevronDown,
   HelpCircle,
+  History,
   LogOut,
   RefreshCw,
   Search,
@@ -41,6 +42,13 @@ const navigationItems: readonly NavigationItem[] = [
     shortLabel: 'Pendaftaran',
     permission: AccessPermission.QUEUE_READ,
     icon: UserCheck,
+  },
+  {
+    href: '/riwayat-kunjungan',
+    label: 'Riwayat Kunjungan',
+    shortLabel: 'Riwayat',
+    permission: AccessPermission.QUEUE_READ,
+    icon: History,
   },
   {
     href: '/rme',

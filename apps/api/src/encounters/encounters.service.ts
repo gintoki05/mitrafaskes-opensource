@@ -8,6 +8,7 @@ import {
 import { EncounterStatus, UserRole } from '@mitrafaskes/shared';
 import type {
   Encounter as SharedEncounter,
+  EncounterHistoryListQuery,
   EncounterListQuery,
 } from '@mitrafaskes/shared';
 import type { ResourceIntegrationSummary } from '@mitrafaskes/shared';
@@ -36,6 +37,7 @@ import {
 import { assertEncounterTransition } from './encounter.status-policy';
 import {
   validateCreateEncounter,
+  validateEncounterHistoryDateRange,
   validateStatusUpdate,
   type ValidatedCreateEncounterInput,
   type ValidatedStatusInput,
@@ -102,18 +104,41 @@ export class EncountersService {
       page,
       pageSize,
     );
-    const integrations = this.integrations
-      ? await this.integrations.findResourceSummaries(
-          'Encounter',
-          records.map((record) => record.id),
-        )
-      : new Map<string, ResourceIntegrationSummary[]>();
-    return {
-      items: records.map((record) =>
-        toEncounter(record, integrations.get(record.id) ?? []),
-      ),
-      meta: { page, pageSize, total },
-    };
+    return this.toListResponse(records, page, pageSize, total);
+  }
+
+  async findHistory(
+    query: EncounterHistoryListQuery = {},
+    actor?: EncounterActor,
+  ) {
+    const { fromDate, toDate } = validateEncounterHistoryDateRange(
+      query.fromDate,
+      query.toDate,
+    );
+    const page = this.normalizePositiveInteger(query.page, 1);
+    const pageSize = Math.min(
+      this.normalizePositiveInteger(query.pageSize, 25),
+      100,
+    );
+    const doctorId =
+      actor?.role === UserRole.DOKTER
+        ? await this.resolveActorUserId(actor)
+        : undefined;
+    const { records, total } = await this.repository.findHistory(
+      {
+        fromDate,
+        toDate,
+        search: query.search,
+        status: query.status ? mapStatusToPrisma(query.status) : undefined,
+        doctorId:
+          actor?.role === UserRole.DOKTER
+            ? (doctorId ?? '__unknown_doctor__')
+            : undefined,
+      },
+      page,
+      pageSize,
+    );
+    return this.toListResponse(records, page, pageSize, total);
   }
 
   async create(
@@ -227,6 +252,26 @@ export class EncountersService {
 
   async findById(id: string): Promise<EncounterWithRelations | null> {
     return this.repository.findById(id);
+  }
+
+  private async toListResponse(
+    records: EncounterWithRelations[],
+    page: number,
+    pageSize: number,
+    total: number,
+  ) {
+    const integrations = this.integrations
+      ? await this.integrations.findResourceSummaries(
+          'Encounter',
+          records.map((record) => record.id),
+        )
+      : new Map<string, ResourceIntegrationSummary[]>();
+    return {
+      items: records.map((record) =>
+        toEncounter(record, integrations.get(record.id) ?? []),
+      ),
+      meta: { page, pageSize, total },
+    };
   }
 
   async saveRmeCompletion(

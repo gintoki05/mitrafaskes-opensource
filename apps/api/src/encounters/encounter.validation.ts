@@ -1,5 +1,6 @@
 import { EncounterStatus } from '@mitrafaskes/shared';
 import { EncounterValidationError } from './encounter.errors';
+import { parseFacilityDate } from './encounter.constants';
 
 const recordOf = (input: unknown): Record<string, unknown> =>
   typeof input === 'object' && input !== null
@@ -87,6 +88,68 @@ export const parseEncounterStatus = (
   }
   return value as EncounterStatus;
 };
+
+export interface ValidatedEncounterHistoryDateRange {
+  fromDate: Date;
+  toDate: Date;
+}
+
+export function validateEncounterHistoryDateRange(
+  fromDate: string | undefined,
+  toDate: string | undefined,
+): ValidatedEncounterHistoryDateRange {
+  const issues: Array<{ field: string; message: string }> = [];
+  let parsedFromDate: Date | undefined;
+  let parsedToDate: Date | undefined;
+
+  if (!fromDate) {
+    issues.push({
+      field: 'fromDate',
+      message: 'Tanggal mulai wajib diisi',
+    });
+  } else {
+    try {
+      parsedFromDate = parseFacilityDate(fromDate);
+    } catch {
+      issues.push({
+        field: 'fromDate',
+        message: 'Tanggal mulai harus berformat YYYY-MM-DD dan valid',
+      });
+    }
+  }
+
+  if (!toDate) {
+    issues.push({
+      field: 'toDate',
+      message: 'Tanggal akhir wajib diisi',
+    });
+  } else {
+    try {
+      parsedToDate = parseFacilityDate(toDate);
+    } catch {
+      issues.push({
+        field: 'toDate',
+        message: 'Tanggal akhir harus berformat YYYY-MM-DD dan valid',
+      });
+    }
+  }
+
+  if (parsedFromDate && parsedToDate && parsedFromDate > parsedToDate) {
+    issues.push({
+      field: 'dateRange',
+      message: 'Tanggal mulai tidak boleh setelah tanggal akhir',
+    });
+  }
+
+  if (issues.length > 0 || !parsedFromDate || !parsedToDate) {
+    throw new EncounterValidationError(
+      'Rentang tanggal riwayat kunjungan tidak valid',
+      issues,
+    );
+  }
+
+  return { fromDate: parsedFromDate, toDate: parsedToDate };
+}
 
 export const parsePositiveInteger = (
   value: string | undefined,

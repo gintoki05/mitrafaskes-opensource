@@ -37,4 +37,55 @@ describe('EncounterRepository allocators', () => {
     expect(numbers).toEqual([1, 2]);
     expect(transaction.$queryRaw).toHaveBeenCalledTimes(2);
   });
+
+  it('queries history inclusively with search fields and newest-first ordering', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const prisma = {
+      encounter: { findMany, count },
+      $transaction: jest.fn((operations: Promise<unknown>[]) =>
+        Promise.all(operations),
+      ),
+    } as unknown as PrismaService;
+    const repository = new EncounterRepository(prisma);
+    const fromDate = new Date('2026-08-01T00:00:00.000Z');
+    const toDate = new Date('2026-08-13T00:00:00.000Z');
+
+    await expect(
+      repository.findHistory(
+        {
+          fromDate,
+          toDate,
+          search: 'Siti Aminah',
+          status: 'COMPLETED',
+        },
+        2,
+        25,
+      ),
+    ).resolves.toEqual({ records: [], total: 0 });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          queueDate: { gte: fromDate, lte: toDate },
+          status: 'COMPLETED',
+          OR: expect.any(Array),
+        }),
+        orderBy: [
+          { queueDate: 'desc' },
+          { queueNumber: 'asc' },
+          { createdAt: 'desc' },
+        ],
+        skip: 25,
+        take: 25,
+      }),
+    );
+    expect(count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          queueDate: { gte: fromDate, lte: toDate },
+        }),
+      }),
+    );
+  });
 });

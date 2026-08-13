@@ -17,7 +17,7 @@ import { ScreenState } from '@/components/ScreenState';
 import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
-import type { EncounterApiError } from './useEncounterActions';
+import type { EncounterApiError } from '@/hooks/useEncounterActions';
 
 type QueuePanelProps = {
   encounters: Encounter[];

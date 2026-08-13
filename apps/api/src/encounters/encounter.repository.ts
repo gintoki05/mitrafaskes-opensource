@@ -53,6 +53,14 @@ export interface EncounterListWhere {
   status?: Prisma.EncounterWhereInput['status'];
 }
 
+export interface EncounterHistoryListWhere {
+  fromDate: Date;
+  toDate: Date;
+  doctorId?: string;
+  search?: string;
+  status?: Prisma.EncounterWhereInput['status'];
+}
+
 export class EncounterRepository {
   constructor(private readonly prisma: PrismaService) {}
 
@@ -72,6 +80,72 @@ export class EncounterRepository {
         where: prismaWhere,
         include: encounterInclude,
         orderBy: [{ queueNumber: 'asc' }, { createdAt: 'asc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.encounter.count({ where: prismaWhere }),
+    ]);
+    return { records, total };
+  }
+
+  async findHistory(
+    where: EncounterHistoryListWhere,
+    page: number,
+    pageSize: number,
+  ): Promise<{ records: EncounterWithRelations[]; total: number }> {
+    const normalizedSearch = where.search?.trim();
+    const searchWhere: Prisma.EncounterWhereInput | undefined = normalizedSearch
+      ? {
+          OR: [
+            {
+              encounterNumber: {
+                contains: normalizedSearch,
+                mode: 'insensitive',
+              },
+            },
+            {
+              patient: {
+                is: {
+                  OR: [
+                    {
+                      fullName: {
+                        contains: normalizedSearch,
+                        mode: 'insensitive',
+                      },
+                    },
+                    {
+                      medicalRecNo: {
+                        contains: normalizedSearch,
+                        mode: 'insensitive',
+                      },
+                    },
+                    {
+                      nik: {
+                        contains: normalizedSearch,
+                      },
+                    },
+                  ],
+                },
+              },
+            },
+          ],
+        }
+      : undefined;
+    const prismaWhere: Prisma.EncounterWhereInput = {
+      queueDate: { gte: where.fromDate, lte: where.toDate },
+      doctorId: where.doctorId,
+      status: where.status,
+      ...(searchWhere ?? {}),
+    };
+    const [records, total] = await this.prisma.$transaction([
+      this.prisma.encounter.findMany({
+        where: prismaWhere,
+        include: encounterInclude,
+        orderBy: [
+          { queueDate: 'desc' },
+          { queueNumber: 'asc' },
+          { createdAt: 'desc' },
+        ],
         skip: (page - 1) * pageSize,
         take: pageSize,
       }),

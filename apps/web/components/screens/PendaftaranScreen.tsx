@@ -23,12 +23,12 @@ import { PatientFormDialog } from './pendaftaran/PatientFormDialog';
 import { PatientSyncDialog } from './pendaftaran/PatientSyncDialog';
 import { QueuePanel } from './pendaftaran/QueuePanel';
 import { EncounterRegistrationDialog } from './pendaftaran/EncounterRegistrationDialog';
-import { EncounterSyncDialog } from './pendaftaran/EncounterSyncDialog';
-import { shouldRefreshEncounterListAfterSync } from './pendaftaran/encounter-sync-state';
+import { EncounterSyncDialog } from './encounters/EncounterSyncDialog';
+import { shouldRefreshEncounterListAfterSync } from './encounters/encounter-sync-state';
 import { RegistrationViewTabs, type RegistrationView } from './pendaftaran/RegistrationViewTabs';
 import { usePatientActions } from './pendaftaran/usePatientActions';
 import { useMaritalStatuses } from './pendaftaran/useMaritalStatuses';
-import { useEncounterActions } from './pendaftaran/useEncounterActions';
+import { useEncounterActions } from '@/hooks/useEncounterActions';
 import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 
 export default function PendaftaranPage() {

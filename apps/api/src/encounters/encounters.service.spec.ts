@@ -340,4 +340,82 @@ describe('EncountersService', () => {
       findMany.mockRestore();
     }
   });
+
+  it('limits the doctor history to Encounters assigned to the logged-in doctor', async () => {
+    const findHistory = jest
+      .spyOn(EncounterRepository.prototype, 'findHistory')
+      .mockResolvedValue({ records: [], total: 0 });
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'doctor-1' }) },
+    } as unknown as PrismaService;
+    const service = new EncountersService(prisma);
+
+    try {
+      await service.findHistory(
+        {
+          fromDate: '2026-08-01',
+          toDate: '2026-08-13',
+          search: 'RM-2026',
+          status: EncounterStatus.COMPLETED,
+        },
+        { id: 'session-user-1', username: 'dr_budi', role: 'DOKTER' },
+      );
+      expect(findHistory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fromDate: new Date('2026-08-01T00:00:00.000Z'),
+          toDate: new Date('2026-08-13T00:00:00.000Z'),
+          search: 'RM-2026',
+          status: EncounterStatus.COMPLETED,
+          doctorId: 'doctor-1',
+        }),
+        1,
+        25,
+      );
+    } finally {
+      findHistory.mockRestore();
+    }
+  });
+
+  it('returns history relations and provider-neutral integration summaries', async () => {
+    const record = encounterRecord();
+    const findHistory = jest
+      .spyOn(EncounterRepository.prototype, 'findHistory')
+      .mockResolvedValue({ records: [record], total: 1 });
+    const integrationSummary = {
+      provider: 'SATUSEHAT',
+      environment: 'SANDBOX',
+      linkage: { externalResourceId: 'satusehat-enc-1' },
+    };
+    const findResourceSummaries = jest
+      .fn()
+      .mockResolvedValue(new Map([[record.id, [integrationSummary]]]));
+    const service = new EncountersService(
+      {} as PrismaService,
+      { findResourceSummaries } as never,
+    );
+
+    try {
+      const result = await service.findHistory({
+        fromDate: '2026-08-01',
+        toDate: '2026-08-13',
+      });
+
+      expect(result.items[0]).toEqual(
+        expect.objectContaining({
+          patient: expect.objectContaining({
+            fullName: 'Ahmad Supardi',
+            medicalRecNo: 'RM-2026-000001',
+          }),
+          doctor: expect.objectContaining({ fullName: 'dr. Budi Santoso' }),
+          location: expect.objectContaining({ name: 'Poli Umum' }),
+          integrations: [integrationSummary],
+        }),
+      );
+      expect(findResourceSummaries).toHaveBeenCalledWith('Encounter', [
+        record.id,
+      ]);
+    } finally {
+      findHistory.mockRestore();
+    }
+  });
 });

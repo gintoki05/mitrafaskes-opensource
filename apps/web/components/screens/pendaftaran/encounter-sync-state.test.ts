@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveEncounterSyncUiState, shouldRefreshEncounterListAfterSync } from './encounter-sync-state.ts';
+import { resolveEncounterSyncUiState, shouldRefreshEncounterListAfterSync } from '../encounters/encounter-sync-state.ts';
 
 test('Encounter sync UI exposes loading and permission-disabled states', () => {
   assert.deepEqual(

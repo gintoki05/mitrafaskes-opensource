@@ -4,6 +4,7 @@ import {
   parseEncounterStatus,
   parsePositiveInteger,
   validateCreateEncounter,
+  validateEncounterHistoryDateRange,
   validateStatusUpdate,
 } from './encounter.validation';
 
@@ -58,5 +59,25 @@ describe('Encounter validation', () => {
     expect(parsePositiveInteger('3', 1)).toBe(3);
     expect(parsePositiveInteger('999', 1, 100)).toBe(100);
     expect(parsePositiveInteger('nope', 1)).toBe(1);
+  });
+
+  it('validates an inclusive history date range', () => {
+    expect(
+      validateEncounterHistoryDateRange('2026-08-01', '2026-08-13'),
+    ).toEqual({
+      fromDate: new Date('2026-08-01T00:00:00.000Z'),
+      toDate: new Date('2026-08-13T00:00:00.000Z'),
+    });
+  });
+
+  it.each([
+    [undefined, '2026-08-13'],
+    ['2026-08-01', undefined],
+    ['2026-08-13', '2026-08-01'],
+    ['2026-02-30', '2026-08-13'],
+  ] as const)('rejects invalid history range %j - %j', (fromDate, toDate) => {
+    expect(() => validateEncounterHistoryDateRange(fromDate, toDate)).toThrow(
+      EncounterValidationError,
+    );
   });
 });

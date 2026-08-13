@@ -85,3 +85,14 @@ export interface EncounterListQuery {
 }
 
 export type EncounterListResponse = PaginatedListResponse<Encounter>;
+
+export interface EncounterHistoryListQuery {
+  page?: number;
+  pageSize?: number;
+  fromDate?: string;
+  toDate?: string;
+  search?: string;
+  status?: EncounterStatus;
+}
+
+export type EncounterHistoryListResponse = PaginatedListResponse<Encounter>;
