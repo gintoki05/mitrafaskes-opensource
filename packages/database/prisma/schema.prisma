@@ -518,6 +518,7 @@ model MedicalRecord {
   authoredAt        DateTime?
   finalizedBy       String?             @db.VarChar(128)
   finalizedAt       DateTime?
+  serviceProfile    String              @default("OUTPATIENT_GENERAL") @db.VarChar(64)
   validationProfile String              @default("OUTPATIENT_GENERAL_V1") @db.VarChar(64)
   anamnesis         String?
   systolic          Int?

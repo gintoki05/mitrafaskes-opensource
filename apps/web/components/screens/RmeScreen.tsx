@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useState } from 'react';
-import { Stethoscope, Zap } from 'lucide-react';
+import { RefreshCw, Stethoscope, Zap } from 'lucide-react';
 import { AccessPermission } from '@mitrafaskes/shared';
 import { RouteGuard } from '@/components/RouteGuard';
 import { PageHeader } from '@/components/PageHeader';
 import { ScreenState } from '@/components/ScreenState';
+import { Button } from '@/components/ui/button';
 import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut';
 import { useRmeLifecycle, RmeApiError } from '@/hooks/useRmeLifecycle';
 import { useRmeResources } from '@/hooks/useRmeResources';
@@ -14,6 +15,8 @@ import { can } from '@/lib/auth';
 import { toast } from 'sonner';
 import { RmeEncounterQueue } from './rme/RmeEncounterQueue';
 import { RmeForm, RmeFormPlaceholder } from './rme/RmeForm';
+import { RmeWorkspaceContext } from './rme/RmeWorkspaceContext';
+import { resolveRmeWorkspaceViewState } from './rme/rme-workspace-model';
 import type { RmeFormValues } from './rme/rme-form-schema';
 
 function errorDescription(error: unknown): string {
@@ -38,6 +41,13 @@ export default function RmePage() {
     selectEncounter,
   } = useRmeResources();
   const lifecycle = useRmeLifecycle(selectedEncounter?.id ?? null);
+  const workspaceState = resolveRmeWorkspaceViewState({
+    encountersLoading,
+    queueError: loadError,
+    hasSelectedEncounter: Boolean(selectedEncounter),
+    recordLoading: lifecycle.loading,
+    recordError: lifecycle.loadError,
+  });
 
   const handleSaveShortcut = useCallback((event: KeyboardEvent) => {
     if (!event.ctrlKey || event.key !== 'Enter') return;
@@ -91,8 +101,6 @@ export default function RmePage() {
           }
         />
 
-        {loadError ? <ScreenState kind="error" title="Antrean tidak tersedia" description={loadError} compact /> : null}
-
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
           <RmeEncounterQueue
             encounters={encounters}
@@ -102,32 +110,55 @@ export default function RmePage() {
             loadError={loadError}
             onSelectEncounter={selectEncounter}
             onPageChange={(page) => void refreshEncounters(page)}
+            onRetry={() => void refreshEncounters(encountersMeta.page)}
           />
 
           <div className="min-w-0 space-y-6 lg:col-span-3">
-            {selectedEncounter && lifecycle.loading ? (
-              <ScreenState kind="loading" title="Memuat draft RME" description="Mengambil versi catatan terbaru." />
-            ) : selectedEncounter && lifecycle.loadError ? (
-              <ScreenState kind="error" title="RME tidak tersedia" description={lifecycle.loadError} />
-            ) : selectedEncounter ? (
-              <RmeForm
-                key={selectedEncounter.id}
+            {selectedEncounter ? (
+              <RmeWorkspaceContext
                 encounter={selectedEncounter}
                 record={lifecycle.record}
+              />
+            ) : null}
+
+            {workspaceState === 'loading-record' ? (
+              <ScreenState kind="loading" title="Memuat draft RME" description="Mengambil versi catatan terbaru." />
+            ) : workspaceState === 'record-error' ? (
+              <ScreenState
+                kind="error"
+                title="RME tidak tersedia"
+                description={lifecycle.loadError}
+                action={(
+                  <Button type="button" size="sm" onClick={lifecycle.reload}>
+                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                    Muat ulang RME
+                  </Button>
+                )}
+              />
+            ) : workspaceState === 'ready' && selectedEncounter ? (
+              <RmeForm
+                key={selectedEncounter.id}
+                record={lifecycle.record}
                 mutationState={lifecycle.mutationState}
+                conflict={lifecycle.conflict}
                 canSaveDraft={can(session?.user ?? null, AccessPermission.RME_WRITE_DRAFT)}
                 canFinalize={can(session?.user ?? null, AccessPermission.RME_FINALIZE)}
                 icdSearch={icdSearch}
                 icdResults={icdResults}
                 onSaveDraft={handleSaveDraft}
                 onFinalize={handleFinalize}
+                onReload={lifecycle.reload}
                 onIcdSearchChange={(value) => {
                   setIcdSearch(value);
                   void searchIcd10(value);
                 }}
               />
             ) : (
-              <RmeFormPlaceholder encountersLoading={encountersLoading} />
+              <RmeFormPlaceholder
+                encountersLoading={workspaceState === 'loading-queue'}
+                loadError={workspaceState === 'queue-error' ? loadError : ''}
+                onRetry={() => void refreshEncounters(encountersMeta.page)}
+              />
             )}
           </div>
         </div>

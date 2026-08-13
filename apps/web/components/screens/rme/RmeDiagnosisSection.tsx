@@ -91,6 +91,11 @@ export function RmeDiagnosisSection({
               </Button>
             </div>
           ))}
+          {selectedDiagnoses.length === 0 ? (
+            <p className="rounded-[var(--radius-control)] border border-dashed border-border p-3 text-xs text-muted-foreground">
+              Belum ada diagnosis. Cari ICD-10 untuk menambahkan diagnosis saat data klinis tersedia.
+            </p>
+          ) : null}
         </div>
       </CardContent>
     </Card>

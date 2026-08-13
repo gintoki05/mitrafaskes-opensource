@@ -9,6 +9,11 @@ export const encounterInclude = {
       nik: true,
       fullName: true,
       medicalRecNo: true,
+      birthDate: true,
+      gender: true,
+      address: true,
+      phone: true,
+      birthPlaceText: true,
     },
   },
   doctor: {

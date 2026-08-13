@@ -1,5 +1,6 @@
 import type {
   Encounter as SharedEncounter,
+  Gender,
   ResourceIntegrationSummary,
   EncounterStatus,
   UserRole,
@@ -41,6 +42,11 @@ export function toEncounter(
       nik: record.patient.nik ?? undefined,
       fullName: record.patient.fullName,
       medicalRecNo: record.patient.medicalRecNo,
+      birthDate: record.patient.birthDate.toISOString().slice(0, 10),
+      gender: record.patient.gender as unknown as Gender,
+      address: record.patient.address ?? undefined,
+      phone: record.patient.phone ?? undefined,
+      birthPlaceText: record.patient.birthPlaceText ?? undefined,
     },
     doctor: {
       fullName: record.doctor.fullName,

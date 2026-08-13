@@ -13,5 +13,8 @@ export type RmePrescription = {
 
 export type RmePresetBundle = 'ISPA' | 'GASTRITIS' | 'HYPERTENSION';
 
-export type RmePrescriptionField = 'medicineName' | 'frequency' | 'quantity';
-
+export type RmePrescriptionField =
+  | 'medicineName'
+  | 'dosage'
+  | 'frequency'
+  | 'quantity';

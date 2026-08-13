@@ -12,9 +12,18 @@ test('RME contract exposes draft/final lifecycle and version metadata', () => {
   assert.match(source, /enum MedicalRecordStatus[\s\S]*DRAFT[\s\S]*FINAL/);
   assert.match(source, /status:\s*MedicalRecordStatus/);
   assert.match(source, /version:\s*number/);
-  assert.match(source, /validationProfile:\s*string/);
+  assert.match(source, /serviceProfile:\s*MedicalRecordServiceProfile/);
+  assert.match(source, /validationProfile:\s*MedicalRecordValidationProfile/);
   assert.match(source, /authoredBy\?:\s*string/);
   assert.match(source, /finalizedBy\?:\s*string/);
+});
+
+test('service profile maps explicitly to a versioned validation profile', () => {
+  assert.match(source, /OUTPATIENT_GENERAL = 'OUTPATIENT_GENERAL'/);
+  assert.match(
+    source,
+    /\[MedicalRecordServiceProfile\.OUTPATIENT_GENERAL\]:[\s\S]*OUTPATIENT_GENERAL_VALIDATION_PROFILE/,
+  );
 });
 
 test('draft and finalize commands both require expectedVersion', () => {

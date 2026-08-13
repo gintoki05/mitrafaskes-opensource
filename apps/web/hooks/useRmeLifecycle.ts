@@ -1,9 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import type { MedicalRecord, SaveMedicalRecordDraftDto } from '@mitrafaskes/shared';
+import {
+  MedicalRecordServiceProfile,
+  type MedicalRecord,
+  type SaveMedicalRecordDraftDto,
+} from '@mitrafaskes/shared';
 import { apiFetch } from '@/lib/auth';
 import type { RmeFormValues } from '@/components/screens/rme/rme-form-schema';
+import {
+  versionConflictFrom,
+  type RmeVersionConflict,
+} from '@/components/screens/rme/rme-workspace-model';
 
 export type RmeMutationState =
   | 'idle'
@@ -15,6 +23,7 @@ type RmeApiErrorBody = {
   code?: string;
   message?: string;
   errors?: Array<{ field: string; message: string }>;
+  currentVersion?: number;
 };
 
 export class RmeApiError extends Error {
@@ -22,6 +31,7 @@ export class RmeApiError extends Error {
     message: string,
     readonly code?: string,
     readonly issues: Array<{ field: string; message: string }> = [],
+    readonly currentVersion?: number,
   ) {
     super(message);
   }
@@ -39,6 +49,7 @@ async function readResponse(response: Response): Promise<MedicalRecord | null> {
       error.message ?? 'RME tidak dapat diproses.',
       error.code,
       error.errors ?? [],
+      error.currentVersion,
     );
   }
   return body as MedicalRecord | null;
@@ -52,6 +63,7 @@ function draftPayload(
   return {
     encounterId,
     expectedVersion,
+    serviceProfile: MedicalRecordServiceProfile.OUTPATIENT_GENERAL,
     ...values,
     systolic: values.systolic ? Number(values.systolic) : undefined,
     diastolic: values.diastolic ? Number(values.diastolic) : undefined,
@@ -65,18 +77,31 @@ export function useRmeLifecycle(encounterId: string | null) {
     encounterId: string | null;
     record: MedicalRecord | null;
     error: string;
-  }>({ encounterId: null, record: null, error: '' });
+    loading: boolean;
+  }>({ encounterId: null, record: null, error: '', loading: false });
   const [mutation, setMutation] = useState<{
     encounterId: string | null;
     state: RmeMutationState;
   }>({ encounterId: null, state: 'idle' });
+  const [reloadKey, setReloadKey] = useState(0);
+  const [conflictState, setConflictState] = useState<{
+    encounterId: string | null;
+    conflict: RmeVersionConflict | null;
+  }>({ encounterId: null, conflict: null });
   const record =
     loadState.encounterId === encounterId ? loadState.record : null;
   const loadError =
     loadState.encounterId === encounterId ? loadState.error : '';
-  const loading = Boolean(encounterId && loadState.encounterId !== encounterId);
+  const loading = Boolean(
+    encounterId &&
+      (loadState.encounterId !== encounterId || loadState.loading),
+  );
   const mutationState =
     mutation.encounterId === encounterId ? mutation.state : 'idle';
+  const conflict =
+    conflictState.encounterId === encounterId
+      ? conflictState.conflict
+      : null;
 
   useEffect(() => {
     let active = true;
@@ -89,7 +114,9 @@ export function useRmeLifecycle(encounterId: string | null) {
     void apiFetch(`/api/rme/encounter/${encounterId}`)
       .then((response) => readResponse(response))
       .then((loaded) => {
-        if (active) setLoadState({ encounterId, record: loaded, error: '' });
+        if (active) {
+          setLoadState({ encounterId, record: loaded, error: '', loading: false });
+        }
       })
       .catch((error: unknown) => {
         if (active) {
@@ -98,6 +125,7 @@ export function useRmeLifecycle(encounterId: string | null) {
             record: null,
             error:
               error instanceof Error ? error.message : 'RME tidak dapat dimuat.',
+            loading: false,
           });
         }
       });
@@ -105,6 +133,18 @@ export function useRmeLifecycle(encounterId: string | null) {
     return () => {
       active = false;
     };
+  }, [encounterId, reloadKey]);
+
+  const reload = useCallback(() => {
+    if (!encounterId) return;
+    setLoadState((current) => ({
+      encounterId,
+      record: current.encounterId === encounterId ? current.record : null,
+      error: '',
+      loading: true,
+    }));
+    setConflictState({ encounterId, conflict: null });
+    setReloadKey((current) => current + 1);
   }, [encounterId]);
 
   const saveDraft = useCallback(
@@ -121,10 +161,15 @@ export function useRmeLifecycle(encounterId: string | null) {
         });
         const saved = await readResponse(response);
         if (!saved) throw new RmeApiError('API tidak mengembalikan draft RME.');
-        setLoadState({ encounterId, record: saved, error: '' });
+        setLoadState({ encounterId, record: saved, error: '', loading: false });
+        setConflictState({ encounterId, conflict: null });
         setMutation({ encounterId, state: 'draft-saved' });
         return saved;
       } catch (error) {
+        setConflictState({
+          encounterId,
+          conflict: versionConflictFrom(error),
+        });
         setMutation({ encounterId, state: 'idle' });
         throw error;
       }
@@ -146,14 +191,28 @@ export function useRmeLifecycle(encounterId: string | null) {
       });
       const finalized = await readResponse(response);
       if (!finalized) throw new RmeApiError('API tidak mengembalikan RME final.');
-      setLoadState({ encounterId, record: finalized, error: '' });
+      setLoadState({ encounterId, record: finalized, error: '', loading: false });
+      setConflictState({ encounterId, conflict: null });
       setMutation({ encounterId, state: 'idle' });
       return finalized;
     } catch (error) {
+      setConflictState({
+        encounterId,
+        conflict: versionConflictFrom(error),
+      });
       setMutation({ encounterId, state: 'idle' });
       throw error;
     }
   }, [encounterId, record]);
 
-  return { record, loading, loadError, mutationState, saveDraft, finalize };
+  return {
+    record,
+    loading,
+    loadError,
+    mutationState,
+    conflict,
+    reload,
+    saveDraft,
+    finalize,
+  };
 }

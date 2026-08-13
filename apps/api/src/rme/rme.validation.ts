@@ -1,5 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import {
+  MEDICAL_RECORD_VALIDATION_PROFILE,
+  MedicalRecordServiceProfile,
   OUTPATIENT_GENERAL_VALIDATION_PROFILE,
   type DiagnosisDto,
   type PrescriptionDto,
@@ -12,10 +14,13 @@ export type ValidatedMedicalRecordDraft = Omit<
 > & {
   diagnoses: DiagnosisDto[];
   prescriptions: PrescriptionDto[];
+  serviceProfile: MedicalRecordServiceProfile;
   validationProfile: typeof OUTPATIENT_GENERAL_VALIDATION_PROFILE;
 };
 
 export type FinalizationValidationInput = {
+  serviceProfile: string;
+  validationProfile: string;
   anamnesis: string | null;
   systolic: number | null;
   diastolic: number | null;
@@ -74,8 +79,16 @@ function expectedVersion(value: unknown): number {
   return parsed;
 }
 
+function serviceProfile(value: unknown): MedicalRecordServiceProfile {
+  if (value === undefined || value === MedicalRecordServiceProfile.OUTPATIENT_GENERAL) {
+    return MedicalRecordServiceProfile.OUTPATIENT_GENERAL;
+  }
+  throw validationError('Profil layanan RME tidak didukung.');
+}
+
 export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
   const body = recordOf(input);
+  const selectedServiceProfile = serviceProfile(body.serviceProfile);
   const diagnoses = (Array.isArray(body.diagnoses) ? body.diagnoses : []).map(
     (diagnosis) => {
       const value = recordOf(diagnosis);
@@ -107,7 +120,9 @@ export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
   return {
     encounterId: requiredString(body.encounterId, 'encounterId'),
     expectedVersion: expectedVersion(body.expectedVersion),
-    validationProfile: OUTPATIENT_GENERAL_VALIDATION_PROFILE,
+    serviceProfile: selectedServiceProfile,
+    validationProfile:
+      MEDICAL_RECORD_VALIDATION_PROFILE[selectedServiceProfile],
     anamnesis: optionalString(body.anamnesis),
     systolic: optionalNumber(body.systolic, 'systolic'),
     diastolic: optionalNumber(body.diastolic, 'diastolic'),
@@ -135,6 +150,16 @@ export function assertReadyForFinalization(
   record: FinalizationValidationInput,
 ): void {
   const errors: Array<{ field: string; message: string }> = [];
+  if (
+    record.serviceProfile !== MedicalRecordServiceProfile.OUTPATIENT_GENERAL ||
+    record.validationProfile !==
+      MEDICAL_RECORD_VALIDATION_PROFILE[MedicalRecordServiceProfile.OUTPATIENT_GENERAL]
+  ) {
+    errors.push({
+      field: 'serviceProfile',
+      message: 'Profil layanan dan validation profile RME tidak konsisten.',
+    });
+  }
   if (!record.encounter.patientId) {
     errors.push({ field: 'patientId', message: 'Pasien Encounter tidak tersedia.' });
   }

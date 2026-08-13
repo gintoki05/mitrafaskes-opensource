@@ -10,6 +10,8 @@ import {
   Prisma,
 } from '@prisma/client';
 import {
+  MEDICAL_RECORD_VALIDATION_PROFILE,
+  MedicalRecordServiceProfile,
   MedicalRecordStatus,
   type MedicalRecord,
 } from '@mitrafaskes/shared';
@@ -47,16 +49,25 @@ type LockedMedicalRecord = {
 };
 
 function toMedicalRecord(record: MedicalRecordWithRelations): MedicalRecord {
+  if (
+    record.serviceProfile !== MedicalRecordServiceProfile.OUTPATIENT_GENERAL ||
+    record.validationProfile !==
+      MEDICAL_RECORD_VALIDATION_PROFILE[MedicalRecordServiceProfile.OUTPATIENT_GENERAL]
+  ) {
+    throw new Error('Konfigurasi profil layanan RME tidak konsisten');
+  }
   return {
     id: record.id,
     encounterId: record.encounterId,
     status: record.status as MedicalRecordStatus,
     version: record.version,
+    serviceProfile: MedicalRecordServiceProfile.OUTPATIENT_GENERAL,
     authoredBy: record.authoredBy ?? undefined,
     authoredAt: record.authoredAt?.toISOString(),
     finalizedBy: record.finalizedBy ?? undefined,
     finalizedAt: record.finalizedAt?.toISOString(),
-    validationProfile: record.validationProfile,
+    validationProfile:
+      MEDICAL_RECORD_VALIDATION_PROFILE[MedicalRecordServiceProfile.OUTPATIENT_GENERAL],
     anamnesis: record.anamnesis ?? undefined,
     systolic: record.systolic ?? undefined,
     diastolic: record.diastolic ?? undefined,
@@ -149,6 +160,7 @@ export class RmeService {
         height: draft.height ?? null,
         authoredBy: actor.username,
         authoredAt: now,
+        serviceProfile: draft.serviceProfile,
         validationProfile: draft.validationProfile,
       };
       if (!current) {

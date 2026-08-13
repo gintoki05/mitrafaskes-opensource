@@ -29,6 +29,11 @@ function encounterRecord(status = EncounterStatus.WAITING) {
       nik: '3171012304900001',
       fullName: 'Ahmad Supardi',
       medicalRecNo: 'RM-2026-000001',
+      birthDate: new Date('1990-04-23T00:00:00.000Z'),
+      gender: 'MALE',
+      address: 'Jl. Merdeka 10',
+      phone: '08123456789',
+      birthPlaceText: 'Jakarta',
     },
     doctor: {
       id: 'doctor-1',
@@ -117,6 +122,13 @@ describe('EncountersService', () => {
     expect(result.encounterNumber).toBe('ENC-2026-000001');
     expect(result.queueNumber).toBe(1);
     expect(result.status).toBe(EncounterStatus.WAITING);
+    expect(result.patient).toEqual(
+      expect.objectContaining({
+        birthDate: '1990-04-23',
+        gender: 'MALE',
+        address: 'Jl. Merdeka 10',
+      }),
+    );
     expect(transaction.encounter.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({

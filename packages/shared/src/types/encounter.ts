@@ -1,6 +1,7 @@
 import type { PaginatedListResponse } from './pagination';
 import type { UserRole } from './auth';
 import type { ResourceIntegrationSummary } from './integrations';
+import type { Gender } from './patient';
 
 export enum EncounterStatus {
   WAITING = "WAITING",
@@ -42,6 +43,11 @@ export interface Encounter {
     nik?: string;
     fullName: string;
     medicalRecNo: string;
+    birthDate: string;
+    gender: Gender;
+    address?: string;
+    phone?: string;
+    birthPlaceText?: string;
   };
   doctor?: {
     fullName: string;

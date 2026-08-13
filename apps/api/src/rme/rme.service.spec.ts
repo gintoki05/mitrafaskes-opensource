@@ -21,6 +21,7 @@ function medicalRecord(
     authoredAt: now,
     finalizedBy: status === MedicalRecordStatus.FINAL ? 'dr_budi' : null,
     finalizedAt: status === MedicalRecordStatus.FINAL ? now : null,
+    serviceProfile: 'OUTPATIENT_GENERAL',
     validationProfile: 'OUTPATIENT_GENERAL_V1',
     anamnesis: 'Demam sejak dua hari.',
     systolic: 120,
@@ -257,6 +258,8 @@ describe('RmeService lifecycle', () => {
 
     expect(parsed).toEqual(
       expect.objectContaining({
+        serviceProfile: 'OUTPATIENT_GENERAL',
+        validationProfile: 'OUTPATIENT_GENERAL_V1',
         anamnesis: undefined,
         systolic: undefined,
         diastolic: undefined,
@@ -266,5 +269,17 @@ describe('RmeService lifecycle', () => {
         prescriptions: [],
       }),
     );
+  });
+
+  it('rejects an unsupported service profile before writing a draft', () => {
+    expect(() =>
+      parseDraftInput({
+        encounterId: 'encounter-1',
+        expectedVersion: 0,
+        serviceProfile: 'OUTPATIENT_DENTAL',
+        diagnoses: [],
+        prescriptions: [],
+      }),
+    ).toThrow('Profil layanan RME tidak didukung.');
   });
 });

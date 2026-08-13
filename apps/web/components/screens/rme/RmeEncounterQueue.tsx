@@ -4,6 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 import type { ListMeta } from '@mitrafaskes/shared';
 import type { Encounter } from '@/lib/clinical-types';
 
@@ -15,6 +17,7 @@ type RmeEncounterQueueProps = {
   loadError: string;
   onSelectEncounter: (encounter: Encounter) => void;
   onPageChange: (page: number) => void;
+  onRetry: () => void;
 };
 
 export function RmeEncounterQueue({
@@ -25,6 +28,7 @@ export function RmeEncounterQueue({
   loadError,
   onSelectEncounter,
   onPageChange,
+  onRetry,
 }: RmeEncounterQueueProps) {
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
 
@@ -39,6 +43,19 @@ export function RmeEncounterQueue({
         <CardContent className="space-y-2">
           {encountersLoading ? (
             <ScreenState kind="loading" title="Memuat antrean" compact />
+          ) : loadError ? (
+            <ScreenState
+              kind="error"
+              title="Antrean tidak tersedia"
+              description={loadError}
+              compact
+              action={(
+                <Button type="button" size="sm" onClick={onRetry}>
+                  <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                  Coba lagi
+                </Button>
+              )}
+            />
           ) : encounters.length === 0 && !loadError ? (
             <ScreenState
               kind="empty"

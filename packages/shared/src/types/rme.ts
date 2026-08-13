@@ -25,19 +25,32 @@ export enum MedicalRecordStatus {
   FINAL = 'FINAL',
 }
 
+export enum MedicalRecordServiceProfile {
+  OUTPATIENT_GENERAL = 'OUTPATIENT_GENERAL',
+}
+
 export const OUTPATIENT_GENERAL_VALIDATION_PROFILE =
   'OUTPATIENT_GENERAL_V1' as const;
+
+export const MEDICAL_RECORD_VALIDATION_PROFILE = {
+  [MedicalRecordServiceProfile.OUTPATIENT_GENERAL]:
+    OUTPATIENT_GENERAL_VALIDATION_PROFILE,
+} as const;
+
+export type MedicalRecordValidationProfile =
+  (typeof MEDICAL_RECORD_VALIDATION_PROFILE)[MedicalRecordServiceProfile];
 
 export interface MedicalRecord {
   id: string;
   encounterId: string;
   status: MedicalRecordStatus;
   version: number;
+  serviceProfile: MedicalRecordServiceProfile;
   authoredBy?: string;
   authoredAt?: string;
   finalizedBy?: string;
   finalizedAt?: string;
-  validationProfile: string;
+  validationProfile: MedicalRecordValidationProfile;
   anamnesis?: string;
   systolic?: number;
   diastolic?: number;
@@ -67,6 +80,7 @@ export interface MedicalRecord {
 export interface SaveMedicalRecordDraftDto {
   encounterId: string;
   expectedVersion: number;
+  serviceProfile: MedicalRecordServiceProfile;
   anamnesis?: string;
   systolic?: number;
   diastolic?: number;

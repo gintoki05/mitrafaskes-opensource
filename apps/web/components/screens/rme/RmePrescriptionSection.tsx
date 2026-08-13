@@ -49,7 +49,7 @@ export function RmePrescriptionSection({
 
         <div className="space-y-3">
           {prescriptions.map((prescription, index) => (
-            <div key={index} className="grid grid-cols-1 gap-3 rounded-[var(--radius-card)] border border-border bg-background p-3 sm:grid-cols-4">
+            <div key={index} className="grid grid-cols-1 gap-3 rounded-[var(--radius-card)] border border-border bg-background p-3 sm:grid-cols-5">
               <div className="sm:col-span-2">
                 <Input
                   type="text"
@@ -58,6 +58,16 @@ export function RmePrescriptionSection({
                   placeholder="Nama Obat (Contoh: Paracetamol 500mg)"
                   className="text-xs"
                   aria-label={`Nama obat resep ${index + 1}`}
+                />
+              </div>
+              <div>
+                <Input
+                  type="text"
+                  value={prescription.dosage}
+                  onChange={(event) => onUpdatePrescription(index, 'dosage', event.target.value)}
+                  placeholder="Dosis (contoh: 1 tablet)"
+                  className="text-xs"
+                  aria-label={`Dosis obat resep ${index + 1}`}
                 />
               </div>
               <div>
@@ -82,6 +92,11 @@ export function RmePrescriptionSection({
               </div>
             </div>
           ))}
+          {prescriptions.length === 0 ? (
+            <p className="rounded-[var(--radius-control)] border border-dashed border-border p-3 text-xs text-muted-foreground">
+              Belum ada resep. Kunjungan tanpa resep tetap dapat disimpan sebagai draft.
+            </p>
+          ) : null}
         </div>
       </CardContent>
     </Card>
