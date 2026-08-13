@@ -80,7 +80,9 @@ export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
   const diagnoses = (Array.isArray(body.diagnoses) ? body.diagnoses : []).map(
     (diagnosis) => {
       const value = recordOf(diagnosis);
+      const id = optionalString(value.id);
       return {
+        ...(id ? { id } : {}),
         icd10Code: requiredString(value.icd10Code, 'icd10Code'),
         isPrimary: value.isPrimary !== false,
         notes: optionalString(value.notes),

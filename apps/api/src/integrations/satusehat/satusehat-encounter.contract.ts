@@ -3,6 +3,7 @@ import type {
   SatusehatEncounterStatus,
 } from '@mitrafaskes/shared';
 import {
+  ADMISSION_DIAGNOSIS,
   AMBULATORY_CLASS,
   ATTENDER_PARTICIPATION,
   ENCOUNTER_IDENTIFIER_SYSTEM_PREFIX,
@@ -169,6 +170,42 @@ export function validateSatusehatEncounterPayload(
     'participant[0].individual',
     issues,
   );
+
+  if (payload.diagnosis !== undefined) {
+    const diagnoses = readArray(payload.diagnosis, 'diagnosis', issues);
+    for (const [index, entry] of diagnoses.entries()) {
+      const diagnosis = asRecord(entry);
+      requireReference(
+        diagnosis.condition,
+        'Condition',
+        `diagnosis[${index}].condition`,
+        issues,
+      );
+      const use = asRecord(diagnosis.use);
+      const useCoding = firstRecord(
+        use.coding,
+        `diagnosis[${index}].use.coding`,
+        issues,
+      );
+      requireCoding(
+        useCoding,
+        ADMISSION_DIAGNOSIS,
+        `diagnosis[${index}].use.coding[0]`,
+        issues,
+      );
+      if (
+        typeof diagnosis.rank !== 'number' ||
+        !Number.isInteger(diagnosis.rank) ||
+        diagnosis.rank <= 0
+      ) {
+        addIssue(
+          issues,
+          `diagnosis[${index}].rank`,
+          'Rank diagnosis harus berupa bilangan bulat positif',
+        );
+      }
+    }
+  }
 
   const location = firstRecord(payload.location, 'location', issues);
   requireReference(

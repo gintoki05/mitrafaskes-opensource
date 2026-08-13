@@ -26,6 +26,7 @@ import { SatusehatAuthService } from './satusehat-auth.service';
 import { SatusehatPatientService } from './satusehat-patient.service';
 import { SatusehatPractitionerService } from './satusehat-practitioner.service';
 import { SatusehatEncounterService } from './satusehat-encounter.service';
+import { SatusehatConditionService } from './satusehat-condition.service';
 import { SatusehatReconciliationService } from './satusehat-reconciliation.service';
 import { MemoryStore } from './memory-store';
 import { IntegrationRegistry } from '../integration-registry';
@@ -50,9 +51,17 @@ const localResourceTypes: Record<string, string> = {
   Practitioner: 'User',
   Patient: 'Patient',
   Encounter: 'Encounter',
+  Condition: 'Diagnosis',
 };
 
-const resources = ['Organization', 'Location', 'Practitioner', 'Patient', 'Encounter'];
+const resources = [
+  'Organization',
+  'Location',
+  'Practitioner',
+  'Patient',
+  'Encounter',
+  'Condition',
+];
 const operations = [
   'search',
   'import',
@@ -105,8 +114,9 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
     private readonly satusehatEncounters: SatusehatEncounterService,
     private readonly reconciliation: SatusehatReconciliationService,
     private readonly masterWilayah: SatusehatMasterWilayahAdapter,
+    private readonly satusehatConditions?: SatusehatConditionService,
   ) {
-    this.handlers = new Map([
+    const handlers = new Map<string, IntegrationResourceHandler>([
       [
         'Patient',
         {
@@ -170,6 +180,17 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
         },
       ],
     ]);
+    if (this.satusehatConditions) {
+      handlers.set('Condition', {
+        resourceType: 'Condition',
+        preview: (id) => this.satusehatConditions!.previewCondition(id),
+        sync: (id, context) =>
+          context
+            ? this.satusehatConditions!.syncCondition(id, context)
+            : this.satusehatConditions!.syncCondition(id),
+      });
+    }
+    this.handlers = handlers;
   }
 
   onModuleInit(): void {
@@ -337,12 +358,7 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
     const linkById = new Map(links.map((link) => [link.localResourceId, link]));
     const logById = new Map<string, (typeof logs)[number]>();
     for (const log of logs) {
-      if (
-        resourceType === 'Encounter' &&
-        !this.encounterLogMatchesEnvironment(log.payload, environment)
-      ) {
-        continue;
-      }
+      if (!this.logMatchesEnvironment(log.payload, environment)) continue;
       if (!logById.has(log.resourceId)) logById.set(log.resourceId, log);
     }
 
@@ -459,19 +475,12 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
       : this.readEnvironment();
   }
 
-  private readEnvironment(): string {
-    return process.env.SATUSEHAT_ENVIRONMENT?.trim() || DEFAULT_ENVIRONMENT;
+  private logMatchesEnvironment(payload: unknown, environment: string): boolean {
+    return this.readLogEnvironment(payload) === environment;
   }
 
-  private encounterLogMatchesEnvironment(
-    payload: unknown,
-    environment: string,
-  ): boolean {
-    const record = this.isRecord(payload) ? payload : undefined;
-    const metadata =
-      record && this.isRecord(record.metadata) ? record.metadata : undefined;
-    const logEnvironment = metadata?.environment;
-    return typeof logEnvironment !== 'string' || logEnvironment === environment;
+  private readEnvironment(): string {
+    return process.env.SATUSEHAT_ENVIRONMENT?.trim() || DEFAULT_ENVIRONMENT;
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

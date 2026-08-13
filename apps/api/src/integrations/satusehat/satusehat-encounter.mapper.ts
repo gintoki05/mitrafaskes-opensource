@@ -8,6 +8,7 @@ import { assertSatusehatEncounterPayload } from './satusehat-encounter.contract'
 import {
   AMBULATORY_CLASS,
   ATTENDER_PARTICIPATION,
+  ADMISSION_DIAGNOSIS,
   ENCOUNTER_IDENTIFIER_SYSTEM_PREFIX,
 } from './satusehat-encounter.constants';
 
@@ -17,6 +18,11 @@ export interface SatusehatEncounterDependencies {
   patientExternalId: string;
   practitionerExternalId: string;
   encounterExternalId?: string;
+  diagnoses?: Array<{
+    externalResourceId: string;
+    display: string;
+    rank: number;
+  }>;
 }
 
 const statusMap: Readonly<Record<EncounterStatus, SatusehatEncounterStatus>> = {
@@ -94,6 +100,18 @@ export function toSatusehatEncounterPayload(
         },
       },
     ],
+    ...(dependencies.diagnoses && dependencies.diagnoses.length > 0
+      ? {
+          diagnosis: dependencies.diagnoses.map((diagnosis) => ({
+            condition: {
+              reference: `Condition/${diagnosis.externalResourceId}`,
+              display: diagnosis.display,
+            },
+            use: { coding: [{ ...ADMISSION_DIAGNOSIS }] },
+            rank: diagnosis.rank,
+          })),
+        }
+      : {}),
     serviceProvider: {
       reference: `Organization/${dependencies.organizationExternalId}`,
       display: encounter.organization.name,

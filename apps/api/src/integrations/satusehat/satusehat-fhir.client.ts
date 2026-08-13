@@ -166,6 +166,14 @@ export class SatusehatFhirClient {
     return this.request('PUT', ['Encounter', id], payload);
   }
 
+  createCondition(payload: unknown): Promise<unknown> {
+    return this.request('POST', ['Condition'], payload);
+  }
+
+  updateCondition(id: string, payload: unknown): Promise<unknown> {
+    return this.request('PUT', ['Condition', id], payload);
+  }
+
   private async request(
     method: FhirRequestMethod,
     pathSegments: string[],

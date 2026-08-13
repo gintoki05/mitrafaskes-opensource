@@ -139,6 +139,65 @@ describe('SATUSEHAT Encounter payload contract', () => {
 
     expect(payload.id).toBe('encounter-remote-42');
   });
+
+  it('projects linked Conditions with admission diagnosis use and deterministic ranks', () => {
+    const payload = toSatusehatEncounterPayload(completedEncounter(), {
+      organizationExternalId: dependencies.Organization,
+      locationExternalId: dependencies.Location,
+      patientExternalId: dependencies.Patient,
+      practitionerExternalId: dependencies.Practitioner,
+      diagnoses: [
+        {
+          externalResourceId: 'condition-remote-primary',
+          display: 'Essential hypertension',
+          rank: 1,
+        },
+        {
+          externalResourceId: 'condition-remote-secondary',
+          display: 'Acute URI',
+          rank: 2,
+        },
+      ],
+    });
+
+    expect(payload.diagnosis).toEqual([
+      {
+        condition: {
+          reference: 'Condition/condition-remote-primary',
+          display: 'Essential hypertension',
+        },
+        use: {
+          coding: [
+            {
+              system:
+                'http://terminology.hl7.org/CodeSystem/diagnosis-role',
+              code: 'AD',
+              display: 'Admission diagnosis',
+            },
+          ],
+        },
+        rank: 1,
+      },
+      {
+        condition: {
+          reference: 'Condition/condition-remote-secondary',
+          display: 'Acute URI',
+        },
+        use: {
+          coding: [
+            {
+              system:
+                'http://terminology.hl7.org/CodeSystem/diagnosis-role',
+              code: 'AD',
+              display: 'Admission diagnosis',
+            },
+          ],
+        },
+        rank: 2,
+      },
+    ]);
+    expect(validateSatusehatEncounterPayload(payload)).toEqual([]);
+  });
 });
 
 describe('SatusehatEncounterService preview', () => {

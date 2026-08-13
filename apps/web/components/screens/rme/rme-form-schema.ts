@@ -23,6 +23,7 @@ export const rmeFormSchema = z.object({
   temperature: z.string(),
   diagnoses: z.array(
     z.object({
+      id: z.string().optional(),
       icd10Code: z.string(),
       nameIndo: z.string(),
       isPrimary: z.boolean(),

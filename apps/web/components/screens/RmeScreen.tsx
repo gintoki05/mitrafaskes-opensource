@@ -18,6 +18,7 @@ import { RmeForm, RmeFormPlaceholder } from './rme/RmeForm';
 import { RmeWorkspaceContext } from './rme/RmeWorkspaceContext';
 import { resolveRmeWorkspaceViewState } from './rme/rme-workspace-model';
 import type { RmeFormValues } from './rme/rme-form-schema';
+import { useConditionActions } from './rme/useConditionActions';
 
 function errorDescription(error: unknown): string {
   if (error instanceof RmeApiError && error.issues.length > 0) {
@@ -28,6 +29,9 @@ function errorDescription(error: unknown): string {
 
 export default function RmePage() {
   const [icdSearch, setIcdSearch] = useState('');
+  const [syncingDiagnosisId, setSyncingDiagnosisId] = useState<string | null>(
+    null,
+  );
   const session = useSession();
   const {
     encounters,
@@ -41,6 +45,11 @@ export default function RmePage() {
     selectEncounter,
   } = useRmeResources();
   const lifecycle = useRmeLifecycle(selectedEncounter?.id ?? null);
+  const conditionActions = useConditionActions();
+  const canSyncDiagnosis = can(
+    session?.user ?? null,
+    AccessPermission.SYNC_RETRY,
+  );
   const workspaceState = resolveRmeWorkspaceViewState({
     encountersLoading,
     queueError: loadError,
@@ -108,6 +117,27 @@ export default function RmePage() {
     }
   };
 
+  const handleSyncDiagnosis = async (diagnosisId: string) => {
+    if (syncingDiagnosisId) return;
+    setSyncingDiagnosisId(diagnosisId);
+    try {
+      await conditionActions.syncSatusehat(diagnosisId);
+      lifecycle.reload();
+      toast.success('Diagnosis tersinkron ke SATUSEHAT', {
+        description:
+          'Linkage dan status sinkronisasi terbaru sudah dimuat ulang.',
+      });
+    } catch (error) {
+      lifecycle.reload();
+      toast.error('Diagnosis gagal disinkronkan', {
+        description: errorDescription(error),
+        duration: 9000,
+      });
+    } finally {
+      setSyncingDiagnosisId(null);
+    }
+  };
+
   return (
     <RouteGuard permission={AccessPermission.RME_READ}>
       <div className="min-w-0 space-y-6 sm:space-y-8">
@@ -150,12 +180,12 @@ export default function RmePage() {
                 kind="error"
                 title="RME tidak tersedia"
                 description={lifecycle.loadError}
-                action={(
+                action={
                   <Button type="button" size="sm" onClick={lifecycle.reload}>
                     <RefreshCw className="h-4 w-4" aria-hidden="true" />
                     Muat ulang RME
                   </Button>
-                )}
+                }
               />
             ) : workspaceState === 'ready' && selectedEncounter ? (
               <RmeForm
@@ -164,14 +194,25 @@ export default function RmePage() {
                 mutationState={lifecycle.mutationState}
                 conflict={lifecycle.conflict}
                 finalizationIssues={lifecycle.finalizationIssues}
-                canSaveDraft={can(session?.user ?? null, AccessPermission.RME_WRITE_DRAFT)}
-                canFinalize={can(session?.user ?? null, AccessPermission.RME_FINALIZE)}
+                canSaveDraft={can(
+                  session?.user ?? null,
+                  AccessPermission.RME_WRITE_DRAFT,
+                )}
+                canFinalize={can(
+                  session?.user ?? null,
+                  AccessPermission.RME_FINALIZE,
+                )}
                 icdSearch={icdSearch}
                 icdResults={icdResults}
                 onSaveDraft={handleSaveDraft}
                 onPreflight={handlePreflight}
                 onFinalize={handleFinalize}
                 onReload={lifecycle.reload}
+                canSyncDiagnosis={canSyncDiagnosis}
+                syncingDiagnosisId={syncingDiagnosisId}
+                onSyncDiagnosis={(diagnosisId) =>
+                  void handleSyncDiagnosis(diagnosisId)
+                }
                 onIcdSearchChange={(value) => {
                   setIcdSearch(value);
                   void searchIcd10(value);

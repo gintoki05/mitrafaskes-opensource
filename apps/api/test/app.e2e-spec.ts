@@ -235,6 +235,13 @@ describe('Access control (e2e)', () => {
       .expect(503);
 
     expect(connection.body.code).toBe('INTEGRATION_DISABLED');
+
+    const conditionSync = await request(app.getHttpServer())
+      .post('/api/integrations/SATUSEHAT/resources/Condition/diagnosis-1/sync')
+      .set(bearer('mock-jwt-token-admin'))
+      .expect(503);
+
+    expect(conditionSync.body.code).toBe('INTEGRATION_DISABLED');
   });
 
   it('returns 403 when an authenticated role bypasses the UI', async () => {

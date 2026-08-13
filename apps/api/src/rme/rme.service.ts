@@ -4,25 +4,16 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
-import {
-  MedicalRecordStatus as PrismaMedicalRecordStatus,
-  Prisma,
-} from '@prisma/client';
-import {
-  type MedicalRecord,
-  type RmePreflightResult,
-} from '@mitrafaskes/shared';
+import { MedicalRecordStatus as PrismaMedicalRecordStatus, Prisma } from '@prisma/client';
+import { type MedicalRecord, type RmePreflightResult } from '@mitrafaskes/shared';
 import type { AuthenticatedUser } from '../auth/session-permission.guard';
 import { PrismaService } from '../database/prisma.service';
 import { EncountersService } from '../encounters/encounters.service';
-import { MasterIcd10Service } from '../master-data/master-icd10.service';
+import { IntegrationRegistry } from '../integrations/integration-registry';
 import { validateFinalization } from './rme.finalization-profile';
-import {
-  medicalRecordInclude,
-  toMedicalRecord,
-  type MedicalRecordWithRelations,
-} from './rme.mapper';
+import { medicalRecordInclude, toMedicalRecord, type MedicalRecordWithRelations } from './rme.mapper';
 import {
   parseDraftInput,
   parseFinalizeInput,
@@ -71,14 +62,11 @@ export type RmeRequestMetadata = {
 export class RmeService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly icd10: MasterIcd10Service,
     private readonly encounters: EncountersService,
+    @Optional() private readonly integrations?: IntegrationRegistry,
   ) {}
 
-  async findByEncounterId(
-    encounterId: string,
-    actor: AuthenticatedUser,
-  ): Promise<MedicalRecord | null> {
+  async findByEncounterId(encounterId: string, actor: AuthenticatedUser): Promise<MedicalRecord | null> {
     const actorUserId = await this.resolveActorUserId(actor);
     const encounter = await this.prisma.encounter.findUnique({
       where: { id: encounterId },
@@ -90,15 +78,11 @@ export class RmeService {
       where: { encounterId },
       include: medicalRecordInclude,
     });
-    return record ? toMedicalRecord(record) : null;
+    return record ? this.toResponse(record) : null;
   }
 
-  async saveDraft(
-    input: unknown,
-    actor: AuthenticatedUser,
-  ): Promise<MedicalRecord> {
+  async saveDraft(input: unknown, actor: AuthenticatedUser): Promise<MedicalRecord> {
     const draft = parseDraftInput(input);
-    await this.assertIcd10CodesExist(draft);
     const actorUserId = await this.resolveActorUserId(actor);
 
     const record = await this.prisma.$transaction(async (transaction) => {
@@ -143,40 +127,42 @@ export class RmeService {
             ...clinicalData,
             status: PrismaMedicalRecordStatus.DRAFT,
             version: 1,
-            diagnoses: { create: draft.diagnoses },
+            diagnoses: {
+              create: draft.diagnoses.map(({ id: _id, notes: _notes, ...diagnosis }) => diagnosis),
+            },
             prescriptions: { create: draft.prescriptions },
           },
           include: medicalRecordInclude,
         });
       }
 
-      return transaction.medicalRecord.update({
+      const updated = await transaction.medicalRecord.update({
         where: { id: current.id },
         data: {
           ...clinicalData,
           version: { increment: 1 },
-          diagnoses: { deleteMany: {}, create: draft.diagnoses },
           prescriptions: { deleteMany: {}, create: draft.prescriptions },
         },
         include: medicalRecordInclude,
       });
+      await this.replaceDraftDiagnoses(transaction, current.id, draft.diagnoses);
+      if (!transaction.diagnosis) return updated;
+      const refreshed = await transaction.medicalRecord.findUnique({
+        where: { id: current.id },
+        include: medicalRecordInclude,
     });
-    return toMedicalRecord(record);
+      return refreshed ?? updated;
+    });
+    return this.toResponse(record);
   }
 
-  async preflight(
-    input: unknown,
-    actor: AuthenticatedUser,
-  ): Promise<RmePreflightResult> {
+  async preflight(input: unknown, actor: AuthenticatedUser): Promise<RmePreflightResult> {
     const command = parsePreflightInput(input);
     const actorUserId = await this.resolveActorUserId(actor);
     return this.prisma.$transaction(async (transaction) => {
       const encounter = await this.lockEncounter(transaction, command.encounterId);
       this.assertDoctorAssignment(encounter.doctorId, actor, actorUserId);
-      const current = await this.requireDraft(
-        transaction,
-        command.encounterId,
-      );
+      const current = await this.requireDraft(transaction, command.encounterId);
       if (current.status === PrismaMedicalRecordStatus.FINAL) {
         throw new ConflictException({
           code: 'RME_ALREADY_FINAL',
@@ -189,11 +175,7 @@ export class RmeService {
     });
   }
 
-  async finalize(
-    input: unknown,
-    actor: AuthenticatedUser,
-    request: RmeRequestMetadata,
-  ): Promise<MedicalRecord> {
+  async finalize(input: unknown, actor: AuthenticatedUser, request: RmeRequestMetadata): Promise<MedicalRecord> {
     const command = parseFinalizeInput(input);
     const actorUserId = await this.resolveActorUserId(actor);
     const record = await this.prisma.$transaction(async (transaction) => {
@@ -254,12 +236,7 @@ export class RmeService {
         },
         include: medicalRecordInclude,
       });
-      await this.encounters.saveRmeCompletion(
-        transaction,
-        command.encounterId,
-        encounter.version,
-        actor,
-      );
+      await this.encounters.saveRmeCompletion(transaction, command.encounterId, encounter.version, actor);
       await transaction.medicalRecordAuditEvent.create({
         data: {
           medicalRecordId: current.id,
@@ -279,13 +256,76 @@ export class RmeService {
       });
       return finalized;
     });
-    return toMedicalRecord(record);
+    return this.toResponse(record);
   }
 
-  private async requireDraft(
+  private async toResponse(record: MedicalRecordWithRelations): Promise<MedicalRecord> {
+    const conditionIntegrations = this.integrations
+      ? await this.integrations.findResourceSummaries(
+          'Condition',
+          record.diagnoses.map((diagnosis) => diagnosis.id),
+        )
+      : new Map();
+    const catalogClient = this.prisma.masterIcd10;
+    const codes = record.diagnoses.map((diagnosis) => diagnosis.icd10Code);
+    const catalogEntries =
+      catalogClient && typeof catalogClient.findMany === 'function'
+        ? await catalogClient.findMany({ where: { code: { in: codes } } })
+        : [];
+    return toMedicalRecord(record, conditionIntegrations, new Map(catalogEntries.map((entry) => [entry.code, entry])));
+  }
+
+  /**
+   * Draft edits must keep a diagnosis UUID alive so a provider linkage remains
+   * scoped to the same local clinical item. The fallback by ICD-10 code keeps
+   * older clients compatible while newer clients echo the child id explicitly.
+   */
+  private async replaceDraftDiagnoses(
     transaction: Prisma.TransactionClient,
-    encounterId: string,
-  ): Promise<LockedMedicalRecord> {
+    medicalRecordId: string,
+    diagnoses: ValidatedMedicalRecordDraft['diagnoses'],
+  ): Promise<void> {
+    const delegate = transaction.diagnosis;
+    if (!delegate) return;
+
+    const existing = await delegate.findMany({
+      where: { medicalRecordId },
+      select: { id: true, icd10Code: true },
+    });
+    const existingById = new Map(existing.map((diagnosis) => [diagnosis.id, diagnosis]));
+    const existingByCode = new Map<string, (typeof existing)[number]>();
+    for (const diagnosis of existing) {
+      if (!existingByCode.has(diagnosis.icd10Code)) {
+        existingByCode.set(diagnosis.icd10Code, diagnosis);
+      }
+    }
+    const keptIds = new Set<string>();
+
+    for (const diagnosis of diagnoses) {
+      const matched =
+        (diagnosis.id ? existingById.get(diagnosis.id) : undefined) ?? existingByCode.get(diagnosis.icd10Code);
+      const data = {
+        icd10Code: diagnosis.icd10Code,
+        isPrimary: diagnosis.isPrimary,
+      };
+      if (matched && !keptIds.has(matched.id)) {
+        keptIds.add(matched.id);
+        await delegate.update({ where: { id: matched.id }, data });
+      } else {
+        const created = await delegate.create({
+          data: { medicalRecordId, ...data },
+        });
+        keptIds.add(created.id);
+      }
+    }
+
+    const removedIds = existing.map((diagnosis) => diagnosis.id).filter((id) => !keptIds.has(id));
+    if (removedIds.length > 0) {
+      await delegate.deleteMany({ where: { id: { in: removedIds } } });
+    }
+  }
+
+  private async requireDraft(transaction: Prisma.TransactionClient, encounterId: string): Promise<LockedMedicalRecord> {
     const current = await this.lockMedicalRecord(transaction, encounterId);
     if (!current) {
       throw new ConflictException({
@@ -296,10 +336,7 @@ export class RmeService {
     return current;
   }
 
-  private async readFinalizationDraft(
-    transaction: Prisma.TransactionClient,
-    id: string,
-  ) {
+  private async readFinalizationDraft(transaction: Prisma.TransactionClient, id: string) {
     const draft = await transaction.medicalRecord.findUnique({
       where: { id },
       include: finalizationInclude,
@@ -320,26 +357,7 @@ export class RmeService {
     return record;
   }
 
-  private async assertIcd10CodesExist(
-    draft: ValidatedMedicalRecordDraft,
-  ): Promise<void> {
-    const codes = draft.diagnoses.map((diagnosis) => diagnosis.icd10Code);
-    const entries = await this.icd10.findByCodes(codes);
-    const found = new Set(entries.map((entry) => entry.code));
-    const missing = codes.filter((code) => !found.has(code));
-    if (missing.length > 0) {
-      throw new BadRequestException({
-        code: 'RME_ICD10_NOT_FOUND',
-        message: 'Kode ICD-10 tidak ditemukan di katalog lokal.',
-        codes: missing,
-      });
-    }
-  }
-
-  private async lockEncounter(
-    transaction: Prisma.TransactionClient,
-    encounterId: string,
-  ): Promise<LockedEncounter> {
+  private async lockEncounter(transaction: Prisma.TransactionClient, encounterId: string): Promise<LockedEncounter> {
     const rows = await transaction.$queryRaw<LockedEncounter[]>(
       Prisma.sql`SELECT "id", "status", "version", "doctorId", "organizationId", "locationId" FROM "Encounter" WHERE "id" = ${encounterId} FOR UPDATE`,
     );
@@ -379,9 +397,7 @@ export class RmeService {
     }
   }
 
-  private async resolveActorUserId(
-    actor: AuthenticatedUser,
-  ): Promise<string | undefined> {
+  private async resolveActorUserId(actor: AuthenticatedUser): Promise<string | undefined> {
     const user = await this.prisma.user.findUnique({
       where: { username: actor.username },
       select: { id: true },

@@ -90,3 +90,51 @@ describe('IntegrationGatewayController retry payload visibility', () => {
     });
   });
 });
+
+describe('IntegrationGatewayController resource payload visibility', () => {
+  it('redacts raw preview and sync payloads for non-Admin operators', async () => {
+    const preview = jest.fn().mockResolvedValue({
+      operation: 'CREATE',
+      payload: { resourceType: 'Condition', subject: { reference: 'Patient/P1' } },
+    });
+    const sync = jest.fn().mockResolvedValue({
+      syncedRemotely: true,
+      payload: { resourceType: 'Condition', code: { coding: [] } },
+      response: { resourceType: 'Condition', id: 'condition-1' },
+    });
+    const controller = new IntegrationGatewayController({
+      getResourceHandler: jest.fn().mockReturnValue({
+        resourceType: 'Condition',
+        preview,
+        sync,
+      }),
+    } as never);
+
+    const perawat = {
+      user: {
+        id: 'usr-perawat_ani',
+        username: 'perawat_ani',
+        role: UserRole.PERAWAT,
+      },
+    };
+    const admin = {
+      user: { id: 'usr-admin', username: 'admin', role: UserRole.ADMIN },
+    };
+
+    await expect(
+      controller.preview('SATUSEHAT', 'Condition', 'diagnosis-1', perawat),
+    ).resolves.toEqual({ operation: 'CREATE' });
+    await expect(
+      controller.sync('SATUSEHAT', 'Condition', 'diagnosis-1', perawat),
+    ).resolves.toEqual({ syncedRemotely: true });
+    await expect(
+      controller.preview('SATUSEHAT', 'Condition', 'diagnosis-1', admin),
+    ).resolves.toEqual(expect.objectContaining({ payload: expect.any(Object) }));
+    await expect(
+      controller.sync('SATUSEHAT', 'Condition', 'diagnosis-1', admin),
+    ).resolves.toEqual(expect.objectContaining({
+      payload: expect.any(Object),
+      response: expect.any(Object),
+    }));
+  });
+});

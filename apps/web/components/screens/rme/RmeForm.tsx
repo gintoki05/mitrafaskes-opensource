@@ -21,10 +21,7 @@ import { formValuesFrom } from './rme-form-mappers';
 import { rmePresetValues } from './rme-presets';
 import type { RmePrescriptionField, RmePresetBundle } from './types';
 import type { RmeMutationState } from '@/hooks/useRmeLifecycle';
-import {
-  isRmeReadOnly,
-  type RmeVersionConflict,
-} from './rme-workspace-model';
+import { isRmeReadOnly, type RmeVersionConflict } from './rme-workspace-model';
 import {
   RmeLifecycleActions,
   RmeLifecycleSummary,
@@ -34,6 +31,7 @@ import {
   RmePhysicalExamSection,
 } from './RmeAssessmentSections';
 import { RmeCarePlanSection } from './RmeCarePlanSection';
+import { useRmeDiagnosisEditor } from './useRmeDiagnosisEditor';
 import {
   RmeGlobalFinalizationIssues,
   RmeSectionIssues,
@@ -53,6 +51,9 @@ type RmeFormProps = {
   onFinalize: () => Promise<void>;
   onReload: () => void;
   onIcdSearchChange: (value: string) => void;
+  canSyncDiagnosis: boolean;
+  syncingDiagnosisId: string | null;
+  onSyncDiagnosis: (id: string) => void;
 };
 
 export function RmeForm({
@@ -69,6 +70,9 @@ export function RmeForm({
   onFinalize,
   onReload,
   onIcdSearchChange,
+  canSyncDiagnosis,
+  syncingDiagnosisId,
+  onSyncDiagnosis,
 }: RmeFormProps) {
   const {
     control,
@@ -88,10 +92,23 @@ export function RmeForm({
   const diastolic = useWatch({ control, name: 'diastolic' });
   const heartRate = useWatch({ control, name: 'heartRate' });
   const temperature = useWatch({ control, name: 'temperature' });
-  const allergyReviewStatus = useWatch({ control, name: 'allergyReviewStatus' });
+  const allergyReviewStatus = useWatch({
+    control,
+    name: 'allergyReviewStatus',
+  });
   const disposition = useWatch({ control, name: 'disposition' });
-  const diagnoses = useWatch({ control, name: 'diagnoses' }) ?? [];
   const prescriptions = useWatch({ control, name: 'prescriptions' }) ?? [];
+  const {
+    selectedDiagnoses,
+    updateDiagnoses,
+    handleAddDiagnosis,
+    handleRemoveDiagnosis,
+  } = useRmeDiagnosisEditor({
+    control,
+    setValue,
+    record,
+    onSearchChange: onIcdSearchChange,
+  });
   const readOnly = isRmeReadOnly(record);
   const busy =
     mutationState === 'preflighting' ||
@@ -117,27 +134,6 @@ export function RmeForm({
     value: string,
   ) => {
     setValue(field, value, { shouldDirty: true, shouldValidate: true });
-  };
-
-  const updateDiagnoses = (value: RmeFormValues['diagnoses']) => {
-    setValue('diagnoses', value, { shouldDirty: true, shouldValidate: true });
-  };
-
-  const handleAddDiagnosis = (icd: Icd10Entry) => {
-    if (diagnoses.some((diagnosis) => diagnosis.icd10Code === icd.code)) return;
-    updateDiagnoses([
-      ...diagnoses,
-      {
-        icd10Code: icd.code,
-        nameIndo: icd.nameIndo ?? icd.display,
-        isPrimary: diagnoses.length === 0,
-      },
-    ]);
-    onIcdSearchChange('');
-  };
-
-  const handleRemoveDiagnosis = (code: string) => {
-    updateDiagnoses(diagnoses.filter((diagnosis) => diagnosis.icd10Code !== code));
   };
 
   const handleUpdatePrescription = (
@@ -202,61 +198,77 @@ export function RmeForm({
       ) : null}
 
       <fieldset disabled={readOnly || busy} className="space-y-6">
-
-      <RmeAssessmentSections
-        register={register}
-        allergyReviewStatus={allergyReviewStatus}
-        onAllergyReviewChange={(value) =>
-          setValue('allergyReviewStatus', value, { shouldDirty: true })
-        }
-        issues={finalizationIssues}
-      />
-
-      <div data-rme-section="vitalSigns" tabIndex={-1}>
-        <RmeVitalSigns
-          systolic={systolic}
-          diastolic={diastolic}
-          temperature={temperature}
-          heartRate={heartRate}
-          onChange={(field, value) => updateStringValue(field, value)}
+        <RmeAssessmentSections
+          register={register}
+          allergyReviewStatus={allergyReviewStatus}
+          onAllergyReviewChange={(value) =>
+            setValue('allergyReviewStatus', value, { shouldDirty: true })
+          }
+          issues={finalizationIssues}
         />
-        <RmeSectionIssues issues={finalizationIssues} section="vitalSigns" />
-      </div>
-      <RmePhysicalExamSection
-        register={register}
-        issues={finalizationIssues}
-      />
+
+        <div data-rme-section="vitalSigns" tabIndex={-1}>
+          <RmeVitalSigns
+            systolic={systolic}
+            diastolic={diastolic}
+            temperature={temperature}
+            heartRate={heartRate}
+            onChange={(field, value) => updateStringValue(field, value)}
+          />
+          <RmeSectionIssues issues={finalizationIssues} section="vitalSigns" />
+        </div>
+        <RmePhysicalExamSection
+          register={register}
+          issues={finalizationIssues}
+        />
+      </fieldset>
       <div data-rme-section="diagnoses" tabIndex={-1}>
         <RmeDiagnosisSection
           icdSearch={icdSearch}
           icdResults={icdResults}
-          selectedDiagnoses={diagnoses}
+          selectedDiagnoses={selectedDiagnoses}
           onSearchChange={onIcdSearchChange}
           onAddDiagnosis={handleAddDiagnosis}
           onRemoveDiagnosis={handleRemoveDiagnosis}
+          disabled={readOnly || busy}
+          syncDisabled={isDirty || busy}
+          syncDisabledReason={
+            busy
+              ? 'Tunggu proses RME selesai.'
+              : 'Simpan perubahan lokal sebelum sinkronisasi.'
+          }
+          canSyncDiagnosis={canSyncDiagnosis}
+          syncingDiagnosisId={syncingDiagnosisId}
+          onSyncDiagnosis={onSyncDiagnosis}
         />
         <RmeSectionIssues issues={finalizationIssues} section="diagnoses" />
       </div>
-      <div data-rme-section="prescriptions" tabIndex={-1}>
-        <RmePrescriptionSection
-          prescriptions={prescriptions}
-          onAddPrescription={() =>
-            append({ medicineName: '', dosage: '', frequency: '', quantity: 0 })
-          }
-          onUpdatePrescription={handleUpdatePrescription}
-          onApplyPresetBundle={handleApplyPresetBundle}
-        />
-        <RmeSectionIssues issues={finalizationIssues} section="prescriptions" />
-      </div>
-      <RmeCarePlanSection
-        register={register}
-        disposition={disposition}
-        onDispositionChange={(value) =>
-          setValue('disposition', value, { shouldDirty: true })
-        }
-        issues={finalizationIssues}
-      />
 
+      <fieldset disabled={readOnly || busy} className="space-y-6">
+        <div data-rme-section="prescriptions" tabIndex={-1}>
+          <RmePrescriptionSection
+            prescriptions={prescriptions}
+            onAddPrescription={() =>
+              append({
+                medicineName: '',
+                dosage: '',
+                frequency: '',
+                quantity: 0,
+              })
+            }
+            onUpdatePrescription={handleUpdatePrescription}
+            onApplyPresetBundle={handleApplyPresetBundle}
+          />
+          <RmeSectionIssues issues={finalizationIssues} section="prescriptions" />
+        </div>
+        <RmeCarePlanSection
+          register={register}
+          disposition={disposition}
+          onDispositionChange={(value) =>
+            setValue('disposition', value, { shouldDirty: true })
+          }
+          issues={finalizationIssues}
+        />
       </fieldset>
 
       <RmeLifecycleActions

@@ -28,6 +28,7 @@ const satusehatEnabled =
             'Practitioner',
             'Patient',
             'Encounter',
+            'Condition',
           ],
           operations: [
             'search',

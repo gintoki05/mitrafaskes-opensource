@@ -19,6 +19,7 @@ export function formValuesFrom(record: MedicalRecord | null): RmeFormValues {
     temperature:
       record.temperature === undefined ? '' : String(record.temperature),
     diagnoses: record.diagnoses.map((diagnosis) => ({
+      id: diagnosis.id,
       icd10Code: diagnosis.icd10Code,
       nameIndo:
         diagnosis.icd10?.nameIndo ??

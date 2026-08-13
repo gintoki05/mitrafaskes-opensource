@@ -1,7 +1,11 @@
+import type { ResourceIntegrationSummary } from '@mitrafaskes/shared';
+
 export type RmeDiagnosis = {
+  id?: string;
   icd10Code: string;
   nameIndo: string;
   isPrimary: boolean;
+  integrations?: ResourceIntegrationSummary[];
 };
 
 export type RmePrescription = {

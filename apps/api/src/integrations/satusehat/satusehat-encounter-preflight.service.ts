@@ -8,7 +8,9 @@ import { PrismaService } from '../../database/prisma.service';
 import { EncountersService } from '../../encounters/encounters.service';
 import {
   DEFAULT_SATUSEHAT_ENVIRONMENT,
+  CONDITION_RESOURCE_TYPE,
   ENCOUNTER_RESOURCE_TYPE,
+  LOCAL_CONDITION_RESOURCE_TYPE,
   LOCAL_ENCOUNTER_RESOURCE_TYPE,
   LOCAL_LOCATION_RESOURCE_TYPE,
   LOCAL_ORGANIZATION_RESOURCE_TYPE,
@@ -100,6 +102,10 @@ export class SatusehatEncounterPreflightService {
         select: { organizationId: true },
       }),
     ]);
+    const diagnoses = await this.findLinkedConditionDiagnoses(
+      encounter.id,
+      environment,
+    );
     const missingScopes = dependencyScopes.filter(
       (_, index) => !dependencyLinks[index],
     );
@@ -146,6 +152,7 @@ export class SatusehatEncounterPreflightService {
           patientExternalId: patientLink!.externalResourceId,
           practitionerExternalId: practitionerLink!.externalResourceId,
           encounterExternalId: externalResourceId,
+          ...(diagnoses.length > 0 ? { diagnoses } : {}),
         }),
       };
     } catch (error) {
@@ -178,6 +185,75 @@ export class SatusehatEncounterPreflightService {
         },
       },
     });
+  }
+
+  private async findLinkedConditionDiagnoses(
+    encounterId: string,
+    environment: string,
+  ): Promise<
+    Array<{ externalResourceId: string; display: string; rank: number }>
+  > {
+    const diagnosisClient = this.prisma.diagnosis;
+    const linkClient = this.prisma.externalResourceLink;
+    if (
+      !diagnosisClient ||
+      typeof diagnosisClient.findMany !== 'function' ||
+      !linkClient ||
+      typeof linkClient.findMany !== 'function'
+    ) {
+      return [];
+    }
+
+    const diagnoses = await diagnosisClient.findMany({
+      where: { medicalRecord: { encounterId } },
+      select: {
+        id: true,
+        isPrimary: true,
+        icd10Code: true,
+      },
+    });
+    if (diagnoses.length === 0) return [];
+
+    const catalogEntries = await this.prisma.masterIcd10.findMany({
+      where: { code: { in: diagnoses.map((diagnosis) => diagnosis.icd10Code) } },
+      select: { code: true, display: true },
+    });
+    const catalogByCode = new Map(
+      catalogEntries.map((entry) => [entry.code, entry.display]),
+    );
+
+    const links = await linkClient.findMany({
+      where: {
+        provider: SATUSEHAT_PROVIDER,
+        environment,
+        resourceType: CONDITION_RESOURCE_TYPE,
+        localResourceType: LOCAL_CONDITION_RESOURCE_TYPE,
+        localResourceId: { in: diagnoses.map((diagnosis) => diagnosis.id) },
+      },
+      select: { localResourceId: true, externalResourceId: true },
+    });
+    const linkByDiagnosisId = new Map(
+      links.map((link) => [link.localResourceId, link.externalResourceId]),
+    );
+
+    return [...diagnoses]
+      .sort((left, right) => {
+        if (left.isPrimary !== right.isPrimary) {
+          return left.isPrimary ? -1 : 1;
+        }
+        return left.id.localeCompare(right.id);
+      })
+      .flatMap((diagnosis, index) => {
+        const externalResourceId = linkByDiagnosisId.get(diagnosis.id);
+        if (!externalResourceId) return [];
+        return [
+          {
+            externalResourceId,
+            display: catalogByCode.get(diagnosis.icd10Code) ?? diagnosis.icd10Code,
+            rank: index + 1,
+          },
+        ];
+      });
   }
 
   private readEnvironment(): string {

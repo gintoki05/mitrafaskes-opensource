@@ -309,6 +309,45 @@ describe('SatusehatFhirClient', () => {
     );
   });
 
+  it('creates and updates Condition resources on their FHIR endpoints', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({ resourceType: 'Condition', id: 'condition-1' }),
+        ),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: jest.fn().mockResolvedValue(
+          JSON.stringify({ resourceType: 'Condition', id: 'condition-1' }),
+        ),
+      });
+    const auth = {
+      getAccessToken: jest.fn().mockResolvedValue('access-token'),
+    } as unknown as SatusehatAuthService;
+    const client = new SatusehatFhirClient(auth);
+    const payload = { resourceType: 'Condition', code: { coding: [] } };
+
+    await client.createCondition(payload);
+    await client.updateCondition('condition-1', payload);
+
+    expect(fetchMock.mock.calls[0]?.[0]).toEqual(
+      new URL('https://satusehat.example.test/fhir-r4/v1/Condition'),
+    );
+    expect(fetchMock.mock.calls[0]?.[1]).toEqual(
+      expect.objectContaining({ method: 'POST', body: JSON.stringify(payload) }),
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toEqual(
+      new URL('https://satusehat.example.test/fhir-r4/v1/Condition/condition-1'),
+    );
+    expect(fetchMock.mock.calls[1]?.[1]).toEqual(
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify(payload) }),
+    );
+  });
+
   it('fails before requesting a token when the FHIR base URL is missing', async () => {
     delete process.env.SATUSEHAT_FHIR_BASE_URL;
     const getAccessToken = jest.fn();

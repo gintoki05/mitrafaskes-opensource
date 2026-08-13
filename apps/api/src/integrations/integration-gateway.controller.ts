@@ -141,24 +141,36 @@ export class IntegrationGatewayController {
 
   @Get(':provider/resources/:resourceType/:localResourceId/preview')
   @RequirePermission(AccessPermission.SYNC_STATUS_READ)
-  preview(
+  async preview(
     @Param('provider') provider: string,
     @Param('resourceType') resourceType: string,
     @Param('localResourceId') localResourceId: string,
+    @Req() request: { user: AuthenticatedUser },
   ) {
     const handler = this.integrations.getResourceHandler(provider, resourceType);
-    return requireOperation(handler, 'preview')(localResourceId);
+    const result = await requireOperation(handler, 'preview')(localResourceId);
+    return redactRawIntegrationResponse(
+      result,
+      evaluateAccess(request.user.role, AccessPermission.SYNC_PAYLOAD_READ)
+        .allowed,
+    );
   }
 
   @Post(':provider/resources/:resourceType/:localResourceId/sync')
   @RequirePermission(AccessPermission.SYNC_RETRY)
-  sync(
+  async sync(
     @Param('provider') provider: string,
     @Param('resourceType') resourceType: string,
     @Param('localResourceId') localResourceId: string,
+    @Req() request: { user: AuthenticatedUser },
   ) {
     const handler = this.integrations.getResourceHandler(provider, resourceType);
-    return requireOperation(handler, 'sync')(localResourceId);
+    const result = await requireOperation(handler, 'sync')(localResourceId);
+    return redactRawIntegrationResponse(
+      result,
+      evaluateAccess(request.user.role, AccessPermission.SYNC_PAYLOAD_READ)
+        .allowed,
+    );
   }
 
   @Post(':provider/resources/:resourceType/:localResourceId/link')
@@ -181,4 +193,19 @@ export class IntegrationGatewayController {
   ) {
     return this.integrations.refreshMasterData(provider, domain);
   }
+}
+
+function redactRawIntegrationResponse(
+  value: unknown,
+  canReadPayload: boolean,
+): unknown {
+  if (canReadPayload || !isRecord(value)) return value;
+  const safe = { ...value };
+  delete safe.payload;
+  delete safe.response;
+  return safe;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }

@@ -589,8 +589,6 @@ model MasterIcd10 {
   sourceVersion String?     @db.VarChar(128)
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
-  diagnoses     Diagnosis[]
-
   @@index([active, displayOrder, code])
   @@index([active, display])
   @@index([active, nameIndo])
@@ -603,7 +601,6 @@ model Diagnosis {
   isPrimary            Boolean       @default(true)
   satusehatConditionId String?
   medicalRecord        MedicalRecord @relation(fields: [medicalRecordId], references: [id])
-  icd10                MasterIcd10   @relation(fields: [icd10Code], references: [code])
 }
 
 model Prescription {

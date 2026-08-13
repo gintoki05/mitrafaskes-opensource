@@ -3,6 +3,8 @@ export const DEFAULT_SATUSEHAT_ENVIRONMENT = 'sandbox';
 
 export const ENCOUNTER_RESOURCE_TYPE = 'Encounter';
 export const LOCAL_ENCOUNTER_RESOURCE_TYPE = 'Encounter';
+export const CONDITION_RESOURCE_TYPE = 'Condition';
+export const LOCAL_CONDITION_RESOURCE_TYPE = 'Diagnosis';
 export const LOCAL_ORGANIZATION_RESOURCE_TYPE = 'HealthcareOrganization';
 export const LOCAL_LOCATION_RESOURCE_TYPE = 'Location';
 export const LOCAL_PATIENT_RESOURCE_TYPE = 'Patient';
@@ -22,6 +24,8 @@ export const ACT_CODE_SYSTEM =
   'http://terminology.hl7.org/CodeSystem/v3-ActCode';
 export const PARTICIPATION_TYPE_SYSTEM =
   'http://terminology.hl7.org/CodeSystem/v3-ParticipationType';
+export const DIAGNOSIS_ROLE_SYSTEM =
+  'http://terminology.hl7.org/CodeSystem/diagnosis-role';
 
 export const AMBULATORY_CLASS = {
   system: ACT_CODE_SYSTEM,
@@ -33,4 +37,10 @@ export const ATTENDER_PARTICIPATION = {
   system: PARTICIPATION_TYPE_SYSTEM,
   code: 'ATND',
   display: 'attender',
+} as const;
+
+export const ADMISSION_DIAGNOSIS = {
+  system: DIAGNOSIS_ROLE_SYSTEM,
+  code: 'AD',
+  display: 'Admission diagnosis',
 } as const;

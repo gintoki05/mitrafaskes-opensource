@@ -1,3 +1,5 @@
+import type { ResourceIntegrationSummary } from './integrations';
+
 export interface MasterIcd10 {
   code: string;
   display: string;
@@ -6,6 +8,8 @@ export interface MasterIcd10 {
 }
 
 export interface DiagnosisDto {
+  /** Existing child ID is echoed by the client so draft edits preserve linkage scope. */
+  id?: string;
   icd10Code: string;
   isPrimary: boolean;
   notes?: string;
@@ -104,6 +108,7 @@ export interface MedicalRecord {
     icd10Code: string;
     isPrimary: boolean;
     icd10?: MasterIcd10;
+    integrations?: ResourceIntegrationSummary[];
   }[];
   prescriptions: {
     id: string;

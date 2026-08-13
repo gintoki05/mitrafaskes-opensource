@@ -423,6 +423,12 @@ export interface SatusehatEncounterReference {
   display?: string;
 }
 
+export interface SatusehatEncounterDiagnosis {
+  condition: SatusehatEncounterReference;
+  use: { coding: SatusehatEncounterCoding[] };
+  rank: number;
+}
+
 export interface SatusehatEncounterPayload {
   resourceType: 'Encounter';
   id?: string;
@@ -450,6 +456,7 @@ export interface SatusehatEncounterPayload {
   location: {
     location: SatusehatEncounterReference;
   }[];
+  diagnosis?: SatusehatEncounterDiagnosis[];
   serviceProvider: SatusehatEncounterReference;
 }
 

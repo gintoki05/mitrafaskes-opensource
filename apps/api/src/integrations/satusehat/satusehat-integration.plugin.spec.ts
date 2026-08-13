@@ -5,6 +5,7 @@ import { SatusehatIntegrationPlugin } from './satusehat-integration.plugin';
 function buildPlugin(
   input: {
     encounters?: { previewEncounter: jest.Mock; syncEncounter: jest.Mock };
+    conditions?: { previewCondition: jest.Mock; syncCondition: jest.Mock };
     reconciliation?: { reconcile: jest.Mock };
     prisma?: unknown;
   } = {},
@@ -29,6 +30,7 @@ function buildPlugin(
     }) as never,
     (input.reconciliation ?? { reconcile: jest.fn() }) as never,
     unused,
+    input.conditions as never,
   );
 }
 
@@ -301,5 +303,34 @@ describe('SatusehatIntegrationPlugin Encounter handler', () => {
     expect(externalResourceLink.findMany).not.toHaveBeenCalledWith(
       expect.objectContaining({ delete: expect.anything() }),
     );
+  });
+});
+
+describe('SatusehatIntegrationPlugin Condition handler', () => {
+  it('registers Condition preview and sync without moving provider types into core modules', async () => {
+    const previewCondition = jest
+      .fn()
+      .mockResolvedValue({ operation: 'CREATE', rank: 1 });
+    const syncCondition = jest.fn().mockResolvedValue({ syncedRemotely: true });
+    const plugin = buildPlugin({
+      conditions: { previewCondition, syncCondition },
+    });
+    const handler = plugin.getResourceHandler('Condition');
+
+    await expect(handler?.preview?.('diagnosis-local-1')).resolves.toEqual({
+      operation: 'CREATE',
+      rank: 1,
+    });
+    await expect(
+      handler?.sync?.('diagnosis-local-1', {
+        retryAttempt: 1,
+        retryOfLogId: 'sync-condition-failed-1',
+      }),
+    ).resolves.toEqual({ syncedRemotely: true });
+    expect(previewCondition).toHaveBeenCalledWith('diagnosis-local-1');
+    expect(syncCondition).toHaveBeenCalledWith('diagnosis-local-1', {
+      retryAttempt: 1,
+      retryOfLogId: 'sync-condition-failed-1',
+    });
   });
 });
