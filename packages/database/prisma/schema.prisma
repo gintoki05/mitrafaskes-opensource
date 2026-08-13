@@ -90,6 +90,19 @@ enum MedicalRecordStatus {
   FINAL
 }
 
+enum AllergyReviewStatus {
+  KNOWN
+  NONE_KNOWN
+  NOT_REVIEWED
+}
+
+enum OutpatientDisposition {
+  HOME
+  REFERRED
+  ADMITTED
+  OTHER
+}
+
 enum SyncStatus {
   PENDING
   SUCCESS
@@ -520,6 +533,14 @@ model MedicalRecord {
   finalizedAt       DateTime?
   serviceProfile    String              @default("OUTPATIENT_GENERAL") @db.VarChar(64)
   validationProfile String              @default("OUTPATIENT_GENERAL_V1") @db.VarChar(64)
+  chiefComplaint    String?
+  presentIllness    String?
+  allergyReviewStatus AllergyReviewStatus?
+  allergyDetails     String?
+  physicalExam      String?
+  education         String?
+  carePlan          String?
+  disposition       OutpatientDisposition?
   anamnesis         String?
   systolic          Int?
   diastolic         Int?
@@ -530,8 +551,31 @@ model MedicalRecord {
   encounter         Encounter           @relation(fields: [encounterId], references: [id])
   diagnoses         Diagnosis[]
   prescriptions     Prescription[]
+  auditEvents       MedicalRecordAuditEvent[]
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
+}
+
+model MedicalRecordAuditEvent {
+  id             String        @id @default(uuid())
+  medicalRecordId String
+  actorUserId    String?
+  actorUsername  String        @db.VarChar(128)
+  actorRole      Role
+  action         String        @db.VarChar(64)
+  entityType     String        @db.VarChar(64)
+  entityId       String
+  entityVersion  Int
+  expectedVersion Int
+  occurredAt     DateTime      @default(now())
+  requestId      String        @db.VarChar(128)
+  correlationId  String        @db.VarChar(128)
+  idempotencyKey String        @unique @db.VarChar(128)
+  medicalRecord  MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Restrict)
+
+  @@index([entityType, entityId, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@index([correlationId])
 }
 
 model MasterIcd10 {

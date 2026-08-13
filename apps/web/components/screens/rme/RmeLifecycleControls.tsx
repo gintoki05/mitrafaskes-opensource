@@ -51,6 +51,8 @@ export function RmeLifecycleSummary({
         <span className="text-xs text-muted-foreground" aria-live="polite">
           {mutationState === 'saving-draft'
             ? 'Menyimpan draft...'
+            : mutationState === 'preflighting'
+              ? 'Memeriksa kelengkapan finalisasi...'
             : mutationState === 'finalizing'
               ? 'Memfinalisasi RME...'
               : mutationState === 'draft-saved'
@@ -79,6 +81,7 @@ type ActionProps = LifecycleProps & {
   isSubmitting: boolean;
   canSaveDraft: boolean;
   canFinalize: boolean;
+  onPreflight: () => Promise<boolean>;
   onFinalize: () => Promise<void>;
 };
 
@@ -91,15 +94,16 @@ export function RmeLifecycleActions({
   isSubmitting,
   canSaveDraft,
   canFinalize,
+  onPreflight,
   onFinalize,
 }: ActionProps) {
   const [finalizeDialogOpen, setFinalizeDialogOpen] = useState(false);
 
   if (readOnly) return null;
 
-  const openFinalizeDialog = () => {
+  const openFinalizeDialog = async () => {
     if (!canFinalize || !record || isDirty || busy || isSubmitting) return;
-    setFinalizeDialogOpen(true);
+    if (await onPreflight()) setFinalizeDialogOpen(true);
   };
 
   const confirmFinalize = async () => {
@@ -125,12 +129,16 @@ export function RmeLifecycleActions({
       <Button
         type="button"
         disabled={!canFinalize || !record || isDirty || busy || isSubmitting}
-        onClick={openFinalizeDialog}
+        onClick={() => void openFinalizeDialog()}
         title={isDirty ? 'Simpan perubahan sebagai draft sebelum finalisasi' : undefined}
         className="py-4 text-sm font-bold"
       >
         <CheckCircle className="mr-2 h-5 w-5 stroke-[2.5]" />
-        {mutationState === 'finalizing' ? 'Memfinalisasi...' : 'Finalisasi RME'}
+        {mutationState === 'preflighting'
+          ? 'Memeriksa...'
+          : mutationState === 'finalizing'
+            ? 'Memfinalisasi...'
+            : 'Finalisasi RME'}
       </Button>
 
       <AlertDialog

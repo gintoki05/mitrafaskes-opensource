@@ -10,36 +10,50 @@ import {
   Prisma,
 } from '@prisma/client';
 import {
-  MEDICAL_RECORD_VALIDATION_PROFILE,
-  MedicalRecordServiceProfile,
-  MedicalRecordStatus,
   type MedicalRecord,
+  type RmePreflightResult,
 } from '@mitrafaskes/shared';
 import type { AuthenticatedUser } from '../auth/session-permission.guard';
 import { PrismaService } from '../database/prisma.service';
 import { EncountersService } from '../encounters/encounters.service';
 import { MasterIcd10Service } from '../master-data/master-icd10.service';
+import { validateFinalization } from './rme.finalization-profile';
 import {
-  assertReadyForFinalization,
+  medicalRecordInclude,
+  toMedicalRecord,
+  type MedicalRecordWithRelations,
+} from './rme.mapper';
+import {
   parseDraftInput,
   parseFinalizeInput,
+  parsePreflightInput,
   type ValidatedMedicalRecordDraft,
 } from './rme.validation';
 
-const medicalRecordInclude = {
-  diagnoses: { include: { icd10: true } },
-  prescriptions: true,
+const finalizationInclude = {
+  ...medicalRecordInclude,
+  encounter: {
+    include: {
+      doctor: {
+        select: {
+          active: true,
+          role: true,
+          organizationId: true,
+          locationId: true,
+          locationAssignments: { select: { locationId: true } },
+        },
+      },
+    },
+  },
 } satisfies Prisma.MedicalRecordInclude;
-
-type MedicalRecordWithRelations = Prisma.MedicalRecordGetPayload<{
-  include: typeof medicalRecordInclude;
-}>;
 
 type LockedEncounter = {
   id: string;
   status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   version: number;
   doctorId: string;
+  organizationId: string;
+  locationId: string;
 };
 
 type LockedMedicalRecord = {
@@ -48,59 +62,10 @@ type LockedMedicalRecord = {
   version: number;
 };
 
-function toMedicalRecord(record: MedicalRecordWithRelations): MedicalRecord {
-  if (
-    record.serviceProfile !== MedicalRecordServiceProfile.OUTPATIENT_GENERAL ||
-    record.validationProfile !==
-      MEDICAL_RECORD_VALIDATION_PROFILE[MedicalRecordServiceProfile.OUTPATIENT_GENERAL]
-  ) {
-    throw new Error('Konfigurasi profil layanan RME tidak konsisten');
-  }
-  return {
-    id: record.id,
-    encounterId: record.encounterId,
-    status: record.status as MedicalRecordStatus,
-    version: record.version,
-    serviceProfile: MedicalRecordServiceProfile.OUTPATIENT_GENERAL,
-    authoredBy: record.authoredBy ?? undefined,
-    authoredAt: record.authoredAt?.toISOString(),
-    finalizedBy: record.finalizedBy ?? undefined,
-    finalizedAt: record.finalizedAt?.toISOString(),
-    validationProfile:
-      MEDICAL_RECORD_VALIDATION_PROFILE[MedicalRecordServiceProfile.OUTPATIENT_GENERAL],
-    anamnesis: record.anamnesis ?? undefined,
-    systolic: record.systolic ?? undefined,
-    diastolic: record.diastolic ?? undefined,
-    heartRate: record.heartRate ?? undefined,
-    temperature: record.temperature ?? undefined,
-    weight: record.weight ?? undefined,
-    height: record.height ?? undefined,
-    diagnoses: record.diagnoses.map((diagnosis) => ({
-      id: diagnosis.id,
-      icd10Code: diagnosis.icd10Code,
-      isPrimary: diagnosis.isPrimary,
-      icd10: diagnosis.icd10
-        ? {
-            code: diagnosis.icd10.code,
-            display: diagnosis.icd10.display,
-            nameIndo: diagnosis.icd10.nameIndo ?? undefined,
-            nameEng: diagnosis.icd10.nameEng,
-          }
-        : undefined,
-    })),
-    prescriptions: record.prescriptions.map((prescription) => ({
-      id: prescription.id,
-      medicineName: prescription.medicineName,
-      kfaCode: prescription.kfaCode ?? undefined,
-      dosage: prescription.dosage,
-      frequency: prescription.frequency,
-      quantity: prescription.quantity,
-      instructions: prescription.instructions ?? undefined,
-    })),
-    createdAt: record.createdAt.toISOString(),
-    updatedAt: record.updatedAt.toISOString(),
-  };
-}
+export type RmeRequestMetadata = {
+  requestId: string;
+  correlationId: string;
+};
 
 @Injectable()
 export class RmeService {
@@ -151,6 +116,14 @@ export class RmeService {
 
       const now = new Date();
       const clinicalData = {
+        chiefComplaint: draft.chiefComplaint ?? null,
+        presentIllness: draft.presentIllness ?? null,
+        allergyReviewStatus: draft.allergyReviewStatus ?? null,
+        allergyDetails: draft.allergyDetails ?? null,
+        physicalExam: draft.physicalExam ?? null,
+        education: draft.education ?? null,
+        carePlan: draft.carePlan ?? null,
+        disposition: draft.disposition ?? null,
         anamnesis: draft.anamnesis ?? null,
         systolic: draft.systolic ?? null,
         diastolic: draft.diastolic ?? null,
@@ -191,62 +164,86 @@ export class RmeService {
     return toMedicalRecord(record);
   }
 
+  async preflight(
+    input: unknown,
+    actor: AuthenticatedUser,
+  ): Promise<RmePreflightResult> {
+    const command = parsePreflightInput(input);
+    const actorUserId = await this.resolveActorUserId(actor);
+    return this.prisma.$transaction(async (transaction) => {
+      const encounter = await this.lockEncounter(transaction, command.encounterId);
+      this.assertDoctorAssignment(encounter.doctorId, actor, actorUserId);
+      const current = await this.requireDraft(
+        transaction,
+        command.encounterId,
+      );
+      if (current.status === PrismaMedicalRecordStatus.FINAL) {
+        throw new ConflictException({
+          code: 'RME_ALREADY_FINAL',
+          message: 'RME sudah final. Muat ulang catatan untuk melihat versi terbaru.',
+        });
+      }
+      this.assertExpectedVersion(current.version, command.expectedVersion);
+      const draft = await this.readFinalizationDraft(transaction, current.id);
+      return validateFinalization(draft);
+    });
+  }
+
   async finalize(
     input: unknown,
     actor: AuthenticatedUser,
+    request: RmeRequestMetadata,
   ): Promise<MedicalRecord> {
     const command = parseFinalizeInput(input);
     const actorUserId = await this.resolveActorUserId(actor);
     const record = await this.prisma.$transaction(async (transaction) => {
       const encounter = await this.lockEncounter(transaction, command.encounterId);
       this.assertDoctorAssignment(encounter.doctorId, actor, actorUserId);
-      const current = await this.lockMedicalRecord(transaction, command.encounterId);
-      if (!current) {
+      const current = await this.requireDraft(transaction, command.encounterId);
+      const priorAudit = await transaction.medicalRecordAuditEvent.findUnique({
+        where: { idempotencyKey: command.idempotencyKey },
+      });
+
+      if (priorAudit) {
+        const isSameRequest =
+          priorAudit.medicalRecordId === current.id &&
+          priorAudit.expectedVersion === command.expectedVersion &&
+          priorAudit.action === 'RME_FINALIZED';
+        if (
+          isSameRequest &&
+          current.status === PrismaMedicalRecordStatus.FINAL &&
+          current.version === priorAudit.entityVersion &&
+          encounter.status === 'COMPLETED'
+        ) {
+          return this.readMedicalRecord(transaction, current.id);
+        }
         throw new ConflictException({
-          code: 'RME_DRAFT_REQUIRED',
-          message: 'Simpan draft RME sebelum melakukan finalisasi.',
+          code: 'RME_IDEMPOTENCY_CONFLICT',
+          message: 'Kunci idempotensi telah dipakai oleh request finalisasi yang berbeda.',
         });
       }
 
       if (current.status === PrismaMedicalRecordStatus.FINAL) {
-        if (
-          encounter.status === 'COMPLETED' &&
-          (command.expectedVersion === current.version ||
-            command.expectedVersion === current.version - 1)
-        ) {
-          const finalized = await transaction.medicalRecord.findUnique({
-            where: { id: current.id },
-            include: medicalRecordInclude,
-          });
-          if (!finalized) throw new NotFoundException('RME tidak ditemukan');
-          return finalized;
-        }
         throw new ConflictException({
           code: 'RME_ALREADY_FINAL',
-          message: 'RME sudah final. Muat ulang catatan untuk melihat versi terbaru.',
+          message: 'RME sudah final. Retry harus memakai kunci idempotensi request semula.',
+          currentVersion: current.version,
         });
       }
 
-      this.assertEncounterInProgress(encounter);
       this.assertExpectedVersion(current.version, command.expectedVersion);
-      const draft = await transaction.medicalRecord.findUnique({
-        where: { id: current.id },
-        include: {
-          ...medicalRecordInclude,
-          encounter: {
-            select: {
-              patientId: true,
-              doctorId: true,
-              organizationId: true,
-              locationId: true,
-            },
-          },
-        },
-      });
-      if (!draft) throw new NotFoundException('RME tidak ditemukan');
-      assertReadyForFinalization(draft);
+      const draft = await this.readFinalizationDraft(transaction, current.id);
+      const preflight = validateFinalization(draft);
+      if (!preflight.ready) {
+        throw new BadRequestException({
+          code: 'RME_PREFLIGHT_FAILED',
+          message: `RME belum memenuhi validation profile ${preflight.validationProfile}.`,
+          issues: preflight.issues,
+        });
+      }
 
       const now = new Date();
+      const finalVersion = current.version + 1;
       const finalized = await transaction.medicalRecord.update({
         where: { id: current.id },
         data: {
@@ -263,9 +260,64 @@ export class RmeService {
         encounter.version,
         actor,
       );
+      await transaction.medicalRecordAuditEvent.create({
+        data: {
+          medicalRecordId: current.id,
+          actorUserId,
+          actorUsername: actor.username,
+          actorRole: actor.role,
+          action: 'RME_FINALIZED',
+          entityType: 'MedicalRecord',
+          entityId: current.id,
+          entityVersion: finalVersion,
+          expectedVersion: command.expectedVersion,
+          occurredAt: now,
+          requestId: request.requestId,
+          correlationId: request.correlationId,
+          idempotencyKey: command.idempotencyKey,
+        },
+      });
       return finalized;
     });
     return toMedicalRecord(record);
+  }
+
+  private async requireDraft(
+    transaction: Prisma.TransactionClient,
+    encounterId: string,
+  ): Promise<LockedMedicalRecord> {
+    const current = await this.lockMedicalRecord(transaction, encounterId);
+    if (!current) {
+      throw new ConflictException({
+        code: 'RME_DRAFT_REQUIRED',
+        message: 'Simpan draft RME sebelum melakukan finalisasi.',
+      });
+    }
+    return current;
+  }
+
+  private async readFinalizationDraft(
+    transaction: Prisma.TransactionClient,
+    id: string,
+  ) {
+    const draft = await transaction.medicalRecord.findUnique({
+      where: { id },
+      include: finalizationInclude,
+    });
+    if (!draft) throw new NotFoundException('RME tidak ditemukan');
+    return draft;
+  }
+
+  private async readMedicalRecord(
+    transaction: Prisma.TransactionClient,
+    id: string,
+  ): Promise<MedicalRecordWithRelations> {
+    const record = await transaction.medicalRecord.findUnique({
+      where: { id },
+      include: medicalRecordInclude,
+    });
+    if (!record) throw new NotFoundException('RME tidak ditemukan');
+    return record;
   }
 
   private async assertIcd10CodesExist(
@@ -289,7 +341,7 @@ export class RmeService {
     encounterId: string,
   ): Promise<LockedEncounter> {
     const rows = await transaction.$queryRaw<LockedEncounter[]>(
-      Prisma.sql`SELECT "id", "status", "version", "doctorId" FROM "Encounter" WHERE "id" = ${encounterId} FOR UPDATE`,
+      Prisma.sql`SELECT "id", "status", "version", "doctorId", "organizationId", "locationId" FROM "Encounter" WHERE "id" = ${encounterId} FOR UPDATE`,
     );
     if (!rows[0]) throw new NotFoundException('Kunjungan / Encounter tidak ditemukan');
     return rows[0];

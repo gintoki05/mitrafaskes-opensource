@@ -29,6 +29,19 @@ export enum MedicalRecordServiceProfile {
   OUTPATIENT_GENERAL = 'OUTPATIENT_GENERAL',
 }
 
+export enum AllergyReviewStatus {
+  KNOWN = 'KNOWN',
+  NONE_KNOWN = 'NONE_KNOWN',
+  NOT_REVIEWED = 'NOT_REVIEWED',
+}
+
+export enum OutpatientDisposition {
+  HOME = 'HOME',
+  REFERRED = 'REFERRED',
+  ADMITTED = 'ADMITTED',
+  OTHER = 'OTHER',
+}
+
 export const OUTPATIENT_GENERAL_VALIDATION_PROFILE =
   'OUTPATIENT_GENERAL_V1' as const;
 
@@ -39,6 +52,25 @@ export const MEDICAL_RECORD_VALIDATION_PROFILE = {
 
 export type MedicalRecordValidationProfile =
   (typeof MEDICAL_RECORD_VALIDATION_PROFILE)[MedicalRecordServiceProfile];
+
+export type RmeValidationSection =
+  | 'profile'
+  | 'encounter'
+  | 'anamnesis'
+  | 'allergies'
+  | 'vitalSigns'
+  | 'physicalExam'
+  | 'diagnoses'
+  | 'prescriptions'
+  | 'plan'
+  | 'authorization';
+
+export interface RmeValidationIssue {
+  code: string;
+  field: string;
+  section: RmeValidationSection;
+  message: string;
+}
 
 export interface MedicalRecord {
   id: string;
@@ -51,6 +83,15 @@ export interface MedicalRecord {
   finalizedBy?: string;
   finalizedAt?: string;
   validationProfile: MedicalRecordValidationProfile;
+  chiefComplaint?: string;
+  presentIllness?: string;
+  allergyReviewStatus?: AllergyReviewStatus;
+  allergyDetails?: string;
+  physicalExam?: string;
+  education?: string;
+  carePlan?: string;
+  disposition?: OutpatientDisposition;
+  /** @deprecated Legacy combined narrative retained for read compatibility. */
   anamnesis?: string;
   systolic?: number;
   diastolic?: number;
@@ -81,6 +122,15 @@ export interface SaveMedicalRecordDraftDto {
   encounterId: string;
   expectedVersion: number;
   serviceProfile: MedicalRecordServiceProfile;
+  chiefComplaint?: string;
+  presentIllness?: string;
+  allergyReviewStatus?: AllergyReviewStatus;
+  allergyDetails?: string;
+  physicalExam?: string;
+  education?: string;
+  carePlan?: string;
+  disposition?: OutpatientDisposition;
+  /** @deprecated Legacy combined narrative retained for compatibility. */
   anamnesis?: string;
   systolic?: number;
   diastolic?: number;
@@ -95,4 +145,17 @@ export interface SaveMedicalRecordDraftDto {
 export interface FinalizeMedicalRecordDto {
   encounterId: string;
   expectedVersion: number;
+  idempotencyKey: string;
+}
+
+export interface PreflightMedicalRecordDto {
+  encounterId: string;
+  expectedVersion: number;
+}
+
+export interface RmePreflightResult {
+  ready: boolean;
+  serviceProfile: string;
+  validationProfile: string;
+  issues: RmeValidationIssue[];
 }

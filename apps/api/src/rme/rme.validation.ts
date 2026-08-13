@@ -1,8 +1,10 @@
 import { BadRequestException } from '@nestjs/common';
 import {
+  AllergyReviewStatus,
   MEDICAL_RECORD_VALIDATION_PROFILE,
   MedicalRecordServiceProfile,
   OUTPATIENT_GENERAL_VALIDATION_PROFILE,
+  OutpatientDisposition,
   type DiagnosisDto,
   type PrescriptionDto,
   type SaveMedicalRecordDraftDto,
@@ -18,37 +20,13 @@ export type ValidatedMedicalRecordDraft = Omit<
   validationProfile: typeof OUTPATIENT_GENERAL_VALIDATION_PROFILE;
 };
 
-export type FinalizationValidationInput = {
-  serviceProfile: string;
-  validationProfile: string;
-  anamnesis: string | null;
-  systolic: number | null;
-  diastolic: number | null;
-  heartRate: number | null;
-  temperature: number | null;
-  diagnoses: Array<{ isPrimary: boolean }>;
-  encounter: {
-    patientId: string;
-    doctorId: string;
-    organizationId: string;
-    locationId: string;
-  };
-};
-
 const recordOf = (input: unknown): Record<string, unknown> =>
   typeof input === 'object' && input !== null
     ? (input as Record<string, unknown>)
     : {};
 
-function validationError(
-  message: string,
-  errors?: Array<{ field: string; message: string }>,
-): BadRequestException {
-  return new BadRequestException({
-    code: 'RME_VALIDATION_FAILED',
-    message,
-    ...(errors ? { errors } : {}),
-  });
+function validationError(message: string): BadRequestException {
+  return new BadRequestException({ code: 'RME_VALIDATION_FAILED', message });
 }
 
 function requiredString(value: unknown, field: string): string {
@@ -86,6 +64,16 @@ function serviceProfile(value: unknown): MedicalRecordServiceProfile {
   throw validationError('Profil layanan RME tidak didukung.');
 }
 
+function optionalEnum<T extends string>(
+  value: unknown,
+  values: readonly T[],
+  field: string,
+): T | undefined {
+  if (value === undefined || value === null || value === '') return undefined;
+  if (typeof value === 'string' && values.includes(value as T)) return value as T;
+  throw validationError(`${field} tidak valid`);
+}
+
 export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
   const body = recordOf(input);
   const selectedServiceProfile = serviceProfile(body.serviceProfile);
@@ -103,15 +91,15 @@ export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
     Array.isArray(body.prescriptions) ? body.prescriptions : []
   ).map((prescription) => {
     const value = recordOf(prescription);
-    const quantity = Number(value.quantity);
-    if (!Number.isInteger(quantity) || quantity < 1) {
-      throw validationError('Jumlah resep harus berupa bilangan bulat positif');
+    const quantity = Number(value.quantity ?? 0);
+    if (!Number.isInteger(quantity) || quantity < 0) {
+      throw validationError('Jumlah resep harus berupa bilangan bulat non-negatif');
     }
     return {
-      medicineName: requiredString(value.medicineName, 'medicineName'),
+      medicineName: optionalString(value.medicineName) ?? '',
       kfaCode: optionalString(value.kfaCode),
-      dosage: requiredString(value.dosage, 'dosage'),
-      frequency: requiredString(value.frequency, 'frequency'),
+      dosage: optionalString(value.dosage) ?? '',
+      frequency: optionalString(value.frequency) ?? '',
       quantity,
       instructions: optionalString(value.instructions),
     };
@@ -123,6 +111,22 @@ export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
     serviceProfile: selectedServiceProfile,
     validationProfile:
       MEDICAL_RECORD_VALIDATION_PROFILE[selectedServiceProfile],
+    chiefComplaint: optionalString(body.chiefComplaint),
+    presentIllness: optionalString(body.presentIllness),
+    allergyReviewStatus: optionalEnum(
+      body.allergyReviewStatus,
+      Object.values(AllergyReviewStatus),
+      'allergyReviewStatus',
+    ),
+    allergyDetails: optionalString(body.allergyDetails),
+    physicalExam: optionalString(body.physicalExam),
+    education: optionalString(body.education),
+    carePlan: optionalString(body.carePlan),
+    disposition: optionalEnum(
+      body.disposition,
+      Object.values(OutpatientDisposition),
+      'disposition',
+    ),
     anamnesis: optionalString(body.anamnesis),
     systolic: optionalNumber(body.systolic, 'systolic'),
     diastolic: optionalNumber(body.diastolic, 'diastolic'),
@@ -135,7 +139,7 @@ export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
   };
 }
 
-export function parseFinalizeInput(input: unknown): {
+export function parsePreflightInput(input: unknown): {
   encounterId: string;
   expectedVersion: number;
 } {
@@ -146,56 +150,19 @@ export function parseFinalizeInput(input: unknown): {
   };
 }
 
-export function assertReadyForFinalization(
-  record: FinalizationValidationInput,
-): void {
-  const errors: Array<{ field: string; message: string }> = [];
-  if (
-    record.serviceProfile !== MedicalRecordServiceProfile.OUTPATIENT_GENERAL ||
-    record.validationProfile !==
-      MEDICAL_RECORD_VALIDATION_PROFILE[MedicalRecordServiceProfile.OUTPATIENT_GENERAL]
-  ) {
-    errors.push({
-      field: 'serviceProfile',
-      message: 'Profil layanan dan validation profile RME tidak konsisten.',
-    });
+export function parseFinalizeInput(input: unknown): {
+  encounterId: string;
+  expectedVersion: number;
+  idempotencyKey: string;
+} {
+  const body = recordOf(input);
+  const idempotencyKey = requiredString(body.idempotencyKey, 'idempotencyKey');
+  if (!/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) {
+    throw validationError('idempotencyKey harus sepanjang 8-128 karakter aman');
   }
-  if (!record.encounter.patientId) {
-    errors.push({ field: 'patientId', message: 'Pasien Encounter tidak tersedia.' });
-  }
-  if (!record.encounter.organizationId) {
-    errors.push({ field: 'organizationId', message: 'Organisasi layanan tidak tersedia.' });
-  }
-  if (!record.encounter.locationId) {
-    errors.push({ field: 'locationId', message: 'Lokasi layanan tidak tersedia.' });
-  }
-  if (!record.encounter.doctorId) {
-    errors.push({ field: 'doctorId', message: 'Klinisi Encounter tidak tersedia.' });
-  }
-  if (!record.anamnesis?.trim()) {
-    errors.push({ field: 'anamnesis', message: 'Anamnesis dan keluhan utama wajib diisi.' });
-  }
-  for (const [field, value, label] of [
-    ['systolic', record.systolic, 'Tekanan darah sistolik'],
-    ['diastolic', record.diastolic, 'Tekanan darah diastolik'],
-    ['heartRate', record.heartRate, 'Denyut nadi'],
-    ['temperature', record.temperature, 'Suhu tubuh'],
-  ] as const) {
-    if (value === null) errors.push({ field, message: `${label} wajib diisi.` });
-  }
-  const primaryCount = record.diagnoses.filter(
-    (diagnosis) => diagnosis.isPrimary,
-  ).length;
-  if (primaryCount !== 1) {
-    errors.push({
-      field: 'diagnoses',
-      message: 'RME final wajib mempunyai tepat satu diagnosis utama.',
-    });
-  }
-  if (errors.length > 0) {
-    throw validationError(
-      'RME belum memenuhi validation profile OUTPATIENT_GENERAL_V1.',
-      errors,
-    );
-  }
+  return {
+    encounterId: requiredString(body.encounterId, 'encounterId'),
+    expectedVersion: expectedVersion(body.expectedVersion),
+    idempotencyKey,
+  };
 }

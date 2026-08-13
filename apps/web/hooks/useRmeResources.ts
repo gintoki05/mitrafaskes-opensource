@@ -8,6 +8,7 @@ import type {
 } from '@mitrafaskes/shared';
 import { apiFetch } from '@/lib/auth';
 import { Encounter, Icd10Entry } from '@/lib/clinical-types';
+import { reconcileRmeSelection } from '@/components/screens/rme/rme-selection-model';
 
 type RmeResourcesState = {
   encounters: Encounter[];
@@ -20,7 +21,11 @@ type RmeResourcesState = {
 
 type RmeResourcesAction =
   | { type: 'encounters-loading' }
-  | { type: 'encounters-loaded'; response: EncounterListResponse }
+  | {
+      type: 'encounters-loaded';
+      response: EncounterListResponse;
+      retainMissingSelection?: boolean;
+    }
   | { type: 'encounters-failed'; error: string }
   | { type: 'select-encounter'; encounter: Encounter }
   | { type: 'icd-loaded'; results: Icd10Entry[] };
@@ -39,11 +44,11 @@ function rmeResourcesReducer(state: RmeResourcesState, action: RmeResourcesActio
     case 'encounters-loading':
       return { ...state, encountersLoading: true, loadError: '' };
     case 'encounters-loaded': {
-      const selectedEncounter = state.selectedEncounter
-        ? action.response.items.find(
-            (encounter) => encounter.id === state.selectedEncounter?.id,
-          ) ?? action.response.items[0] ?? null
-        : action.response.items[0] ?? null;
+      const selectedEncounter = reconcileRmeSelection(
+        state.selectedEncounter,
+        action.response.items,
+        action.retainMissingSelection ?? false,
+      );
       return {
         ...state,
         encounters: action.response.items,
@@ -117,12 +122,16 @@ export function useRmeResources() {
     };
   }, []);
 
-  const refreshEncounters = useCallback(async (page = 1) => {
+  const refreshEncounters = useCallback(async (
+    page = 1,
+    options: { retainMissingSelection?: boolean } = {},
+  ) => {
     dispatch({ type: 'encounters-loading' });
     try {
       dispatch({
         type: 'encounters-loaded',
         response: await requestEncounters(page),
+        retainMissingSelection: options.retainMissingSelection,
       });
     } catch (error) {
       dispatch({

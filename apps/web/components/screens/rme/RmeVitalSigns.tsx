@@ -24,7 +24,7 @@ export function RmeVitalSigns({
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
           <Activity className="h-4 w-4 text-success" />
-          2. Pemeriksaan Fisik & Vital Signs
+          2. Tanda Vital
         </CardTitle>
       </CardHeader>
       <CardContent>

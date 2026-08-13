@@ -35,4 +35,14 @@ test('draft and finalize commands both require expectedVersion', () => {
     source,
     /interface FinalizeMedicalRecordDto[\s\S]*expectedVersion:\s*number/,
   );
+  assert.match(
+    source,
+    /interface FinalizeMedicalRecordDto[\s\S]*idempotencyKey:\s*string/,
+  );
+});
+
+test('preflight exposes actionable issues grouped by RME section', () => {
+  assert.match(source, /interface RmeValidationIssue[\s\S]*section:\s*RmeValidationSection/);
+  assert.match(source, /interface RmePreflightResult[\s\S]*issues:\s*RmeValidationIssue\[\]/);
+  assert.match(source, /interface PreflightMedicalRecordDto[\s\S]*expectedVersion:\s*number/);
 });

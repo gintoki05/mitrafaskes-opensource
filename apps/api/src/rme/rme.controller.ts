@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AccessPermission } from '@mitrafaskes/shared';
+import { randomUUID } from 'node:crypto';
 import { RequirePermission } from '../auth/access-control.decorator';
 import {
   AuthenticatedUser,
@@ -44,8 +45,28 @@ export class RmeController {
   @RequirePermission(AccessPermission.RME_FINALIZE)
   finalize(
     @Body() body: unknown,
+    @Req() request: {
+      user: AuthenticatedUser;
+      headers: Record<string, string | string[] | undefined>;
+    },
+  ) {
+    const requestId = this.header(request.headers['x-request-id']) ?? randomUUID();
+    const correlationId =
+      this.header(request.headers['x-correlation-id']) ?? requestId;
+    return this.rme.finalize(body, request.user, { requestId, correlationId });
+  }
+
+  @Post('preflight')
+  @RequirePermission(AccessPermission.RME_FINALIZE)
+  preflight(
+    @Body() body: unknown,
     @Req() request: { user: AuthenticatedUser },
   ) {
-    return this.rme.finalize(body, request.user);
+    return this.rme.preflight(body, request.user);
+  }
+
+  private header(value: string | string[] | undefined): string | undefined {
+    const candidate = Array.isArray(value) ? value[0] : value;
+    return candidate?.trim().slice(0, 128) || undefined;
   }
 }

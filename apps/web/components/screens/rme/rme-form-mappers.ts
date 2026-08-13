@@ -4,6 +4,14 @@ import { emptyRmeFormValues, type RmeFormValues } from './rme-form-schema.ts';
 export function formValuesFrom(record: MedicalRecord | null): RmeFormValues {
   if (!record) return emptyRmeFormValues();
   return {
+    chiefComplaint: record.chiefComplaint ?? '',
+    presentIllness: record.presentIllness ?? '',
+    allergyReviewStatus: record.allergyReviewStatus ?? '',
+    allergyDetails: record.allergyDetails ?? '',
+    physicalExam: record.physicalExam ?? '',
+    education: record.education ?? '',
+    carePlan: record.carePlan ?? '',
+    disposition: record.disposition ?? '',
     anamnesis: record.anamnesis ?? '',
     systolic: record.systolic === undefined ? '' : String(record.systolic),
     diastolic: record.diastolic === undefined ? '' : String(record.diastolic),

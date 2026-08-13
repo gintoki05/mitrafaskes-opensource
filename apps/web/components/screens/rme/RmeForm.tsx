@@ -3,12 +3,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useEffect } from 'react';
 import { useFieldArray, useForm, useWatch } from 'react-hook-form';
-import { FileText } from 'lucide-react';
-import type { MedicalRecord } from '@mitrafaskes/shared';
+import type { MedicalRecord, RmeValidationIssue } from '@mitrafaskes/shared';
 import { toast } from 'sonner';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { ScreenState } from '@/components/ScreenState';
 import type { Icd10Entry } from '@/lib/clinical-types';
 import { RmeDiagnosisSection } from './RmeDiagnosisSection';
@@ -32,6 +29,15 @@ import {
   RmeLifecycleActions,
   RmeLifecycleSummary,
 } from './RmeLifecycleControls';
+import {
+  RmeAssessmentSections,
+  RmePhysicalExamSection,
+} from './RmeAssessmentSections';
+import { RmeCarePlanSection } from './RmeCarePlanSection';
+import {
+  RmeGlobalFinalizationIssues,
+  RmeSectionIssues,
+} from './RmeFinalizationIssues';
 
 type RmeFormProps = {
   record: MedicalRecord | null;
@@ -41,7 +47,9 @@ type RmeFormProps = {
   canSaveDraft: boolean;
   canFinalize: boolean;
   conflict: RmeVersionConflict | null;
+  finalizationIssues: RmeValidationIssue[];
   onSaveDraft: (values: RmeFormValues) => Promise<void>;
+  onPreflight: () => Promise<boolean>;
   onFinalize: () => Promise<void>;
   onReload: () => void;
   onIcdSearchChange: (value: string) => void;
@@ -55,14 +63,16 @@ export function RmeForm({
   canSaveDraft,
   canFinalize,
   conflict,
+  finalizationIssues,
   onSaveDraft,
+  onPreflight,
   onFinalize,
   onReload,
   onIcdSearchChange,
 }: RmeFormProps) {
   const {
     control,
-    formState: { errors, isDirty, isSubmitting },
+    formState: { isDirty, isSubmitting },
     register,
     reset,
     setValue,
@@ -78,14 +88,29 @@ export function RmeForm({
   const diastolic = useWatch({ control, name: 'diastolic' });
   const heartRate = useWatch({ control, name: 'heartRate' });
   const temperature = useWatch({ control, name: 'temperature' });
+  const allergyReviewStatus = useWatch({ control, name: 'allergyReviewStatus' });
+  const disposition = useWatch({ control, name: 'disposition' });
   const diagnoses = useWatch({ control, name: 'diagnoses' }) ?? [];
   const prescriptions = useWatch({ control, name: 'prescriptions' }) ?? [];
   const readOnly = isRmeReadOnly(record);
-  const busy = mutationState === 'saving-draft' || mutationState === 'finalizing';
+  const busy =
+    mutationState === 'preflighting' ||
+    mutationState === 'saving-draft' ||
+    mutationState === 'finalizing';
 
   useEffect(() => {
     reset(formValuesFrom(record));
   }, [record, reset]);
+
+  useEffect(() => {
+    const firstIssue = finalizationIssues[0];
+    if (!firstIssue) return;
+    const section = document.querySelector<HTMLElement>(
+      `[data-rme-section="${firstIssue.section}"]`,
+    );
+    section?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    section?.focus({ preventScroll: true });
+  }, [finalizationIssues]);
 
   const updateStringValue = (
     field: 'systolic' | 'diastolic' | 'temperature' | 'heartRate',
@@ -165,6 +190,8 @@ export function RmeForm({
         mutationState={mutationState}
       />
 
+      <RmeGlobalFinalizationIssues issues={finalizationIssues} />
+
       {conflict ? (
         <RmeConflictNotice
           conflict={conflict}
@@ -176,57 +203,58 @@ export function RmeForm({
 
       <fieldset disabled={readOnly || busy} className="space-y-6">
 
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
-            <FileText className="h-4 w-4 text-primary" />
-            1. Anamnesis & Keluhan Utama
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Field data-invalid={Boolean(errors.anamnesis)}>
-            <FieldLabel htmlFor="anamnesis">Anamnesis dan keluhan utama</FieldLabel>
-            <textarea
-              {...register('anamnesis')}
-              id="anamnesis"
-              rows={3}
-              className="clinical-field w-full p-3 text-xs"
-              placeholder="Input keluhan utama, riwayat penyakit, alergi obat..."
-              aria-invalid={Boolean(errors.anamnesis)}
-              aria-describedby="anamnesis-error"
-            />
-            <FieldError id="anamnesis-error" errors={[errors.anamnesis]} />
-          </Field>
-        </CardContent>
-      </Card>
-
-      <RmeVitalSigns
-        systolic={systolic}
-        diastolic={diastolic}
-        temperature={temperature}
-        heartRate={heartRate}
-        onChange={(field, value) => updateStringValue(field, value)}
-      />
-      <RmeDiagnosisSection
-        icdSearch={icdSearch}
-        icdResults={icdResults}
-        selectedDiagnoses={diagnoses}
-        onSearchChange={onIcdSearchChange}
-        onAddDiagnosis={handleAddDiagnosis}
-        onRemoveDiagnosis={handleRemoveDiagnosis}
-      />
-      <RmePrescriptionSection
-        prescriptions={prescriptions}
-        onAddPrescription={() =>
-          append({
-            medicineName: '',
-            dosage: '',
-            frequency: '',
-            quantity: 0,
-          })
+      <RmeAssessmentSections
+        register={register}
+        allergyReviewStatus={allergyReviewStatus}
+        onAllergyReviewChange={(value) =>
+          setValue('allergyReviewStatus', value, { shouldDirty: true })
         }
-        onUpdatePrescription={handleUpdatePrescription}
-        onApplyPresetBundle={handleApplyPresetBundle}
+        issues={finalizationIssues}
+      />
+
+      <div data-rme-section="vitalSigns" tabIndex={-1}>
+        <RmeVitalSigns
+          systolic={systolic}
+          diastolic={diastolic}
+          temperature={temperature}
+          heartRate={heartRate}
+          onChange={(field, value) => updateStringValue(field, value)}
+        />
+        <RmeSectionIssues issues={finalizationIssues} section="vitalSigns" />
+      </div>
+      <RmePhysicalExamSection
+        register={register}
+        issues={finalizationIssues}
+      />
+      <div data-rme-section="diagnoses" tabIndex={-1}>
+        <RmeDiagnosisSection
+          icdSearch={icdSearch}
+          icdResults={icdResults}
+          selectedDiagnoses={diagnoses}
+          onSearchChange={onIcdSearchChange}
+          onAddDiagnosis={handleAddDiagnosis}
+          onRemoveDiagnosis={handleRemoveDiagnosis}
+        />
+        <RmeSectionIssues issues={finalizationIssues} section="diagnoses" />
+      </div>
+      <div data-rme-section="prescriptions" tabIndex={-1}>
+        <RmePrescriptionSection
+          prescriptions={prescriptions}
+          onAddPrescription={() =>
+            append({ medicineName: '', dosage: '', frequency: '', quantity: 0 })
+          }
+          onUpdatePrescription={handleUpdatePrescription}
+          onApplyPresetBundle={handleApplyPresetBundle}
+        />
+        <RmeSectionIssues issues={finalizationIssues} section="prescriptions" />
+      </div>
+      <RmeCarePlanSection
+        register={register}
+        disposition={disposition}
+        onDispositionChange={(value) =>
+          setValue('disposition', value, { shouldDirty: true })
+        }
+        issues={finalizationIssues}
       />
 
       </fieldset>
@@ -240,6 +268,7 @@ export function RmeForm({
         isSubmitting={isSubmitting}
         canSaveDraft={canSaveDraft}
         canFinalize={canFinalize}
+        onPreflight={onPreflight}
         onFinalize={onFinalize}
       />
     </form>

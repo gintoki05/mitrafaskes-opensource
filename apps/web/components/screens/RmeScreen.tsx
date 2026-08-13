@@ -74,7 +74,9 @@ export default function RmePage() {
   const handleFinalize = async () => {
     try {
       await lifecycle.finalize();
-      await refreshEncounters();
+      await refreshEncounters(encountersMeta.page, {
+        retainMissingSelection: true,
+      });
       toast.success('RME berhasil difinalisasi', {
         description: 'Catatan menjadi read-only dan Encounter telah diselesaikan.',
       });
@@ -83,6 +85,26 @@ export default function RmePage() {
         description: errorDescription(error),
         duration: 9000,
       });
+    }
+  };
+
+  const handlePreflight = async (): Promise<boolean> => {
+    try {
+      const result = await lifecycle.preflight();
+      if (!result?.ready) {
+        toast.error('RME belum siap difinalisasi', {
+          description: 'Periksa issue pada setiap bagian formulir.',
+          duration: 9000,
+        });
+        return false;
+      }
+      return true;
+    } catch (error) {
+      toast.error('Preflight finalisasi gagal', {
+        description: errorDescription(error),
+        duration: 9000,
+      });
+      return false;
     }
   };
 
@@ -141,11 +163,13 @@ export default function RmePage() {
                 record={lifecycle.record}
                 mutationState={lifecycle.mutationState}
                 conflict={lifecycle.conflict}
+                finalizationIssues={lifecycle.finalizationIssues}
                 canSaveDraft={can(session?.user ?? null, AccessPermission.RME_WRITE_DRAFT)}
                 canFinalize={can(session?.user ?? null, AccessPermission.RME_FINALIZE)}
                 icdSearch={icdSearch}
                 icdResults={icdResults}
                 onSaveDraft={handleSaveDraft}
+                onPreflight={handlePreflight}
                 onFinalize={handleFinalize}
                 onReload={lifecycle.reload}
                 onIcdSearchChange={(value) => {

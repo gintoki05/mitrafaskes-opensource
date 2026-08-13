@@ -155,3 +155,15 @@ test('only a final record makes the workspace read-only', () => {
   assert.equal(isRmeReadOnly(record(MedicalRecordStatus.DRAFT)), false);
   assert.equal(isRmeReadOnly(record(MedicalRecordStatus.FINAL)), true);
 });
+
+test('preflight issues do not make the draft read-only or replace its local values', () => {
+  const draft = record(MedicalRecordStatus.DRAFT, 3, 'Keluhan belum lengkap');
+  const before = formValuesFrom(draft);
+  const preflightIssues = [
+    { section: 'plan', field: 'carePlan', message: 'Rencana wajib diisi.' },
+  ];
+
+  assert.equal(preflightIssues.length, 1);
+  assert.equal(isRmeReadOnly(draft), false);
+  assert.deepEqual(formValuesFrom(draft), before);
+});
