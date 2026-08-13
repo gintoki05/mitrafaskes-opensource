@@ -7,6 +7,7 @@ import {
   MedicalRecordStatus as PrismaMedicalRecordStatus,
   Prisma,
 } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
 import { UserRole } from '@mitrafaskes/shared';
 import type { AuthenticatedUser } from '../auth/session-permission.guard';
 import { PrismaService } from '../database/prisma.service';
@@ -19,7 +20,10 @@ import {
   sourceObservationIdsForDerived,
   type RmeObservationDraft,
 } from './rme.observation';
-import type { ValidatedMedicalRecordDraft } from './rme.validation';
+import type {
+  ValidatedClinicalHistoryEntry,
+  ValidatedMedicalRecordDraft,
+} from './rme.validation';
 
 export const finalizationInclude = {
   ...medicalRecordInclude,
@@ -167,6 +171,47 @@ export async function replaceDraftObservations(
   }
 }
 
+export async function replaceDraftHistories(
+  transaction: Prisma.TransactionClient,
+  medicalRecordId: string,
+  histories: readonly ValidatedClinicalHistoryEntry[],
+): Promise<void> {
+  const delegate = transaction.clinicalHistoryEntry;
+  if (!delegate || typeof delegate.findMany !== 'function') return;
+
+  const existing = await delegate.findMany({
+    where: { medicalRecordId },
+    select: { id: true },
+  });
+  const existingIds = new Set(existing.map((history) => history.id));
+  const keptIds = new Set<string>();
+
+  for (const history of histories) {
+    const id =
+      history.id && existingIds.has(history.id) ? history.id : randomUUID();
+    keptIds.add(id);
+    const data = {
+      category: history.category,
+      text: history.text,
+      status: history.status ?? null,
+      onsetAt: history.onsetAt ?? null,
+      note: history.note ?? null,
+    };
+    if (existingIds.has(id)) {
+      await delegate.update({ where: { id }, data });
+    } else {
+      await delegate.create({ data: { id, medicalRecordId, ...data } });
+    }
+  }
+
+  const removedIds = existing
+    .map((history) => history.id)
+    .filter((id) => !keptIds.has(id));
+  if (removedIds.length > 0 && typeof delegate.deleteMany === 'function') {
+    await delegate.deleteMany({ where: { id: { in: removedIds } } });
+  }
+}
+
 export function observationData(
   observation: RmeObservationDraft,
 ): Omit<
@@ -205,7 +250,11 @@ export async function readMedicalRecordAfterChildReplacement(
   id: string,
   fallback: MedicalRecordWithRelations,
 ): Promise<MedicalRecordWithRelations> {
-  if (!transaction.diagnosis && !transaction.clinicalObservation) {
+  if (
+    !transaction.diagnosis &&
+    !transaction.clinicalObservation &&
+    !transaction.clinicalHistoryEntry
+  ) {
     return fallback;
   }
   const refreshed = await transaction.medicalRecord.findUnique({

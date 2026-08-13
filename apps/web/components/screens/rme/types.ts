@@ -1,4 +1,4 @@
-import type { ResourceIntegrationSummary } from '@mitrafaskes/shared';
+import type { ResourceIntegrationSummary } from "@mitrafaskes/shared";
 
 export type RmeDiagnosis = {
   id?: string;
@@ -10,15 +10,19 @@ export type RmeDiagnosis = {
 
 export type RmePrescription = {
   medicineName: string;
+  kfaCode?: string;
   dosage: string;
   frequency: string;
   quantity: number;
+  instructions?: string;
 };
 
-export type RmePresetBundle = 'ISPA' | 'GASTRITIS' | 'HYPERTENSION';
+export type RmePresetBundle = "ISPA" | "GASTRITIS" | "HYPERTENSION";
 
 export type RmePrescriptionField =
-  | 'medicineName'
-  | 'dosage'
-  | 'frequency'
-  | 'quantity';
+  | "medicineName"
+  | "kfaCode"
+  | "dosage"
+  | "frequency"
+  | "quantity"
+  | "instructions";

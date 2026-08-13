@@ -1,28 +1,41 @@
 import { z } from "zod";
-import { AllergyReviewStatus, OutpatientDisposition } from '@mitrafaskes/shared';
+import {
+  AllergyReviewStatus,
+  ClinicalHistoryCategory,
+  ClinicalHistoryStatus,
+  OutpatientDisposition,
+} from "@mitrafaskes/shared";
+
+const clinicalHistoryStatusSchema = z.enum(ClinicalHistoryStatus);
 
 export const rmeFormSchema = z.object({
   chiefComplaint: z.string(),
   presentIllness: z.string(),
-  allergyReviewStatus: z.union([
-    z.enum(AllergyReviewStatus),
-    z.literal(''),
-  ]),
+  allergyReviewStatus: z.union([z.enum(AllergyReviewStatus), z.literal("")]),
   allergyDetails: z.string(),
   physicalExam: z.string(),
   education: z.string(),
   carePlan: z.string(),
-  disposition: z.union([
-    z.enum(OutpatientDisposition),
-    z.literal(''),
-  ]),
+  disposition: z.union([z.enum(OutpatientDisposition), z.literal("")]),
   anamnesis: z.string(),
+  histories: z.array(
+    z.object({
+      id: z.string().optional(),
+      category: z.enum(ClinicalHistoryCategory),
+      text: z.string(),
+      status: clinicalHistoryStatusSchema.or(z.literal("")),
+      onset: z.string(),
+      note: z.string(),
+    }),
+  ),
   systolic: z.string(),
   diastolic: z.string(),
   heartRate: z.string(),
   temperature: z.string(),
   weight: z.string(),
   height: z.string(),
+  respiratoryRate: z.string(),
+  oxygenSaturation: z.string(),
   diagnoses: z.array(
     z.object({
       id: z.string().optional(),
@@ -34,9 +47,11 @@ export const rmeFormSchema = z.object({
   prescriptions: z.array(
     z.object({
       medicineName: z.string(),
+      kfaCode: z.string(),
       dosage: z.string(),
       frequency: z.string(),
       quantity: z.number().int().min(0),
+      instructions: z.string(),
     }),
   ),
 });
@@ -45,21 +60,24 @@ export type RmeFormValues = z.infer<typeof rmeFormSchema>;
 
 export function emptyRmeFormValues(): RmeFormValues {
   return {
-    chiefComplaint: '',
-    presentIllness: '',
-    allergyReviewStatus: '',
-    allergyDetails: '',
-    physicalExam: '',
-    education: '',
-    carePlan: '',
-    disposition: '',
-    anamnesis: '',
-    systolic: '',
-    diastolic: '',
-    heartRate: '',
-    temperature: '',
-    weight: '',
-    height: '',
+    chiefComplaint: "",
+    presentIllness: "",
+    allergyReviewStatus: "",
+    allergyDetails: "",
+    physicalExam: "",
+    education: "",
+    carePlan: "",
+    disposition: "",
+    anamnesis: "",
+    histories: [],
+    systolic: "",
+    diastolic: "",
+    heartRate: "",
+    temperature: "",
+    weight: "",
+    height: "",
+    respiratoryRate: "",
+    oxygenSaturation: "",
     diagnoses: [],
     prescriptions: [],
   };

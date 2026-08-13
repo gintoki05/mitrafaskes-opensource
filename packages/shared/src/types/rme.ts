@@ -1,10 +1,42 @@
-import type { ResourceIntegrationSummary } from './integrations';
+import type { ResourceIntegrationSummary } from "./integrations";
 
 export interface MasterIcd10 {
   code: string;
   display: string;
   nameIndo?: string;
   nameEng: string;
+}
+
+export enum ClinicalHistoryCategory {
+  PAST_MEDICAL = "PAST_MEDICAL",
+  FAMILY = "FAMILY",
+  MEDICATION = "MEDICATION",
+  RISK = "RISK",
+}
+
+export enum ClinicalHistoryStatus {
+  ACTIVE = "ACTIVE",
+  RESOLVED = "RESOLVED",
+  UNKNOWN = "UNKNOWN",
+}
+
+export interface ClinicalHistoryEntryDto {
+  /** Existing child ID is echoed by the client so draft edits stay scoped. */
+  id?: string;
+  category: ClinicalHistoryCategory;
+  text: string;
+  status?: ClinicalHistoryStatus;
+  onset?: string;
+  note?: string;
+}
+
+export interface ClinicalHistoryEntry {
+  id: string;
+  category: ClinicalHistoryCategory;
+  text: string;
+  status?: ClinicalHistoryStatus;
+  onset?: string;
+  note?: string;
 }
 
 export interface DiagnosisDto {
@@ -16,21 +48,18 @@ export interface DiagnosisDto {
 }
 
 export type ClinicalObservationValueType =
-  | 'quantity'
-  | 'code'
-  | 'boolean'
-  | 'string';
+  "quantity" | "code" | "boolean" | "string";
 
 export type ClinicalObservationStatus =
-  | 'preliminary'
-  | 'final'
-  | 'amended'
-  | 'corrected'
-  | 'cancelled'
-  | 'entered-in-error'
-  | 'unknown';
+  | "preliminary"
+  | "final"
+  | "amended"
+  | "corrected"
+  | "cancelled"
+  | "entered-in-error"
+  | "unknown";
 
-export type ClinicalObservationProvenance = 'original' | 'derived';
+export type ClinicalObservationProvenance = "original" | "derived";
 
 export interface ClinicalObservationCode {
   system?: string;
@@ -39,7 +68,7 @@ export interface ClinicalObservationCode {
 }
 
 export interface ClinicalObservationQuantityValue {
-  type: 'quantity';
+  type: "quantity";
   value: number;
   unit: string;
   system?: string;
@@ -47,18 +76,18 @@ export interface ClinicalObservationQuantityValue {
 }
 
 export interface ClinicalObservationCodeValue {
-  type: 'code';
+  type: "code";
   coding: ClinicalObservationCode[];
   text?: string;
 }
 
 export interface ClinicalObservationBooleanValue {
-  type: 'boolean';
+  type: "boolean";
   value: boolean;
 }
 
 export interface ClinicalObservationStringValue {
-  type: 'string';
+  type: "string";
   value: string;
 }
 
@@ -118,8 +147,8 @@ export interface PrescriptionDto {
 }
 
 export enum MedicalRecordStatus {
-  DRAFT = 'DRAFT',
-  FINAL = 'FINAL',
+  DRAFT = "DRAFT",
+  FINAL = "FINAL",
 }
 
 export enum MedicalRecordServiceProfile {
@@ -127,20 +156,20 @@ export enum MedicalRecordServiceProfile {
 }
 
 export enum AllergyReviewStatus {
-  KNOWN = 'KNOWN',
-  NONE_KNOWN = 'NONE_KNOWN',
-  NOT_REVIEWED = 'NOT_REVIEWED',
+  KNOWN = "KNOWN",
+  NONE_KNOWN = "NONE_KNOWN",
+  NOT_REVIEWED = "NOT_REVIEWED",
 }
 
 export enum OutpatientDisposition {
-  HOME = 'HOME',
-  REFERRED = 'REFERRED',
-  ADMITTED = 'ADMITTED',
-  OTHER = 'OTHER',
+  HOME = "HOME",
+  REFERRED = "REFERRED",
+  ADMITTED = "ADMITTED",
+  OTHER = "OTHER",
 }
 
 export const OUTPATIENT_GENERAL_VALIDATION_PROFILE =
-  'OUTPATIENT_GENERAL_V1' as const;
+  "OUTPATIENT_GENERAL_V1" as const;
 
 export const MEDICAL_RECORD_VALIDATION_PROFILE = {
   [MedicalRecordServiceProfile.OUTPATIENT_GENERAL]:
@@ -151,16 +180,16 @@ export type MedicalRecordValidationProfile =
   (typeof MEDICAL_RECORD_VALIDATION_PROFILE)[MedicalRecordServiceProfile];
 
 export type RmeValidationSection =
-  | 'profile'
-  | 'encounter'
-  | 'anamnesis'
-  | 'allergies'
-  | 'vitalSigns'
-  | 'physicalExam'
-  | 'diagnoses'
-  | 'prescriptions'
-  | 'plan'
-  | 'authorization';
+  | "profile"
+  | "encounter"
+  | "anamnesis"
+  | "allergies"
+  | "vitalSigns"
+  | "physicalExam"
+  | "diagnoses"
+  | "prescriptions"
+  | "plan"
+  | "authorization";
 
 export interface RmeValidationIssue {
   code: string;
@@ -190,6 +219,7 @@ export interface MedicalRecord {
   disposition?: OutpatientDisposition;
   /** @deprecated Legacy combined narrative retained for read compatibility. */
   anamnesis?: string;
+  histories: ClinicalHistoryEntry[];
   systolic?: number;
   diastolic?: number;
   heartRate?: number;
@@ -231,6 +261,7 @@ export interface SaveMedicalRecordDraftDto {
   disposition?: OutpatientDisposition;
   /** @deprecated Legacy combined narrative retained for compatibility. */
   anamnesis?: string;
+  histories?: ClinicalHistoryEntryDto[];
   systolic?: number;
   diastolic?: number;
   heartRate?: number;

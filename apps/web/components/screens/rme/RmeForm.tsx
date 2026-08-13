@@ -1,42 +1,47 @@
-'use client';
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useEffect } from 'react';
-import { useFieldArray, useForm, useWatch } from 'react-hook-form';
-import type { MedicalRecord, RmeValidationIssue } from '@mitrafaskes/shared';
-import { toast } from 'sonner';
-import { Button } from '@/components/ui/button';
-import { ScreenState } from '@/components/ScreenState';
-import type { Icd10Entry } from '@/lib/clinical-types';
-import { RmeDiagnosisSection } from './RmeDiagnosisSection';
-import { RmeConflictNotice } from './RmeConflictNotice';
-import { RmePrescriptionSection } from './RmePrescriptionSection';
-import { RmeVitalSigns } from './RmeVitalSigns';
-import { RmeObservationSection } from './RmeObservationSection';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import {
+  ClinicalHistoryCategory,
+  type MedicalRecord,
+  type RmeValidationIssue,
+} from "@mitrafaskes/shared";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { ScreenState } from "@/components/ScreenState";
+import type { Icd10Entry } from "@/lib/clinical-types";
+import { RmeDiagnosisSection } from "./RmeDiagnosisSection";
+import { RmeConflictNotice } from "./RmeConflictNotice";
+import { RmePrescriptionSection } from "./RmePrescriptionSection";
+import { RmeVitalSigns } from "./RmeVitalSigns";
+import { RmeObservationSection } from "./RmeObservationSection";
 import {
   emptyRmeFormValues,
   rmeFormSchema,
   type RmeFormValues,
-} from './rme-form-schema';
-import { formValuesFrom } from './rme-form-mappers';
-import { rmePresetValues } from './rme-presets';
-import type { RmePrescriptionField, RmePresetBundle } from './types';
-import type { RmeMutationState } from '@/hooks/useRmeLifecycle';
-import { isRmeReadOnly, type RmeVersionConflict } from './rme-workspace-model';
+} from "./rme-form-schema";
+import { formValuesFrom } from "./rme-form-mappers";
+import { rmePresetValues } from "./rme-presets";
+import type { RmePrescriptionField, RmePresetBundle } from "./types";
+import type { RmeMutationState } from "@/hooks/useRmeLifecycle";
+import { isRmeReadOnly, type RmeVersionConflict } from "./rme-workspace-model";
 import {
   RmeLifecycleActions,
   RmeLifecycleSummary,
-} from './RmeLifecycleControls';
+} from "./RmeLifecycleControls";
 import {
   RmeAssessmentSections,
   RmePhysicalExamSection,
-} from './RmeAssessmentSections';
-import { RmeCarePlanSection } from './RmeCarePlanSection';
-import { useRmeDiagnosisEditor } from './useRmeDiagnosisEditor';
+} from "./RmeAssessmentSections";
+import { RmeHistorySection } from "./RmeHistorySection";
+import { RmeCarePlanSection } from "./RmeCarePlanSection";
+import { useRmeDiagnosisEditor } from "./useRmeDiagnosisEditor";
 import {
   RmeGlobalFinalizationIssues,
   RmeSectionIssues,
-} from './RmeFinalizationIssues';
+} from "./RmeFinalizationIssues";
 
 type RmeFormProps = {
   record: MedicalRecord | null;
@@ -83,7 +88,7 @@ export function RmeForm({
 }: RmeFormProps) {
   const {
     control,
-    formState: { isDirty, isSubmitting },
+    formState: { errors, isDirty, isSubmitting },
     register,
     reset,
     setValue,
@@ -92,21 +97,28 @@ export function RmeForm({
   } = useForm<RmeFormValues>({
     resolver: zodResolver(rmeFormSchema),
     defaultValues: emptyRmeFormValues(),
-    mode: 'onBlur',
+    mode: "onBlur",
   });
-  const { append, replace } = useFieldArray({ control, name: 'prescriptions' });
-  const systolic = useWatch({ control, name: 'systolic' });
-  const diastolic = useWatch({ control, name: 'diastolic' });
-  const heartRate = useWatch({ control, name: 'heartRate' });
-  const temperature = useWatch({ control, name: 'temperature' });
-  const weight = useWatch({ control, name: 'weight' });
-  const height = useWatch({ control, name: 'height' });
+  const { append, replace } = useFieldArray({ control, name: "prescriptions" });
+  const {
+    fields: historyFields,
+    append: appendHistory,
+    remove: removeHistory,
+  } = useFieldArray({ control, name: "histories" });
+  const systolic = useWatch({ control, name: "systolic" });
+  const diastolic = useWatch({ control, name: "diastolic" });
+  const heartRate = useWatch({ control, name: "heartRate" });
+  const temperature = useWatch({ control, name: "temperature" });
+  const weight = useWatch({ control, name: "weight" });
+  const height = useWatch({ control, name: "height" });
+  const respiratoryRate = useWatch({ control, name: "respiratoryRate" });
+  const oxygenSaturation = useWatch({ control, name: "oxygenSaturation" });
   const allergyReviewStatus = useWatch({
     control,
-    name: 'allergyReviewStatus',
+    name: "allergyReviewStatus",
   });
-  const disposition = useWatch({ control, name: 'disposition' });
-  const prescriptions = useWatch({ control, name: 'prescriptions' }) ?? [];
+  const disposition = useWatch({ control, name: "disposition" });
+  const prescriptions = useWatch({ control, name: "prescriptions" }) ?? [];
   const {
     selectedDiagnoses,
     updateDiagnoses,
@@ -120,9 +132,9 @@ export function RmeForm({
   });
   const readOnly = isRmeReadOnly(record);
   const busy =
-    mutationState === 'preflighting' ||
-    mutationState === 'saving-draft' ||
-    mutationState === 'finalizing';
+    mutationState === "preflighting" ||
+    mutationState === "saving-draft" ||
+    mutationState === "finalizing";
 
   useEffect(() => {
     reset(formValuesFrom(record));
@@ -134,12 +146,20 @@ export function RmeForm({
     const section = document.querySelector<HTMLElement>(
       `[data-rme-section="${firstIssue.section}"]`,
     );
-    section?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    section?.scrollIntoView({ behavior: "smooth", block: "center" });
     section?.focus({ preventScroll: true });
   }, [finalizationIssues]);
 
   const updateStringValue = (
-    field: 'systolic' | 'diastolic' | 'temperature' | 'heartRate' | 'weight' | 'height',
+    field:
+      | "systolic"
+      | "diastolic"
+      | "temperature"
+      | "heartRate"
+      | "weight"
+      | "height"
+      | "respiratoryRate"
+      | "oxygenSaturation",
     value: string,
   ) => {
     setValue(field, value, { shouldDirty: true, shouldValidate: true });
@@ -150,7 +170,7 @@ export function RmeForm({
     field: RmePrescriptionField,
     value: string | number,
   ) => {
-    if (field === 'quantity') {
+    if (field === "quantity") {
       setValue(`prescriptions.${index}.quantity`, Number(value) || 0, {
         shouldDirty: true,
         shouldValidate: true,
@@ -174,14 +194,16 @@ export function RmeForm({
 
   const copyDraft = async () => {
     try {
-      if (!navigator.clipboard) throw new Error('Clipboard tidak tersedia');
+      if (!navigator.clipboard) throw new Error("Clipboard tidak tersedia");
       await navigator.clipboard.writeText(JSON.stringify(getValues(), null, 2));
-      toast.success('Draft disalin', {
-        description: 'Simpan salinan ini secara aman sebelum memuat versi server.',
+      toast.success("Draft disalin", {
+        description:
+          "Simpan salinan ini secara aman sebelum memuat versi server.",
       });
     } catch {
-      toast.error('Draft tidak dapat disalin', {
-        description: 'Salin isi form secara manual sebelum memuat versi terbaru.',
+      toast.error("Draft tidak dapat disalin", {
+        description:
+          "Salin isi form secara manual sebelum memuat versi terbaru.",
       });
     }
   };
@@ -211,9 +233,37 @@ export function RmeForm({
           register={register}
           allergyReviewStatus={allergyReviewStatus}
           onAllergyReviewChange={(value) =>
-            setValue('allergyReviewStatus', value, { shouldDirty: true })
+            setValue("allergyReviewStatus", value, { shouldDirty: true })
           }
           issues={finalizationIssues}
+        />
+
+        <RmeHistorySection
+          control={control}
+          fields={historyFields}
+          register={register}
+          errors={
+            errors.histories as
+              | Array<
+                  | {
+                      category?: { message?: string };
+                      text?: { message?: string };
+                    }
+                  | undefined
+                >
+              | undefined
+          }
+          disabled={readOnly || busy}
+          onAdd={() =>
+            appendHistory({
+              category: ClinicalHistoryCategory.PAST_MEDICAL,
+              text: "",
+              status: "",
+              onset: "",
+              note: "",
+            })
+          }
+          onRemove={removeHistory}
         />
 
         <div data-rme-section="vitalSigns" tabIndex={-1}>
@@ -224,6 +274,8 @@ export function RmeForm({
             heartRate={heartRate}
             weight={weight}
             height={height}
+            respiratoryRate={respiratoryRate}
+            oxygenSaturation={oxygenSaturation}
             onChange={(field, value) => updateStringValue(field, value)}
           />
           <RmeSectionIssues issues={finalizationIssues} section="vitalSigns" />
@@ -238,8 +290,8 @@ export function RmeForm({
         syncDisabled={isDirty || busy}
         syncDisabledReason={
           busy
-            ? 'Tunggu proses RME selesai.'
-            : 'Simpan perubahan lokal sebelum sinkronisasi.'
+            ? "Tunggu proses RME selesai."
+            : "Simpan perubahan lokal sebelum sinkronisasi."
         }
         canSyncObservation={canSyncObservation}
         syncingObservationId={syncingObservationId}
@@ -257,8 +309,8 @@ export function RmeForm({
           syncDisabled={isDirty || busy}
           syncDisabledReason={
             busy
-              ? 'Tunggu proses RME selesai.'
-              : 'Simpan perubahan lokal sebelum sinkronisasi.'
+              ? "Tunggu proses RME selesai."
+              : "Simpan perubahan lokal sebelum sinkronisasi."
           }
           canSyncDiagnosis={canSyncDiagnosis}
           syncingDiagnosisId={syncingDiagnosisId}
@@ -273,22 +325,27 @@ export function RmeForm({
             prescriptions={prescriptions}
             onAddPrescription={() =>
               append({
-                medicineName: '',
-                dosage: '',
-                frequency: '',
+                medicineName: "",
+                kfaCode: "",
+                dosage: "",
+                frequency: "",
                 quantity: 0,
+                instructions: "",
               })
             }
             onUpdatePrescription={handleUpdatePrescription}
             onApplyPresetBundle={handleApplyPresetBundle}
           />
-          <RmeSectionIssues issues={finalizationIssues} section="prescriptions" />
+          <RmeSectionIssues
+            issues={finalizationIssues}
+            section="prescriptions"
+          />
         </div>
         <RmeCarePlanSection
           register={register}
           disposition={disposition}
           onDispositionChange={(value) =>
-            setValue('disposition', value, { shouldDirty: true })
+            setValue("disposition", value, { shouldDirty: true })
           }
           issues={finalizationIssues}
         />
@@ -312,7 +369,7 @@ export function RmeForm({
 
 export function RmeFormPlaceholder({
   encountersLoading,
-  loadError = '',
+  loadError = "",
   onRetry,
 }: {
   encountersLoading: boolean;
@@ -325,17 +382,29 @@ export function RmeFormPlaceholder({
         kind="error"
         title="Ruang kerja RME tidak tersedia"
         description={loadError}
-        action={onRetry ? (
-          <Button type="button" size="sm" onClick={onRetry}>Coba lagi</Button>
-        ) : undefined}
+        action={
+          onRetry ? (
+            <Button type="button" size="sm" onClick={onRetry}>
+              Coba lagi
+            </Button>
+          ) : undefined
+        }
       />
     );
   }
   return (
     <ScreenState
-      kind={encountersLoading ? 'loading' : 'empty'}
-      title={encountersLoading ? 'Menyiapkan ruang kerja RME' : 'Belum ada pasien yang dipilih'}
-      description={encountersLoading ? 'Antrean pasien sedang dimuat.' : 'Pilih antrean pasien untuk mulai mengisi rekam medis.'}
+      kind={encountersLoading ? "loading" : "empty"}
+      title={
+        encountersLoading
+          ? "Menyiapkan ruang kerja RME"
+          : "Belum ada pasien yang dipilih"
+      }
+      description={
+        encountersLoading
+          ? "Antrean pasien sedang dimuat."
+          : "Pilih antrean pasien untuk mulai mengisi rekam medis."
+      }
     />
   );
 }

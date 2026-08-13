@@ -1,6 +1,8 @@
 import { Prisma } from '@prisma/client';
 import {
   AllergyReviewStatus,
+  ClinicalHistoryCategory,
+  ClinicalHistoryStatus,
   MEDICAL_RECORD_VALIDATION_PROFILE,
   MedicalRecordServiceProfile,
   MedicalRecordStatus,
@@ -13,6 +15,7 @@ import {
 } from '@mitrafaskes/shared';
 
 export const medicalRecordInclude = {
+  histories: true,
   diagnoses: true,
   prescriptions: true,
   observations: true,
@@ -75,6 +78,16 @@ export function toMedicalRecord(
     disposition:
       (record.disposition as OutpatientDisposition | null) ?? undefined,
     anamnesis: record.anamnesis ?? undefined,
+    histories: (record.histories ?? []).map((history) => ({
+      id: history.id,
+      category: history.category as ClinicalHistoryCategory,
+      text: history.text,
+      ...(history.status
+        ? { status: history.status as ClinicalHistoryStatus }
+        : {}),
+      ...(history.onsetAt ? { onset: history.onsetAt.toISOString() } : {}),
+      ...(history.note ? { note: history.note } : {}),
+    })),
     systolic: record.systolic ?? undefined,
     diastolic: record.diastolic ?? undefined,
     heartRate: record.heartRate ?? undefined,

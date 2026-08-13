@@ -1,6 +1,8 @@
 import { BadRequestException } from '@nestjs/common';
 import {
   AllergyReviewStatus,
+  ClinicalHistoryCategory,
+  ClinicalHistoryStatus,
   MEDICAL_RECORD_VALIDATION_PROFILE,
   MedicalRecordServiceProfile,
   OUTPATIENT_GENERAL_VALIDATION_PROFILE,
@@ -9,18 +11,29 @@ import {
   type PrescriptionDto,
   type SaveMedicalRecordDraftDto,
 } from '@mitrafaskes/shared';
-import type { ClinicalObservationStatus } from '@mitrafaskes/shared';
+import type {
+  ClinicalHistoryEntryDto,
+  ClinicalObservationStatus,
+} from '@mitrafaskes/shared';
 import type { RmeObservationDraft } from './rme.observation';
 
 export type ValidatedMedicalRecordDraft = Omit<
   SaveMedicalRecordDraftDto,
-  'diagnoses' | 'prescriptions' | 'observations'
+  'diagnoses' | 'prescriptions' | 'observations' | 'histories'
 > & {
   diagnoses: DiagnosisDto[];
   prescriptions: PrescriptionDto[];
   observations: RmeObservationDraft[];
+  histories: ValidatedClinicalHistoryEntry[];
   serviceProfile: MedicalRecordServiceProfile;
   validationProfile: typeof OUTPATIENT_GENERAL_VALIDATION_PROFILE;
+};
+
+export type ValidatedClinicalHistoryEntry = Omit<
+  ClinicalHistoryEntryDto,
+  'onset'
+> & {
+  onsetAt?: Date;
 };
 
 const recordOf = (input: unknown): Record<string, unknown> =>
@@ -275,6 +288,35 @@ function parseObservationDraft(
   };
 }
 
+function parseClinicalHistories(
+  value: unknown,
+): ValidatedClinicalHistoryEntry[] {
+  if (!Array.isArray(value)) return [];
+  return value.map((entry, index) => {
+    const input = recordOf(entry);
+    const category = optionalEnum(
+      input.category,
+      Object.values(ClinicalHistoryCategory),
+      `histories[${index}].category`,
+    );
+    if (!category) {
+      throw validationError(`histories[${index}].category wajib diisi`);
+    }
+    return {
+      id: optionalString(input.id),
+      category,
+      text: requiredString(input.text, `histories[${index}].text`),
+      status: optionalEnum(
+        input.status,
+        Object.values(ClinicalHistoryStatus),
+        `histories[${index}].status`,
+      ),
+      onsetAt: optionalDate(input.onset, `histories[${index}].onset`),
+      note: optionalString(input.note),
+    };
+  });
+}
+
 export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
   const body = recordOf(input);
   const selectedServiceProfile = serviceProfile(body.serviceProfile);
@@ -312,6 +354,7 @@ export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
   const observations = (
     Array.isArray(body.observations) ? body.observations : []
   ).map((observation, index) => parseObservationDraft(observation, index));
+  const histories = parseClinicalHistories(body.histories);
 
   return {
     encounterId: requiredString(body.encounterId, 'encounterId'),
@@ -336,6 +379,7 @@ export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
       'disposition',
     ),
     anamnesis: optionalString(body.anamnesis),
+    histories,
     systolic: optionalNumber(body.systolic, 'systolic'),
     diastolic: optionalNumber(body.diastolic, 'diastolic'),
     heartRate: optionalNumber(body.heartRate, 'heartRate'),

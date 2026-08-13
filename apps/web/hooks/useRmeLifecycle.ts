@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AllergyReviewStatus,
   MedicalRecordServiceProfile,
@@ -9,20 +9,16 @@ import {
   type RmePreflightResult,
   type RmeValidationIssue,
   type SaveMedicalRecordDraftDto,
-} from '@mitrafaskes/shared';
-import { apiFetch } from '@/lib/auth';
-import type { RmeFormValues } from '@/components/screens/rme/rme-form-schema';
+} from "@mitrafaskes/shared";
+import { apiFetch } from "@/lib/auth";
+import type { RmeFormValues } from "@/components/screens/rme/rme-form-schema";
 import {
   versionConflictFrom,
   type RmeVersionConflict,
-} from '@/components/screens/rme/rme-workspace-model';
+} from "@/components/screens/rme/rme-workspace-model";
 
 export type RmeMutationState =
-  | 'idle'
-  | 'preflighting'
-  | 'saving-draft'
-  | 'draft-saved'
-  | 'finalizing';
+  "idle" | "preflighting" | "saving-draft" | "draft-saved" | "finalizing";
 
 type RmeApiErrorBody = {
   code?: string;
@@ -45,14 +41,11 @@ export class RmeApiError extends Error {
 
 async function readResponse<T>(response: Response): Promise<T | null> {
   const text = await response.text();
-  const body = (text ? JSON.parse(text) : null) as
-    | T
-    | RmeApiErrorBody
-    | null;
+  const body = (text ? JSON.parse(text) : null) as T | RmeApiErrorBody | null;
   if (!response.ok) {
     const error = (body ?? {}) as RmeApiErrorBody;
     throw new RmeApiError(
-      error.message ?? 'RME tidak dapat diproses.',
+      error.message ?? "RME tidak dapat diproses.",
       error.code,
       error.issues ?? error.errors ?? [],
       error.currentVersion,
@@ -69,52 +62,66 @@ function draftPayload(
 ): SaveMedicalRecordDraftDto {
   const observationDefinitions = [
     {
-      field: 'systolic' as const,
-      code: '8480-6',
-      display: 'Systolic blood pressure',
-      unit: 'mmHg',
-      unitCode: 'mm[Hg]',
+      field: "systolic" as const,
+      code: "8480-6",
+      display: "Systolic blood pressure",
+      unit: "mmHg",
+      unitCode: "mm[Hg]",
     },
     {
-      field: 'diastolic' as const,
-      code: '8462-4',
-      display: 'Diastolic blood pressure',
-      unit: 'mmHg',
-      unitCode: 'mm[Hg]',
+      field: "diastolic" as const,
+      code: "8462-4",
+      display: "Diastolic blood pressure",
+      unit: "mmHg",
+      unitCode: "mm[Hg]",
     },
     {
-      field: 'heartRate' as const,
-      code: '8867-4',
-      display: 'Heart rate',
-      unit: 'per minute',
-      unitCode: '/min',
+      field: "heartRate" as const,
+      code: "8867-4",
+      display: "Heart rate",
+      unit: "per minute",
+      unitCode: "/min",
     },
     {
-      field: 'temperature' as const,
-      code: '8310-5',
-      display: 'Body temperature',
-      unit: 'Cel',
-      unitCode: 'Cel',
+      field: "temperature" as const,
+      code: "8310-5",
+      display: "Body temperature",
+      unit: "Cel",
+      unitCode: "Cel",
     },
     {
-      field: 'weight' as const,
-      code: '29463-7',
-      display: 'Body weight',
-      unit: 'kg',
-      unitCode: 'kg',
+      field: "weight" as const,
+      code: "29463-7",
+      display: "Body weight",
+      unit: "kg",
+      unitCode: "kg",
     },
     {
-      field: 'height' as const,
-      code: '8302-2',
-      display: 'Body height',
-      unit: 'cm',
-      unitCode: 'cm',
+      field: "height" as const,
+      code: "8302-2",
+      display: "Body height",
+      unit: "cm",
+      unitCode: "cm",
+    },
+    {
+      field: "respiratoryRate" as const,
+      code: "9279-1",
+      display: "Respiratory rate",
+      unit: "per minute",
+      unitCode: "/min",
+    },
+    {
+      field: "oxygenSaturation" as const,
+      code: "2708-6",
+      display: "Oxygen saturation",
+      unit: "%",
+      unitCode: "%",
     },
   ] as const;
   const knownCodes = new Set<string>([
     ...observationDefinitions.map((definition) => definition.code),
-    '39156-5',
-    'body-mass-index',
+    "39156-5",
+    "body-mass-index",
   ]);
   const observations = observationDefinitions.flatMap((definition) => {
     const rawValue = values[definition.field];
@@ -122,31 +129,37 @@ function draftPayload(
     const existing = (record?.observations ?? []).find(
       (observation) => observation.code.code === definition.code,
     );
-    return [{
-      ...(existing?.id ? { id: existing.id } : {}),
-      category: 'vital-signs',
-      code: {
-        system: 'http://loinc.org',
-        code: definition.code,
-        display: definition.display,
+    return [
+      {
+        ...(existing?.id ? { id: existing.id } : {}),
+        category: "vital-signs",
+        code: {
+          system: "http://loinc.org",
+          code: definition.code,
+          display: definition.display,
+        },
+        value: {
+          type: "quantity" as const,
+          value: Number(rawValue),
+          unit: definition.unit,
+          system: "http://unitsofmeasure.org",
+          code: definition.unitCode,
+        },
+        ...(existing?.effectiveAt ? { effectiveAt: existing.effectiveAt } : {}),
+        ...(existing?.performerId ? { performerId: existing.performerId } : {}),
+        ...(existing?.status ? { status: existing.status } : {}),
+        ...(existing?.provenance ? { provenance: existing.provenance } : {}),
+        ...(existing?.derivedFromObservationIds
+          ? { derivedFromObservationIds: existing.derivedFromObservationIds }
+          : {}),
+        ...(existing?.referenceRange
+          ? { referenceRange: existing.referenceRange }
+          : {}),
+        ...(existing?.interpretation
+          ? { interpretation: existing.interpretation }
+          : {}),
       },
-      value: {
-        type: 'quantity' as const,
-        value: Number(rawValue),
-        unit: definition.unit,
-        system: 'http://unitsofmeasure.org',
-        code: definition.unitCode,
-      },
-      ...(existing?.effectiveAt ? { effectiveAt: existing.effectiveAt } : {}),
-      ...(existing?.performerId ? { performerId: existing.performerId } : {}),
-      ...(existing?.status ? { status: existing.status } : {}),
-      ...(existing?.provenance ? { provenance: existing.provenance } : {}),
-      ...(existing?.derivedFromObservationIds
-        ? { derivedFromObservationIds: existing.derivedFromObservationIds }
-        : {}),
-      ...(existing?.referenceRange ? { referenceRange: existing.referenceRange } : {}),
-      ...(existing?.interpretation ? { interpretation: existing.interpretation } : {}),
-    }];
+    ];
   });
   const untouchedObservations = (record?.observations ?? [])
     .filter((observation) => !knownCodes.has(observation.code.code))
@@ -156,26 +169,42 @@ function draftPayload(
       code: observation.code,
       value: observation.value,
       effectiveAt: observation.effectiveAt,
-      ...(observation.performerId ? { performerId: observation.performerId } : {}),
+      ...(observation.performerId
+        ? { performerId: observation.performerId }
+        : {}),
       status: observation.status,
       provenance: observation.provenance,
       derivedFromObservationIds: observation.derivedFromObservationIds,
-      ...(observation.referenceRange ? { referenceRange: observation.referenceRange } : {}),
-      ...(observation.interpretation ? { interpretation: observation.interpretation } : {}),
+      ...(observation.referenceRange
+        ? { referenceRange: observation.referenceRange }
+        : {}),
+      ...(observation.interpretation
+        ? { interpretation: observation.interpretation }
+        : {}),
     }));
   return {
     encounterId,
     expectedVersion,
     serviceProfile: MedicalRecordServiceProfile.OUTPATIENT_GENERAL,
     ...values,
+    histories: values.histories
+      .filter((history) => history.text.trim().length > 0)
+      .map((history) => ({
+        ...(history.id ? { id: history.id } : {}),
+        category: history.category,
+        text: history.text,
+        ...(history.status ? { status: history.status } : {}),
+        ...(history.onset ? { onset: history.onset } : {}),
+        ...(history.note.trim() ? { note: history.note } : {}),
+      })),
     allergyReviewStatus:
-      values.allergyReviewStatus === ''
+      values.allergyReviewStatus === ""
         ? undefined
-        : values.allergyReviewStatus as AllergyReviewStatus,
+        : (values.allergyReviewStatus as AllergyReviewStatus),
     disposition:
-      values.disposition === ''
+      values.disposition === ""
         ? undefined
-        : values.disposition as OutpatientDisposition,
+        : (values.disposition as OutpatientDisposition),
     systolic: values.systolic ? Number(values.systolic) : undefined,
     diastolic: values.diastolic ? Number(values.diastolic) : undefined,
     heartRate: values.heartRate ? Number(values.heartRate) : undefined,
@@ -192,11 +221,11 @@ export function useRmeLifecycle(encounterId: string | null) {
     record: MedicalRecord | null;
     error: string;
     loading: boolean;
-  }>({ encounterId: null, record: null, error: '', loading: false });
+  }>({ encounterId: null, record: null, error: "", loading: false });
   const [mutation, setMutation] = useState<{
     encounterId: string | null;
     state: RmeMutationState;
-  }>({ encounterId: null, state: 'idle' });
+  }>({ encounterId: null, state: "idle" });
   const [reloadKey, setReloadKey] = useState(0);
   const [conflictState, setConflictState] = useState<{
     encounterId: string | null;
@@ -214,17 +243,14 @@ export function useRmeLifecycle(encounterId: string | null) {
   const record =
     loadState.encounterId === encounterId ? loadState.record : null;
   const loadError =
-    loadState.encounterId === encounterId ? loadState.error : '';
+    loadState.encounterId === encounterId ? loadState.error : "";
   const loading = Boolean(
-    encounterId &&
-      (loadState.encounterId !== encounterId || loadState.loading),
+    encounterId && (loadState.encounterId !== encounterId || loadState.loading),
   );
   const mutationState =
-    mutation.encounterId === encounterId ? mutation.state : 'idle';
+    mutation.encounterId === encounterId ? mutation.state : "idle";
   const conflict =
-    conflictState.encounterId === encounterId
-      ? conflictState.conflict
-      : null;
+    conflictState.encounterId === encounterId ? conflictState.conflict : null;
   const finalizationIssues =
     finalizationState.encounterId === encounterId
       ? finalizationState.issues
@@ -242,7 +268,12 @@ export function useRmeLifecycle(encounterId: string | null) {
       .then((response) => readResponse<MedicalRecord>(response))
       .then((loaded) => {
         if (active) {
-          setLoadState({ encounterId, record: loaded, error: '', loading: false });
+          setLoadState({
+            encounterId,
+            record: loaded,
+            error: "",
+            loading: false,
+          });
         }
       })
       .catch((error: unknown) => {
@@ -251,7 +282,9 @@ export function useRmeLifecycle(encounterId: string | null) {
             encounterId,
             record: null,
             error:
-              error instanceof Error ? error.message : 'RME tidak dapat dimuat.',
+              error instanceof Error
+                ? error.message
+                : "RME tidak dapat dimuat.",
             loading: false,
           });
         }
@@ -267,7 +300,7 @@ export function useRmeLifecycle(encounterId: string | null) {
     setLoadState((current) => ({
       encounterId,
       record: current.encounterId === encounterId ? current.record : null,
-      error: '',
+      error: "",
       loading: true,
     }));
     setConflictState({ encounterId, conflict: null });
@@ -278,28 +311,28 @@ export function useRmeLifecycle(encounterId: string | null) {
   const saveDraft = useCallback(
     async (values: RmeFormValues) => {
       if (!encounterId) return null;
-      setMutation({ encounterId, state: 'saving-draft' });
+      setMutation({ encounterId, state: "saving-draft" });
       try {
-        const response = await apiFetch('/api/rme/draft', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await apiFetch("/api/rme/draft", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
             draftPayload(encounterId, record?.version ?? 0, values, record),
           ),
         });
         const saved = await readResponse<MedicalRecord>(response);
-        if (!saved) throw new RmeApiError('API tidak mengembalikan draft RME.');
-        setLoadState({ encounterId, record: saved, error: '', loading: false });
+        if (!saved) throw new RmeApiError("API tidak mengembalikan draft RME.");
+        setLoadState({ encounterId, record: saved, error: "", loading: false });
         setConflictState({ encounterId, conflict: null });
         setFinalizationState({ encounterId, issues: [] });
-        setMutation({ encounterId, state: 'draft-saved' });
+        setMutation({ encounterId, state: "draft-saved" });
         return saved;
       } catch (error) {
         setConflictState({
           encounterId,
           conflict: versionConflictFrom(error),
         });
-        setMutation({ encounterId, state: 'idle' });
+        setMutation({ encounterId, state: "idle" });
         throw error;
       }
     },
@@ -308,21 +341,22 @@ export function useRmeLifecycle(encounterId: string | null) {
 
   const preflight = useCallback(async () => {
     if (!encounterId || !record) return null;
-    setMutation({ encounterId, state: 'preflighting' });
+    setMutation({ encounterId, state: "preflighting" });
     try {
-      const response = await apiFetch('/api/rme/preflight', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await apiFetch("/api/rme/preflight", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           encounterId,
           expectedVersion: record.version,
         }),
       });
       const result = await readResponse<RmePreflightResult>(response);
-      if (!result) throw new RmeApiError('API tidak mengembalikan hasil preflight.');
+      if (!result)
+        throw new RmeApiError("API tidak mengembalikan hasil preflight.");
       setFinalizationState({ encounterId, issues: result.issues });
       setConflictState({ encounterId, conflict: null });
-      setMutation({ encounterId, state: 'idle' });
+      setMutation({ encounterId, state: "idle" });
       return result;
     } catch (error) {
       setFinalizationState({
@@ -330,14 +364,14 @@ export function useRmeLifecycle(encounterId: string | null) {
         issues: error instanceof RmeApiError ? error.issues : [],
       });
       setConflictState({ encounterId, conflict: versionConflictFrom(error) });
-      setMutation({ encounterId, state: 'idle' });
+      setMutation({ encounterId, state: "idle" });
       throw error;
     }
   }, [encounterId, record]);
 
   const finalize = useCallback(async () => {
     if (!encounterId || !record) return null;
-    setMutation({ encounterId, state: 'finalizing' });
+    setMutation({ encounterId, state: "finalizing" });
     try {
       if (
         !finalizeRequest.current ||
@@ -350,9 +384,9 @@ export function useRmeLifecycle(encounterId: string | null) {
           idempotencyKey: crypto.randomUUID(),
         };
       }
-      const response = await apiFetch('/api/rme/finalize', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await apiFetch("/api/rme/finalize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           encounterId,
           expectedVersion: record.version,
@@ -360,11 +394,17 @@ export function useRmeLifecycle(encounterId: string | null) {
         }),
       });
       const finalized = await readResponse<MedicalRecord>(response);
-      if (!finalized) throw new RmeApiError('API tidak mengembalikan RME final.');
-      setLoadState({ encounterId, record: finalized, error: '', loading: false });
+      if (!finalized)
+        throw new RmeApiError("API tidak mengembalikan RME final.");
+      setLoadState({
+        encounterId,
+        record: finalized,
+        error: "",
+        loading: false,
+      });
       setConflictState({ encounterId, conflict: null });
       setFinalizationState({ encounterId, issues: [] });
-      setMutation({ encounterId, state: 'idle' });
+      setMutation({ encounterId, state: "idle" });
       return finalized;
     } catch (error) {
       setFinalizationState({
@@ -375,7 +415,7 @@ export function useRmeLifecycle(encounterId: string | null) {
         encounterId,
         conflict: versionConflictFrom(error),
       });
-      setMutation({ encounterId, state: 'idle' });
+      setMutation({ encounterId, state: "idle" });
       throw error;
     }
   }, [encounterId, record]);

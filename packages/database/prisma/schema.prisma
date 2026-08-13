@@ -146,55 +146,55 @@ enum LocationMode {
 }
 
 model HealthcareOrganization {
-  id          String               @id @default(uuid())
-  code        String               @unique @db.VarChar(64)
-  name        String               @db.VarChar(150)
-  type        OrganizationType     @default(HEALTHCARE_FACILITY)
-  parentId    String?
-  addressText String?              @db.VarChar(500)
-  phone       String?              @db.VarChar(32)
-  email       String?              @db.VarChar(255)
-  active      Boolean              @default(true)
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  parent      HealthcareOrganization?  @relation("OrganizationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
-  children    HealthcareOrganization[] @relation("OrganizationHierarchy")
-  locations   Location[]           @relation("OrganizationLocations")
-  practitioners User[]             @relation("OrganizationPractitioners")
-  encounters   Encounter[]         @relation("OrganizationEncounters")
+  id            String                   @id @default(uuid())
+  code          String                   @unique @db.VarChar(64)
+  name          String                   @db.VarChar(150)
+  type          OrganizationType         @default(HEALTHCARE_FACILITY)
+  parentId      String?
+  addressText   String?                  @db.VarChar(500)
+  phone         String?                  @db.VarChar(32)
+  email         String?                  @db.VarChar(255)
+  active        Boolean                  @default(true)
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  parent        HealthcareOrganization?  @relation("OrganizationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children      HealthcareOrganization[] @relation("OrganizationHierarchy")
+  locations     Location[]               @relation("OrganizationLocations")
+  practitioners User[]                   @relation("OrganizationPractitioners")
+  encounters    Encounter[]              @relation("OrganizationEncounters")
 
   @@index([parentId, active])
   @@index([active, name])
 }
 
 model Location {
-  id             String                @id @default(uuid())
-  organizationId String
-  parentId       String?
-  code           String                @db.VarChar(64)
-  name           String                @db.VarChar(150)
-  type           LocationType          @default(ROOM)
-  description    String?               @db.VarChar(500)
-  status         LocationStatus       @default(ACTIVE)
-  mode           LocationMode          @default(INSTANCE)
-  physicalTypeCode String?             @db.VarChar(32)
-  addressText    String?               @db.VarChar(500)
-  city           String?               @db.VarChar(100)
-  postalCode     String?               @db.VarChar(16)
-  countryCode    String                @default("ID") @db.VarChar(2)
-  latitude       Decimal?              @db.Decimal(10, 7)
-  longitude      Decimal?              @db.Decimal(10, 7)
-  altitude       Decimal?              @db.Decimal(10, 3)
-  active         Boolean               @default(true)
-  createdAt      DateTime              @default(now())
-  updatedAt      DateTime              @updatedAt
-  organization   HealthcareOrganization @relation("OrganizationLocations", fields: [organizationId], references: [id], onDelete: Restrict)
-  parent         Location?             @relation("LocationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
-  children       Location[]            @relation("LocationHierarchy")
-  practitioners  User[]                @relation("LocationPractitioners")
+  id                      String                           @id @default(uuid())
+  organizationId          String
+  parentId                String?
+  code                    String                           @db.VarChar(64)
+  name                    String                           @db.VarChar(150)
+  type                    LocationType                     @default(ROOM)
+  description             String?                          @db.VarChar(500)
+  status                  LocationStatus                   @default(ACTIVE)
+  mode                    LocationMode                     @default(INSTANCE)
+  physicalTypeCode        String?                          @db.VarChar(32)
+  addressText             String?                          @db.VarChar(500)
+  city                    String?                          @db.VarChar(100)
+  postalCode              String?                          @db.VarChar(16)
+  countryCode             String                           @default("ID") @db.VarChar(2)
+  latitude                Decimal?                         @db.Decimal(10, 7)
+  longitude               Decimal?                         @db.Decimal(10, 7)
+  altitude                Decimal?                         @db.Decimal(10, 3)
+  active                  Boolean                          @default(true)
+  createdAt               DateTime                         @default(now())
+  updatedAt               DateTime                         @updatedAt
+  organization            HealthcareOrganization           @relation("OrganizationLocations", fields: [organizationId], references: [id], onDelete: Restrict)
+  parent                  Location?                        @relation("LocationHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children                Location[]                       @relation("LocationHierarchy")
+  practitioners           User[]                           @relation("LocationPractitioners")
   practitionerAssignments PractitionerLocationAssignment[] @relation("LocationPractitionerAssignments")
-  encounters     Encounter[]           @relation("LocationEncounters")
-  queueCounters  EncounterQueueCounter[] @relation("LocationQueueCounters")
+  encounters              Encounter[]                      @relation("LocationEncounters")
+  queueCounters           EncounterQueueCounter[]          @relation("LocationQueueCounters")
 
   @@unique([organizationId, code])
   @@index([organizationId, active, name])
@@ -205,38 +205,38 @@ model Location {
 // payload. The domain remains a string so new master data datasets can be
 // introduced without changing this table's shape.
 model MasterDataImportRun {
-  id                   String                @id @default(uuid())
-  domain               String                @db.VarChar(64)
-  source               String                @db.VarChar(64)
-  sourceVersion        String?               @db.VarChar(128)
-  status               MasterDataImportStatus @default(PENDING)
-  recordsSeen          Int                   @default(0)
-  recordsUpserted      Int                   @default(0)
-  recordsDeactivated   Int                   @default(0)
-  attemptedAt          DateTime              @default(now())
-  completedAt          DateTime?
-  succeededAt          DateTime?
-  errorCode            String?               @db.VarChar(128)
-  errorMessage         String?               @db.VarChar(1000)
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  id                 String                 @id @default(uuid())
+  domain             String                 @db.VarChar(64)
+  source             String                 @db.VarChar(64)
+  sourceVersion      String?                @db.VarChar(128)
+  status             MasterDataImportStatus @default(PENDING)
+  recordsSeen        Int                    @default(0)
+  recordsUpserted    Int                    @default(0)
+  recordsDeactivated Int                    @default(0)
+  attemptedAt        DateTime               @default(now())
+  completedAt        DateTime?
+  succeededAt        DateTime?
+  errorCode          String?                @db.VarChar(128)
+  errorMessage       String?                @db.VarChar(1000)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
 
   @@index([domain, attemptedAt])
   @@index([domain, status, attemptedAt])
 }
 
 model MasterRegion {
-  id            String           @id @default(uuid())
+  id            String            @id @default(uuid())
   level         MasterRegionLevel
-  code          String           @db.VarChar(32)
-  parentCode    String?          @db.VarChar(32)
-  bpsCode       String?          @db.VarChar(32)
-  name          String           @db.VarChar(160)
-  active        Boolean          @default(true)
-  source        String           @db.VarChar(64)
-  sourceVersion String?          @db.VarChar(128)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
+  code          String            @db.VarChar(32)
+  parentCode    String?           @db.VarChar(32)
+  bpsCode       String?           @db.VarChar(32)
+  name          String            @db.VarChar(160)
+  active        Boolean           @default(true)
+  source        String            @db.VarChar(64)
+  sourceVersion String?           @db.VarChar(128)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
 
   @@unique([level, code])
   @@index([level, parentCode, active, name])
@@ -259,16 +259,16 @@ model MasterMaritalStatus {
 // Generic linkage keeps external provider identifiers out of domain models.
 // SATUSEHAT is the first adapter, but the shape remains provider-agnostic.
 model ExternalResourceLink {
-  id                 String   @id @default(uuid())
-  provider           String   @db.VarChar(64)
-  environment        String   @db.VarChar(32)
-  resourceType       String   @db.VarChar(64)
-  localResourceType  String   @db.VarChar(64)
+  id                 String    @id @default(uuid())
+  provider           String    @db.VarChar(64)
+  environment        String    @db.VarChar(32)
+  resourceType       String    @db.VarChar(64)
+  localResourceType  String    @db.VarChar(64)
   localResourceId    String
-  externalResourceId String   @db.VarChar(128)
+  externalResourceId String    @db.VarChar(128)
   lastSyncedAt       DateTime?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@unique([provider, environment, resourceType, localResourceType, localResourceId], name: "localResourceScope")
   @@unique([provider, environment, resourceType, externalResourceId], name: "externalResourceScope")
@@ -276,27 +276,27 @@ model ExternalResourceLink {
 }
 
 model User {
-  id           String      @id @default(uuid())
-  username     String      @unique
-  passwordHash String
-  fullName     String
-  role         Role
-  nik          String?     @unique @db.VarChar(16)
-  birthDate    DateTime?   @db.Date
-  gender       Gender?
-  active       Boolean     @default(true)
-  sipNumber    String?
-  strNumber    String?
-  organizationId String?
-  locationId     String?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
-  organization HealthcareOrganization? @relation("OrganizationPractitioners", fields: [organizationId], references: [id], onDelete: SetNull)
-  location     Location?              @relation("LocationPractitioners", fields: [locationId], references: [id], onDelete: SetNull)
-  locationAssignments PractitionerLocationAssignment[] @relation("PractitionerLocationAssignments")
-  encounters   Encounter[] @relation("DoctorEncounters")
-  encounterStatusHistory EncounterStatusHistory[] @relation("EncounterStatusActor")
-  clinicalObservations ClinicalObservation[] @relation("ObservationPerformer")
+  id                     String                           @id @default(uuid())
+  username               String                           @unique
+  passwordHash           String
+  fullName               String
+  role                   Role
+  nik                    String?                          @unique @db.VarChar(16)
+  birthDate              DateTime?                        @db.Date
+  gender                 Gender?
+  active                 Boolean                          @default(true)
+  sipNumber              String?
+  strNumber              String?
+  organizationId         String?
+  locationId             String?
+  createdAt              DateTime                         @default(now())
+  updatedAt              DateTime                         @updatedAt
+  organization           HealthcareOrganization?          @relation("OrganizationPractitioners", fields: [organizationId], references: [id], onDelete: SetNull)
+  location               Location?                        @relation("LocationPractitioners", fields: [locationId], references: [id], onDelete: SetNull)
+  locationAssignments    PractitionerLocationAssignment[] @relation("PractitionerLocationAssignments")
+  encounters             Encounter[]                      @relation("DoctorEncounters")
+  encounterStatusHistory EncounterStatusHistory[]         @relation("EncounterStatusActor")
+  clinicalObservations   ClinicalObservation[]            @relation("ObservationPerformer")
 
   @@index([role, active, fullName])
   @@index([organizationId, active, fullName])
@@ -465,28 +465,28 @@ model PatientRelationship {
 }
 
 model Encounter {
-  id              String                @id @default(uuid())
-  encounterNumber String                @unique @db.VarChar(32)
+  id              String                   @id @default(uuid())
+  encounterNumber String                   @unique @db.VarChar(32)
   patientId       String
   doctorId        String
   organizationId  String
   locationId      String
-  queueDate       DateTime              @db.Date
+  queueDate       DateTime                 @db.Date
   queueNumber     Int
-  status          EncounterStatus       @default(WAITING)
-  arrivedAt       DateTime              @default(now())
+  status          EncounterStatus          @default(WAITING)
+  arrivedAt       DateTime                 @default(now())
   startedAt       DateTime?
   completedAt     DateTime?
   cancelledAt     DateTime?
-  version         Int                   @default(1)
-  patient         Patient               @relation(fields: [patientId], references: [id])
-  doctor          User                  @relation("DoctorEncounters", fields: [doctorId], references: [id])
-  organization    HealthcareOrganization @relation("OrganizationEncounters", fields: [organizationId], references: [id], onDelete: Restrict)
-  location        Location              @relation("LocationEncounters", fields: [locationId], references: [id], onDelete: Restrict)
+  version         Int                      @default(1)
+  patient         Patient                  @relation(fields: [patientId], references: [id])
+  doctor          User                     @relation("DoctorEncounters", fields: [doctorId], references: [id])
+  organization    HealthcareOrganization   @relation("OrganizationEncounters", fields: [organizationId], references: [id], onDelete: Restrict)
+  location        Location                 @relation("LocationEncounters", fields: [locationId], references: [id], onDelete: Restrict)
   statusHistory   EncounterStatusHistory[]
   medicalRecord   MedicalRecord?
-  createdAt       DateTime              @default(now())
-  updatedAt       DateTime              @updatedAt
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
 
   @@unique([locationId, queueDate, queueNumber])
   @@index([queueDate, locationId, status])
@@ -495,101 +495,118 @@ model Encounter {
 }
 
 model EncounterStatusHistory {
-  id           String          @id @default(uuid())
-  encounterId  String
-  status       EncounterStatus
-  periodStart  DateTime
-  periodEnd    DateTime?
-  actorUserId  String?
-  actorUsername String        @db.VarChar(128)
-  actorRole    Role
-  createdAt    DateTime        @default(now())
-  encounter    Encounter       @relation(fields: [encounterId], references: [id], onDelete: Cascade)
-  actorUser    User?           @relation("EncounterStatusActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  id            String          @id @default(uuid())
+  encounterId   String
+  status        EncounterStatus
+  periodStart   DateTime
+  periodEnd     DateTime?
+  actorUserId   String?
+  actorUsername String          @db.VarChar(128)
+  actorRole     Role
+  createdAt     DateTime        @default(now())
+  encounter     Encounter       @relation(fields: [encounterId], references: [id], onDelete: Cascade)
+  actorUser     User?           @relation("EncounterStatusActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   @@index([encounterId, periodStart])
   @@index([actorUserId, createdAt])
 }
 
 model EncounterQueueCounter {
-  id              String   @id @default(uuid())
-  locationId      String
-  queueDate       DateTime @db.Date
-  lastIssuedNumber Int     @default(0)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-  location        Location @relation("LocationQueueCounters", fields: [locationId], references: [id], onDelete: Cascade)
+  id               String   @id @default(uuid())
+  locationId       String
+  queueDate        DateTime @db.Date
+  lastIssuedNumber Int      @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  location         Location @relation("LocationQueueCounters", fields: [locationId], references: [id], onDelete: Cascade)
 
   @@unique([locationId, queueDate])
 }
 
 model MedicalRecord {
-  id                String              @id @default(uuid())
-  encounterId       String              @unique
-  status            MedicalRecordStatus @default(DRAFT)
-  version           Int                 @default(1)
-  authoredBy        String?             @db.VarChar(128)
-  authoredAt        DateTime?
-  finalizedBy       String?             @db.VarChar(128)
-  finalizedAt       DateTime?
-  serviceProfile    String              @default("OUTPATIENT_GENERAL") @db.VarChar(64)
-  validationProfile String              @default("OUTPATIENT_GENERAL_V1") @db.VarChar(64)
-  chiefComplaint    String?
-  presentIllness    String?
+  id                  String                    @id @default(uuid())
+  encounterId         String                    @unique
+  status              MedicalRecordStatus       @default(DRAFT)
+  version             Int                       @default(1)
+  authoredBy          String?                   @db.VarChar(128)
+  authoredAt          DateTime?
+  finalizedBy         String?                   @db.VarChar(128)
+  finalizedAt         DateTime?
+  serviceProfile      String                    @default("OUTPATIENT_GENERAL") @db.VarChar(64)
+  validationProfile   String                    @default("OUTPATIENT_GENERAL_V1") @db.VarChar(64)
+  chiefComplaint      String?
+  presentIllness      String?
   allergyReviewStatus AllergyReviewStatus?
-  allergyDetails     String?
-  physicalExam      String?
-  education         String?
-  carePlan          String?
-  disposition       OutpatientDisposition?
-  anamnesis         String?
-  systolic          Int?
-  diastolic         Int?
-  heartRate         Int?
-  temperature       Float?
-  weight            Float?
-  height            Float?
-  encounter         Encounter           @relation(fields: [encounterId], references: [id])
-  observations      ClinicalObservation[]
-  diagnoses         Diagnosis[]
-  prescriptions     Prescription[]
-  auditEvents       MedicalRecordAuditEvent[]
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  allergyDetails      String?
+  physicalExam        String?
+  education           String?
+  carePlan            String?
+  disposition         OutpatientDisposition?
+  anamnesis           String?
+  systolic            Int?
+  diastolic           Int?
+  heartRate           Int?
+  temperature         Float?
+  weight              Float?
+  height              Float?
+  encounter           Encounter                 @relation(fields: [encounterId], references: [id])
+  histories           ClinicalHistoryEntry[]
+  observations        ClinicalObservation[]
+  diagnoses           Diagnosis[]
+  prescriptions       Prescription[]
+  auditEvents         MedicalRecordAuditEvent[]
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+}
+
+model ClinicalHistoryEntry {
+  id              String        @id @default(uuid())
+  medicalRecordId String
+  category        String        @db.VarChar(32)
+  text            String
+  status          String?       @db.VarChar(32)
+  onsetAt         DateTime?
+  note            String?
+  medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([medicalRecordId, category])
+  @@index([medicalRecordId, onsetAt])
 }
 
 // Typed clinical child records remain local-first. Provider adapters translate
 // their code/value representation into the remote resource contract.
 model ClinicalObservation {
-  id                        String         @id @default(uuid())
+  id                        String        @id @default(uuid())
   medicalRecordId           String
-  category                  String         @db.VarChar(64)
-  codeSystem                String?        @db.VarChar(255)
-  code                      String         @db.VarChar(128)
-  codeDisplay               String?        @db.VarChar(255)
-  valueType                 String         @db.VarChar(32)
+  category                  String        @db.VarChar(64)
+  codeSystem                String?       @db.VarChar(255)
+  code                      String        @db.VarChar(128)
+  codeDisplay               String?       @db.VarChar(255)
+  valueType                 String        @db.VarChar(32)
   valueQuantityValue        Float?
-  valueQuantityUnit         String?        @db.VarChar(64)
-  valueQuantitySystem       String?        @db.VarChar(255)
-  valueQuantityCode         String?        @db.VarChar(64)
-  valueCodeSystem           String?        @db.VarChar(255)
-  valueCode                 String?        @db.VarChar(128)
-  valueCodeDisplay          String?        @db.VarChar(255)
+  valueQuantityUnit         String?       @db.VarChar(64)
+  valueQuantitySystem       String?       @db.VarChar(255)
+  valueQuantityCode         String?       @db.VarChar(64)
+  valueCodeSystem           String?       @db.VarChar(255)
+  valueCode                 String?       @db.VarChar(128)
+  valueCodeDisplay          String?       @db.VarChar(255)
   valueBoolean              Boolean?
   valueString               String?
   effectiveAt               DateTime
   performerId               String?
-  status                    String         @default("final") @db.VarChar(32)
-  provenance                String         @default("original") @db.VarChar(32)
-  derivedFromObservationIds String[]       @default([])
+  status                    String        @default("final") @db.VarChar(32)
+  provenance                String        @default("original") @db.VarChar(32)
+  derivedFromObservationIds String[]      @default([])
   referenceRangeLow         Float?
   referenceRangeHigh        Float?
-  interpretationCode        String?        @db.VarChar(128)
-  interpretationDisplay     String?        @db.VarChar(255)
-  medicalRecord             MedicalRecord  @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
-  performer                 User?          @relation("ObservationPerformer", fields: [performerId], references: [id], onDelete: Restrict)
-  createdAt                 DateTime       @default(now())
-  updatedAt                 DateTime       @updatedAt
+  interpretationCode        String?       @db.VarChar(128)
+  interpretationDisplay     String?       @db.VarChar(255)
+  medicalRecord             MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Cascade)
+  performer                 User?         @relation("ObservationPerformer", fields: [performerId], references: [id], onDelete: Restrict)
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
 
   @@index([medicalRecordId, effectiveAt])
   @@index([medicalRecordId, code])
@@ -598,21 +615,21 @@ model ClinicalObservation {
 }
 
 model MedicalRecordAuditEvent {
-  id             String        @id @default(uuid())
+  id              String        @id @default(uuid())
   medicalRecordId String
-  actorUserId    String?
-  actorUsername  String        @db.VarChar(128)
-  actorRole      Role
-  action         String        @db.VarChar(64)
-  entityType     String        @db.VarChar(64)
-  entityId       String
-  entityVersion  Int
+  actorUserId     String?
+  actorUsername   String        @db.VarChar(128)
+  actorRole       Role
+  action          String        @db.VarChar(64)
+  entityType      String        @db.VarChar(64)
+  entityId        String
+  entityVersion   Int
   expectedVersion Int
-  occurredAt     DateTime      @default(now())
-  requestId      String        @db.VarChar(128)
-  correlationId  String        @db.VarChar(128)
-  idempotencyKey String        @unique @db.VarChar(128)
-  medicalRecord  MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Restrict)
+  occurredAt      DateTime      @default(now())
+  requestId       String        @db.VarChar(128)
+  correlationId   String        @db.VarChar(128)
+  idempotencyKey  String        @unique @db.VarChar(128)
+  medicalRecord   MedicalRecord @relation(fields: [medicalRecordId], references: [id], onDelete: Restrict)
 
   @@index([entityType, entityId, occurredAt])
   @@index([actorUserId, occurredAt])
@@ -620,16 +637,17 @@ model MedicalRecordAuditEvent {
 }
 
 model MasterIcd10 {
-  code          String      @id @db.VarChar(32)
-  display       String      @db.VarChar(255)
-  nameIndo      String?     @db.VarChar(255)
-  nameEng       String      @db.VarChar(255)
-  active        Boolean     @default(true)
+  code          String   @id @db.VarChar(32)
+  display       String   @db.VarChar(255)
+  nameIndo      String?  @db.VarChar(255)
+  nameEng       String   @db.VarChar(255)
+  active        Boolean  @default(true)
   displayOrder  Int
-  source        String      @db.VarChar(64)
-  sourceVersion String?     @db.VarChar(128)
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  source        String   @db.VarChar(64)
+  sourceVersion String?  @db.VarChar(128)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
   @@index([active, displayOrder, code])
   @@index([active, display])
   @@index([active, nameIndo])

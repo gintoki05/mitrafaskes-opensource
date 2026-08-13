@@ -32,6 +32,7 @@ import {
   readMedicalRecord,
   readMedicalRecordAfterChildReplacement,
   replaceDraftDiagnoses,
+  replaceDraftHistories,
   replaceDraftObservations,
   requireDraft,
   resolveActorUserId,
@@ -151,6 +152,7 @@ export class RmeService {
           include: medicalRecordInclude,
         });
         await replaceDraftObservations(transaction, created.id, observations);
+        await replaceDraftHistories(transaction, created.id, draft.histories);
         return readMedicalRecordAfterChildReplacement(
           transaction,
           created.id,
@@ -168,6 +170,7 @@ export class RmeService {
         include: medicalRecordInclude,
       });
       await replaceDraftDiagnoses(transaction, locked.id, draft.diagnoses);
+      await replaceDraftHistories(transaction, locked.id, draft.histories);
       await replaceDraftObservations(transaction, locked.id, observations);
       return readMedicalRecordAfterChildReplacement(
         transaction,

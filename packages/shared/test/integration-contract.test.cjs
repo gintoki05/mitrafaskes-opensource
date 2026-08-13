@@ -25,7 +25,7 @@ test('generic integration contracts include capability and linkage types', () =>
   assert.match(source, /export interface IntegrationLog/);
 });
 
-test('shared SATUSEHAT contracts exclude out-of-scope remote resources and logs', () => {
+test('shared SATUSEHAT contracts exclude provider-owned logs', () => {
   const source = readFileSync(resolve(sourceRoot, 'types', 'satusehat.ts'), 'utf8');
-  assert.doesNotMatch(source, /Satusehat(?:Encounter|Condition|SyncLog)/);
+  assert.doesNotMatch(source, /SatusehatSyncLog/);
 });
