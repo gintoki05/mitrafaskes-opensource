@@ -461,3 +461,10 @@ export interface SatusehatEncounterPreview {
   externalResourceId?: string;
   payload: SatusehatEncounterPayload;
 }
+
+export interface SatusehatEncounterSyncResult
+  extends SatusehatEncounterPreview {
+  syncedRemotely: boolean;
+  syncLogId: string;
+  response?: unknown;
+}

@@ -1,4 +1,8 @@
-import { IntegrationRegistry, IntegrationDisabledError, IntegrationProviderNotFoundError } from './integration-registry';
+import {
+  IntegrationRegistry,
+  IntegrationDisabledError,
+  IntegrationProviderNotFoundError,
+} from './integration-registry';
 import type { IntegrationCoreOptions } from './integration.types';
 
 const options: IntegrationCoreOptions = {
@@ -7,7 +11,13 @@ const options: IntegrationCoreOptions = {
       provider: 'SATUSEHAT',
       displayName: 'SATUSEHAT',
       environment: 'sandbox',
-      resources: ['Organization', 'Location', 'Practitioner', 'Patient'],
+      resources: [
+        'Organization',
+        'Location',
+        'Practitioner',
+        'Patient',
+        'Encounter',
+      ],
       operations: ['search', 'import', 'preview', 'sync', 'link', 'logs'],
     },
   ],
@@ -26,15 +36,17 @@ describe('IntegrationRegistry', () => {
         }),
       ],
     });
-    await expect(registry.getConnectionStatus('satusehat')).rejects.toBeInstanceOf(
-      IntegrationDisabledError,
-    );
+    await expect(
+      registry.getConnectionStatus('satusehat'),
+    ).rejects.toBeInstanceOf(IntegrationDisabledError);
   });
 
   it('returns a typed 503 for a known provider without a plugin', () => {
     const registry = new IntegrationRegistry(options);
 
-    expect(() => registry.getPlugin('SATUSEHAT')).toThrow(IntegrationDisabledError);
+    expect(() => registry.getPlugin('SATUSEHAT')).toThrow(
+      IntegrationDisabledError,
+    );
     try {
       registry.getPlugin('SATUSEHAT');
     } catch (error) {
@@ -44,6 +56,14 @@ describe('IntegrationRegistry', () => {
         expect.objectContaining({ code: 'INTEGRATION_DISABLED' }),
       );
     }
+  });
+
+  it('blocks Encounter sync routing while the optional plugin is disabled', () => {
+    const registry = new IntegrationRegistry(options);
+
+    expect(() => registry.getResourceHandler('SATUSEHAT', 'Encounter')).toThrow(
+      IntegrationDisabledError,
+    );
   });
 
   it('returns a typed 404 for an unknown provider', () => {

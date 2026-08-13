@@ -5,7 +5,7 @@ import { EncounterStatus, Role } from '@prisma/client';
 import type { EncounterWithRelations } from '../../encounters/encounter.repository';
 import { validateSatusehatEncounterPayload } from './satusehat-encounter.contract';
 import { toSatusehatEncounterPayload } from './satusehat-encounter.mapper';
-import { SatusehatEncounterService } from './satusehat-encounter.service';
+import { SatusehatEncounterPreflightService } from './satusehat-encounter-preflight.service';
 
 const fixture = (name: string): unknown =>
   JSON.parse(
@@ -162,25 +162,32 @@ describe('SatusehatEncounterService preview', () => {
       });
     });
     const syncLogCreate = jest.fn();
+    const locationFindUnique = jest.fn().mockResolvedValue({
+      organizationId: 'organization-local-1',
+    });
     const prisma = {
       externalResourceLink: { findUnique },
       satusehatSyncLog: { create: syncLogCreate },
+      location: {
+        findUnique: locationFindUnique,
+      },
     };
     const encounters = {
       findById: jest.fn().mockResolvedValue(completedEncounter()),
     };
     return {
-      service: new SatusehatEncounterService(
+      service: new SatusehatEncounterPreflightService(
         prisma as never,
         encounters as never,
       ),
       findUnique,
       syncLogCreate,
+      locationFindUnique,
     };
   };
 
   it('uses the contract mapper for CREATE without network or sync-log writes', async () => {
-    const { service, syncLogCreate } = buildService();
+    const { service, syncLogCreate, findUnique } = buildService();
     const fetchSpy = jest.spyOn(global, 'fetch');
 
     const preview = await service.previewEncounter('enc-local-42');
@@ -189,6 +196,15 @@ describe('SatusehatEncounterService preview', () => {
     expect(preview.payload).toEqual(fixture('valid'));
     expect(syncLogCreate).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();
+    expect(findUnique).toHaveBeenCalledTimes(5);
+    for (const [input] of findUnique.mock.calls) {
+      expect(input.where.localResourceScope).toEqual(
+        expect.objectContaining({
+          provider: 'SATUSEHAT',
+          environment: 'sandbox',
+        }),
+      );
+    }
     fetchSpy.mockRestore();
   });
 
@@ -219,4 +235,20 @@ describe('SatusehatEncounterService preview', () => {
       expect(syncLogCreate).not.toHaveBeenCalled();
     },
   );
+
+  it('blocks preview when Location belongs to a different local Organization', async () => {
+    const { service, locationFindUnique } = buildService();
+    locationFindUnique.mockResolvedValue({
+      organizationId: 'organization-local-other',
+    });
+
+    await expect(
+      service.previewEncounter('enc-local-42'),
+    ).rejects.toMatchObject({
+      constructor: ConflictException,
+      response: expect.objectContaining({
+        code: 'SATUSEHAT_ENCOUNTER_LOCATION_ORGANIZATION_MISMATCH',
+      }),
+    });
+  });
 });

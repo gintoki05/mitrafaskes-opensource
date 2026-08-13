@@ -120,6 +120,7 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
         {
           resourceType: 'Encounter',
           preview: (id) => this.satusehatEncounters.previewEncounter(id),
+          sync: (id) => this.satusehatEncounters.syncEncounter(id),
         },
       ],
     ]);
@@ -233,12 +234,26 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
       this.prisma.satusehatSyncLog.findMany({
         where: { resourceType, resourceId: { in: [...localResourceIds] } },
         orderBy: { updatedAt: 'desc' },
-        select: { resourceId: true, status: true, errorMessage: true, updatedAt: true },
+        select: {
+          resourceId: true,
+          status: true,
+          errorMessage: true,
+          updatedAt: true,
+          payload: true,
+        },
       }),
     ]);
     const linkById = new Map(links.map((link) => [link.localResourceId, link]));
     const logById = new Map<string, (typeof logs)[number]>();
-    for (const log of logs) if (!logById.has(log.resourceId)) logById.set(log.resourceId, log);
+    for (const log of logs) {
+      if (
+        resourceType === 'Encounter' &&
+        !this.encounterLogMatchesEnvironment(log.payload, environment)
+      ) {
+        continue;
+      }
+      if (!logById.has(log.resourceId)) logById.set(log.resourceId, log);
+    }
 
     for (const localResourceId of localResourceIds) {
       const link = linkById.get(localResourceId);
@@ -314,5 +329,20 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
 
   private readEnvironment(): string {
     return process.env.SATUSEHAT_ENVIRONMENT?.trim() || DEFAULT_ENVIRONMENT;
+  }
+
+  private encounterLogMatchesEnvironment(
+    payload: unknown,
+    environment: string,
+  ): boolean {
+    if (!this.isRecord(payload)) return false;
+    const metadata = payload.metadata;
+    return (
+      this.isRecord(metadata) && metadata.environment === environment
+    );
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null;
   }
 }

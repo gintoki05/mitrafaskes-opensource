@@ -8,6 +8,14 @@ export const LOCAL_LOCATION_RESOURCE_TYPE = 'Location';
 export const LOCAL_PATIENT_RESOURCE_TYPE = 'Patient';
 export const LOCAL_PRACTITIONER_RESOURCE_TYPE = 'User';
 
+// These are project-owned adapter versions recorded with every sync attempt.
+// They explain historical payloads without claiming an unversioned upstream
+// SATUSEHAT documentation page as a stable release.
+export const ENCOUNTER_MAPPER_VERSION = 'mitrafaskes-encounter-mapper-v1';
+export const ENCOUNTER_FHIR_PROFILE_VERSION = 'FHIR-R4-Encounter-v1';
+export const ENCOUNTER_PLAYBOOK_VERSION =
+  'mitrafaskes-satusehat-rawat-jalan-v1';
+
 export const ENCOUNTER_IDENTIFIER_SYSTEM_PREFIX =
   'http://sys-ids.kemkes.go.id/encounter/';
 export const ACT_CODE_SYSTEM =

@@ -105,6 +105,55 @@ describe('SatusehatFhirClient', () => {
     );
   });
 
+  it('sends Encounter create and update requests to stable FHIR endpoints', async () => {
+    fetchMock
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 201,
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            JSON.stringify({ resourceType: 'Encounter', id: 'encounter-1' }),
+          ),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        text: jest
+          .fn()
+          .mockResolvedValue(
+            JSON.stringify({ resourceType: 'Encounter', id: 'encounter-1' }),
+          ),
+      });
+    const auth = {
+      getAccessToken: jest.fn().mockResolvedValue('access-token'),
+    } as unknown as SatusehatAuthService;
+    const client = new SatusehatFhirClient(auth);
+    const payload = { resourceType: 'Encounter', status: 'in-progress' };
+
+    await client.createEncounter(payload);
+    await client.updateEncounter('encounter-1', payload);
+
+    const requestCalls = fetchMock.mock.calls as unknown[][];
+    expect(requestCalls[0]?.[0]).toEqual(
+      new URL('https://satusehat.example.test/fhir-r4/v1/Encounter'),
+    );
+    expect(requestCalls[0]?.[1]).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify(payload),
+      }),
+    );
+    expect(requestCalls[1]?.[0]).toEqual(
+      new URL(
+        'https://satusehat.example.test/fhir-r4/v1/Encounter/encounter-1',
+      ),
+    );
+    expect(requestCalls[1]?.[1]).toEqual(
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify(payload) }),
+    );
+  });
+
   it('gets and searches Location resources with official query parameters', async () => {
     fetchMock
       .mockResolvedValueOnce({

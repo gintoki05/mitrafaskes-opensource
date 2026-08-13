@@ -14,6 +14,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
+import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
+import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
+import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 import type { EncounterApiError } from './useEncounterActions';
 
 type QueuePanelProps = {
@@ -23,8 +26,10 @@ type QueuePanelProps = {
   encountersError: string;
   onPageChange: (page: number) => void;
   onStatusChange: (encounter: Encounter, status: EncounterStatus) => Promise<void>;
+  onSyncEncounter: (encounter: Encounter) => void;
   canStart: boolean;
   canCancel: boolean;
+  canSync: boolean;
 };
 
 const statusLabels: Record<EncounterStatus, string> = {
@@ -64,8 +69,10 @@ export function QueuePanel({
   encountersError,
   onPageChange,
   onStatusChange,
+  onSyncEncounter,
   canStart,
   canCancel,
+  canSync,
 }: QueuePanelProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
@@ -128,6 +135,14 @@ export function QueuePanel({
           const isUpdating = updatingId === encounter.id;
           const canCancelThis = canCancel && (encounter.status === 'WAITING' || encounter.status === 'IN_PROGRESS');
           const canStartThis = canStart && encounter.status === 'WAITING';
+          const satusehatLinkage = getIntegrationLinkage(
+            encounter.integrations,
+            'SATUSEHAT',
+          );
+          const latestSync = getLatestIntegrationSync(
+            encounter.integrations,
+            'SATUSEHAT',
+          );
 
           return (
             <div key={encounter.id} className="flex min-w-0 flex-wrap items-start justify-between gap-4 px-4 py-4 transition-colors hover:bg-primary/[0.035] sm:px-5">
@@ -154,6 +169,10 @@ export function QueuePanel({
                 <Badge className={statusClass(encounter.status)}>
                   {statusLabels[encounter.status]}
                 </Badge>
+                <SatusehatLinkageBadge
+                  linkage={satusehatLinkage}
+                  resourceName={encounter.encounterNumber}
+                />
                 <div className="flex items-center gap-1" role="group" aria-label={`Aksi lifecycle ${encounter.encounterNumber}`}>
                   {canStartThis ? (
                     <Button
@@ -182,7 +201,22 @@ export function QueuePanel({
                       <X className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
                   ) : null}
+                  <SatusehatActionGroup
+                    resourceName={encounter.encounterNumber}
+                    onSync={() => onSyncEncounter(encounter)}
+                    syncDisabled={!canSync}
+                    syncDisabledReason="Peran Anda tidak memiliki izin sinkronisasi Encounter."
+                  />
                 </div>
+                {latestSync?.status === 'FAILED' ? (
+                  <p
+                    className="basis-full text-right text-[11px] text-destructive"
+                    role="status"
+                    title={latestSync.errorMessage}
+                  >
+                    Sync terakhir gagal · buka aksi SATUSEHAT untuk detail
+                  </p>
+                ) : null}
               </div>
             </div>
           );

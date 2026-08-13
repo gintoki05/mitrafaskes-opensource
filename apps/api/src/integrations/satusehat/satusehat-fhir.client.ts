@@ -143,6 +143,14 @@ export class SatusehatFhirClient {
     return this.mergeSearchPages(firstPage);
   }
 
+  createEncounter(payload: unknown): Promise<unknown> {
+    return this.request('POST', ['Encounter'], payload);
+  }
+
+  updateEncounter(id: string, payload: unknown): Promise<unknown> {
+    return this.request('PUT', ['Encounter', id], payload);
+  }
+
   private async request(
     method: FhirRequestMethod,
     pathSegments: string[],

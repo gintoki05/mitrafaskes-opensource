@@ -16,10 +16,16 @@ import { SatusehatLocationService } from './satusehat-location.service';
 import { SatusehatMasterWilayahAdapter } from './satusehat-master-wilayah.adapter';
 import { SatusehatIntegrationPlugin } from './satusehat-integration.plugin';
 import { SatusehatEncounterService } from './satusehat-encounter.service';
+import { SatusehatEncounterPreflightService } from './satusehat-encounter-preflight.service';
 import { SatusehatTerminologyRegistry } from './satusehat-terminology.registry';
 
 @Module({
-  imports: [PatientsModule, PractitionersModule, MasterDataModule, EncountersModule],
+  imports: [
+    PatientsModule,
+    PractitionersModule,
+    MasterDataModule,
+    EncountersModule,
+  ],
   providers: [
     SatusehatAuthService,
     SatusehatFhirClient,
@@ -32,6 +38,7 @@ import { SatusehatTerminologyRegistry } from './satusehat-terminology.registry';
     SatusehatLocationImportService,
     SatusehatLocationLinkService,
     SatusehatMasterWilayahAdapter,
+    SatusehatEncounterPreflightService,
     SatusehatEncounterService,
     SatusehatTerminologyRegistry,
     SatusehatIntegrationPlugin,

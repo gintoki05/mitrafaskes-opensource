@@ -5,6 +5,8 @@ import type {
   CreateEncounterDto,
   Encounter,
   EncounterStatus,
+  SatusehatEncounterPreview,
+  SatusehatEncounterSyncResult,
   UpdateEncounterStatusDto,
 } from '@mitrafaskes/shared';
 import { apiFetch } from '@/lib/auth';
@@ -18,6 +20,7 @@ type ApiErrorPayload = {
   code?: string;
   message?: string | string[];
   errors?: Array<{ message?: string }>;
+  issues?: Array<{ message?: string }>;
 };
 
 async function readApiError(
@@ -34,8 +37,9 @@ async function readApiError(
   const message = Array.isArray(payload.message)
     ? payload.message.join(' ')
     : payload.message;
-  const details = Array.isArray(payload.errors)
-    ? payload.errors
+  const issues = payload.issues ?? payload.errors;
+  const details = Array.isArray(issues)
+    ? issues
         .map((issue) => issue.message)
         .filter((issue): issue is string => Boolean(issue))
         .join(' ')
@@ -85,5 +89,21 @@ export function useEncounterActions() {
     [],
   );
 
-  return { create, updateStatus };
+  const previewSatusehat = useCallback((id: string) => {
+    return requestJson<SatusehatEncounterPreview>(
+      `/api/integrations/SATUSEHAT/resources/Encounter/${id}/preview`,
+      { method: 'GET' },
+      'Preview Encounter SATUSEHAT belum tersedia.',
+    );
+  }, []);
+
+  const syncSatusehat = useCallback((id: string) => {
+    return requestJson<SatusehatEncounterSyncResult>(
+      `/api/integrations/SATUSEHAT/resources/Encounter/${id}/sync`,
+      { method: 'POST' },
+      'Encounter belum dapat disinkronkan ke SATUSEHAT.',
+    );
+  }, []);
+
+  return { create, updateStatus, previewSatusehat, syncSatusehat };
 }
