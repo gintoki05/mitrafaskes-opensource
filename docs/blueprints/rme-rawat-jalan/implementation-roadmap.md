@@ -12,9 +12,9 @@ bagi issue terkait.
 | 1. RME lifecycle foundation | `DRAFT`/`FINAL`, versioning, ownership, migration | PRI-17 | Draft tersimpan tanpa menutup Encounter; final immutable |
 | 2. Workspace konsultasi | Persistent patient context, section UX, state lengkap | PRI-18, PRI-19 | Empty/loading/error/conflict dan data kosong aman |
 | 3. Finalisasi aman | Preflight, transaction, audit, idempotency | PRI-20, PRI-21 | RME final + Encounter complete atomik |
-| 4. Encounter remote | Create/update, linkage/log, UI, repeat sync | PRI-23, PRI-24 | Sandbox create + update ID sama |
-| 5. Condition | Model diagnosis/complaint + terminology + adapter | PRI-19, PRI-23, PRI-29 | Diagnosis utama/sekunder linked dan idempotent |
-| 6. Observation | Observation typed + LOINC/UCUM + adapter | PRI-19, PRI-23, PRI-29 | Vital signs tersimpan typed dan sync per item |
+| 4. Encounter remote | Create/update, linkage/log, UI, repeat sync | PRI-23, PRI-24 | **API/plugin dan UI tersedia; sandbox create + update ID sama masih perlu diverifikasi** |
+| 5. Condition | Model diagnosis/complaint + terminology + adapter | PRI-19, PRI-23, PRI-29 | **Adapter, dependency preflight, linkage/log, dan UI sync tersedia; sandbox perlu diverifikasi** |
+| 6. Observation | Observation typed + LOINC/UCUM + adapter | PRI-19, PRI-23, PRI-29 | **Adapter, dependency preflight, linkage/log, dan sync per item tersedia; sandbox perlu diverifikasi** |
 | 7. Profil konsultasi gigi | DentalExam, odontogram, index, timeline, validation profile | Belum dipetakan | Dental journey lokal dan histori lolos review dokter gigi |
 | 8. Clinical extensions | Allergy, Procedure, MedicationRequest, Plan, dental imaging | PRI-19, PRI-23 | Resource hanya dibuat bila data berlaku |
 | 9. Summary & reliability | Encounter finished, Composition, monitor/retry | PRI-23, PRI-24 | Urutan final dapat direkonsiliasi |
@@ -24,7 +24,9 @@ bagi issue terkait.
 
 Fase schema/workspace lokal boleh dikerjakan sebelum adapter remote agar data
 memiliki stable IDs. Namun urutan **resource integrasi** tetap Encounter,
-Condition, lalu Observation.
+Condition, lalu Observation. Ketiga adapter tersebut sudah tersedia di codebase;
+pekerjaan berikutnya adalah verifikasi sandbox, rekonsiliasi, dan perluasan
+klinis yang belum menjadi resource aktif.
 
 ## Slice implementasi terdekat
 
@@ -51,22 +53,29 @@ Masuk ke PRI-17, PRI-20, dan PRI-21.
 
 ### Slice C — Encounter sync lengkap
 
-- FHIR client `createEncounter` dan `updateEncounter`;
-- register capability `sync`, bukan hanya `preview`;
-- dependency preflight dan mapper version metadata;
-- persist `ExternalResourceLink` + `SatusehatSyncLog`;
-- shared action/badge pada list/detail dan refresh setelah sukses;
-- unit test sukses/failure/repeat sync serta sandbox manual test.
+Status: **implementasi API/plugin dan UI tersedia; verifikasi sandbox masih
+terbuka**.
+
+- **Sudah tersedia:** FHIR client `createEncounter` dan `updateEncounter`,
+  capability `sync`, dependency preflight, dan mapper version metadata;
+- **Sudah tersedia:** persist `ExternalResourceLink` + `SatusehatSyncLog`,
+  shared action/badge pada list/detail, dan refresh setelah sukses;
+- unit test sukses/failure/repeat sync sudah tersedia; sandbox manual create dan
+  repeat update masih menjadi exit gate.
 
 Masuk ke PRI-23; monitor/retry generik dilanjutkan di PRI-24.
 
 ### Slice D — model klinis terstruktur
 
-- stable child IDs untuk Complaint, Diagnosis, dan ClinicalObservation;
-- terminology registry/version untuk ICD-10, LOINC, UCUM;
-- migrate/read compatibility untuk kolom vital/diagnosis lama;
-- Condition adapter setelah Encounter linked;
-- Observation adapter setelah Condition delivery gate tercapai.
+Status: **model typed, Condition adapter, dan Observation adapter tersedia;
+perluasan terminology dan validasi sandbox tetap terbuka**.
+
+- **Sudah tersedia:** stable child IDs untuk Diagnosis dan ClinicalObservation,
+  Condition adapter dengan preflight setelah dependency Encounter linked,
+  Observation adapter dengan preflight setelah dependency Encounter linked, dan
+  UI RME untuk sync per diagnosis serta per Observation;
+- terminology registry/version dan migrate/read compatibility untuk kolom
+  vital/diagnosis lama masih perlu dirapikan sebagai pekerjaan lanjutan.
 
 Masuk ke PRI-19, PRI-23, dan PRI-29.
 

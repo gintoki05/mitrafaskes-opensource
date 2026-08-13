@@ -54,15 +54,20 @@ gigi baru diaktifkan setelah gate Encounter, Condition, dan Observation lulus.
 
 ## Matriks implementasi
 
-| Resource | Peran dalam RME | Status codebase saat baseline | Fase |
+Status di bawah ini diperbarui pada 13 Agustus 2026 berdasarkan adapter API,
+gateway integrasi, UI RME, dan test yang ada di codebase. Status **aktif** berarti
+jalur kode dan kontrak pengujian tersedia; verifikasi sandbox SATUSEHAT tetap
+menjadi gate delivery terpisah.
+
+| Resource | Peran dalam RME | Status codebase saat ini | Fase |
 | --- | --- | --- | --- |
 | Organization | Identitas faskes | Sync/link tersedia | Prasyarat |
 | Location | Unit/tempat layanan | Sync/link tersedia | Prasyarat |
 | Practitioner | Tenaga kesehatan | Sync/link tersedia | Prasyarat |
 | Patient | Identitas pasien | Sync/link tersedia | Prasyarat |
-| Encounter | Wadah satu kunjungan rawat jalan | Local lifecycle + preview; remote belum aktif | **Berikutnya** |
-| Condition | Keluhan/diagnosis sesuai profile | Model diagnosis minimal; adapter belum aktif | Setelah Encounter |
-| Observation | Vital sign dan hasil pengamatan | Masih embedded; adapter belum aktif | Setelah Condition |
+| Encounter | Wadah satu kunjungan rawat jalan | Local lifecycle + preview + create/update sync; UI sync tersedia | **Aktif** |
+| Condition | Keluhan/diagnosis sesuai profile | Diagnosis terstruktur + preflight/mapper + create/update sync; UI sync tersedia | **Aktif** |
+| Observation | Vital sign dan hasil pengamatan | Observation typed + preflight/mapper + create/update sync per item; UI sync tersedia | **Aktif** |
 | Observation gigi | Odontogram, kondisi mulut, DMF/OHI-S dan indeks lain | Model/UI belum ada | Profil gigi setelah Observation inti |
 | AllergyIntolerance | Alergi/intoleransi | Belum terstruktur | Lanjutan inti |
 | Procedure | Tindakan yang dilakukan | Belum ada entity | Lanjutan inti |

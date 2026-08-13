@@ -1,7 +1,7 @@
 # Blueprint RME Rawat Jalan
 
 Status: **draft untuk review produk, klinis, rekam medis, dan akreditasi**  
-Baseline: 12 Agustus 2026  
+Baseline: 12 Agustus 2026; status implementasi diperbarui 13 Agustus 2026
 Ruang lingkup: pendaftaran sampai kunjungan selesai untuk rawat jalan FKTP,
 termasuk profil konsultasi umum dan gigi
 
@@ -121,27 +121,35 @@ Urutan resource integrasi yang tidak boleh dilompati adalah:
 
 `Organization -> Location -> Practitioner -> Patient -> Encounter -> Condition -> Observation`
 
-Empat resource pertama sudah mempunyai jalur integrasi. Pekerjaan berikutnya
-adalah menyelesaikan **Encounter** dari preview menjadi create/update yang benar,
-baru dilanjutkan ke Condition dan Observation. Resource lain tetap tercantum
-sebagai rancangan target, bukan status implementasi.
+Tujuh resource pada urutan tersebut sekarang sudah mempunyai adapter API/plugin
+dan kontrak test untuk preview, dependency, serta create/update sesuai resource
+masing-masing. Encounter mempunyai jalur sync dari pendaftaran, sedangkan
+Condition dan Observation dapat disinkronkan melalui workspace RME. Resource
+lain tetap tercantum sebagai rancangan target, bukan status implementasi.
 
-## Baseline codebase saat blueprint dibuat
+## Baseline codebase dan pembaruan implementasi
 
 - Encounter lokal dan lifecycle antrean sudah tersedia.
-- Adapter Encounter baru menyediakan preview; remote create/update belum aktif.
-- `MedicalRecord` masih disimpan sekaligus dan menyelesaikan Encounter; belum
-  memiliki status `DRAFT`/`FINAL`.
-- vital sign masih berupa kolom pada `MedicalRecord`, diagnosis masih minimal,
-  dan resep masih dominan berupa string.
-- form RME masih berisi nilai contoh yang terlihat seperti data klinis nyata.
-- antrean masih dapat menandai kunjungan selesai tanpa gate finalisasi RME.
-- outbox klinis, Condition, Observation, dan Composition belum aktif.
+- Adapter Encounter sekarang menyediakan preview, create/update, linkage, log,
+  dan repeat sync dengan remote ID yang sama.
+- `MedicalRecord` memiliki lifecycle `DRAFT`/`FINAL`, versioning, preflight,
+  dan finalisasi atomik; record final menjadi read-only.
+- vital sign dapat disimpan sebagai child Observation typed, diagnosis memiliki
+  child ID stabil dan adapter Condition, sedangkan resep masih dominan berupa
+  string.
+- form RME dimulai tanpa nilai klinis contoh dan menyediakan sync per diagnosis
+  serta per Observation.
+- antrean dan finalisasi memakai gate lifecycle sehingga penyelesaian Encounter
+  mengikuti finalisasi RME.
+- Condition dan Observation sudah aktif pada API/plugin, linkage, sync log,
+  dependency preflight, dan UI RME; Composition, outbox klinis, dan profil gigi
+  belum aktif.
 - belum ada entitas, route, form, ataupun visual odontogram; dukungan gigi saat
   ini baru tampak pada master diagnosis ICD-10 dan penyebutan Poli Gigi.
 
-Daftar tersebut adalah gap yang disengaja untuk roadmap, bukan klaim bahwa
-fitur tersebut telah selesai.
+Daftar tersebut membedakan fitur yang sudah tersedia dari gap roadmap. Status
+adapter yang aktif tetap belum menjadi klaim bahwa sandbox SATUSEHAT, validasi
+klinis, atau kesiapan produksi telah selesai.
 
 ## Batasan
 
