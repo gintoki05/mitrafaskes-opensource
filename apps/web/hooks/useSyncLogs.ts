@@ -2,7 +2,10 @@
 
 import { useCallback, useEffect, useReducer } from 'react';
 import { apiFetch } from '@/lib/auth';
-import type { ListMeta } from '@mitrafaskes/shared';
+import type {
+  IntegrationReconciliationResponse,
+  ListMeta,
+} from '@mitrafaskes/shared';
 import type { SyncLog, SyncLogListResponse } from '@/lib/clinical-types';
 
 type SyncLogsState = {
@@ -14,6 +17,9 @@ type SyncLogsState = {
   error: string;
   retryError: string;
   successMessage: string;
+  reconciliation: IntegrationReconciliationResponse | null;
+  reconciliationLoading: boolean;
+  reconciliationError: string;
 };
 
 type SyncLogsAction =
@@ -23,7 +29,10 @@ type SyncLogsAction =
   | { type: 'select-log'; log: SyncLog }
   | { type: 'retry-start'; logId: string }
   | { type: 'retry-success'; response: SyncLogListResponse }
-  | { type: 'retry-failure'; error: string };
+  | { type: 'retry-failure'; error: string }
+  | { type: 'reconcile-start' }
+  | { type: 'reconcile-success'; report: IntegrationReconciliationResponse }
+  | { type: 'reconcile-failure'; error: string };
 
 const initialState: SyncLogsState = {
   logs: [],
@@ -34,6 +43,9 @@ const initialState: SyncLogsState = {
   error: '',
   retryError: '',
   successMessage: '',
+  reconciliation: null,
+  reconciliationLoading: false,
+  reconciliationError: '',
 };
 
 function withSelectedLog(
@@ -88,6 +100,45 @@ function syncLogsReducer(
       };
     case 'retry-failure':
       return { ...state, retryingId: null, retryError: action.error };
+    case 'reconcile-start':
+      return { ...state, reconciliationLoading: true, reconciliationError: '' };
+    case 'reconcile-success':
+      return {
+        ...state,
+        reconciliation: action.report,
+        reconciliationLoading: false,
+        reconciliationError: '',
+      };
+    case 'reconcile-failure':
+      return {
+        ...state,
+        reconciliationLoading: false,
+        reconciliationError: action.error,
+      };
+  }
+}
+
+async function readApiError(
+  response: Response,
+  fallback: string,
+): Promise<Error> {
+  try {
+    const payload = (await response.json()) as {
+      message?: string | string[];
+      code?: string;
+      retryAfterAt?: string;
+    };
+    const message = Array.isArray(payload.message)
+      ? payload.message.join(' ')
+      : payload.message;
+    const error = new Error(message || fallback);
+    if (payload.code) error.name = payload.code;
+    if (payload.retryAfterAt) {
+      error.message = `${error.message} Coba lagi setelah ${new Date(payload.retryAfterAt).toLocaleString('id-ID')}.`;
+    }
+    return error;
+  } catch {
+    return new Error(fallback);
   }
 }
 
@@ -96,8 +147,24 @@ async function requestLogs(page = 1): Promise<SyncLogListResponse> {
   const response = await apiFetch(
     `/api/integrations/SATUSEHAT/logs?${params.toString()}`,
   );
-  if (!response.ok) throw new Error('Log sinkronisasi tidak dapat dimuat.');
+  if (!response.ok) {
+    throw await readApiError(response, 'Log sinkronisasi tidak dapat dimuat.');
+  }
   return response.json() as Promise<SyncLogListResponse>;
+}
+
+async function requestReconciliation(): Promise<IntegrationReconciliationResponse> {
+  const response = await apiFetch(
+    '/api/integrations/SATUSEHAT/reconciliation',
+    { cache: 'no-store' },
+  );
+  if (!response.ok) {
+    throw await readApiError(
+      response,
+      'Rekonsiliasi integrasi tidak dapat dijalankan.',
+    );
+  }
+  return response.json() as Promise<IntegrationReconciliationResponse>;
 }
 
 function messageFrom(error: unknown, fallback: string): string {
@@ -153,7 +220,10 @@ export function useSyncLogs(enabled = true) {
         { method: 'POST' },
       );
       if (!response.ok) {
-        throw new Error('Retry sinkronisasi tidak dapat dijalankan.');
+        throw await readApiError(
+          response,
+          'Retry sinkronisasi tidak dapat dijalankan.',
+        );
       }
       dispatch({
         type: 'retry-success',
@@ -167,9 +237,28 @@ export function useSyncLogs(enabled = true) {
     }
   }, [enabled]);
 
+  const reconcile = useCallback(async () => {
+    if (!enabled) return;
+    dispatch({ type: 'reconcile-start' });
+    try {
+      dispatch({
+        type: 'reconcile-success',
+        report: await requestReconciliation(),
+      });
+    } catch (error) {
+      dispatch({
+        type: 'reconcile-failure',
+        error: messageFrom(
+          error,
+          'Rekonsiliasi integrasi tidak dapat dijalankan.',
+        ),
+      });
+    }
+  }, [enabled]);
+
   const selectLog = useCallback((log: SyncLog) => {
     dispatch({ type: 'select-log', log });
   }, []);
 
-  return { ...state, refresh, retry, selectLog };
+  return { ...state, refresh, retry, reconcile, selectLog };
 }

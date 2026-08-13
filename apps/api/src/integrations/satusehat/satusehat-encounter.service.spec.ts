@@ -2,6 +2,7 @@
 import { BadGatewayException, ConflictException } from '@nestjs/common';
 import type { SatusehatEncounterPreview } from '@mitrafaskes/shared';
 import { SatusehatEncounterService } from './satusehat-encounter.service';
+import { SatusehatFhirError } from './satusehat-fhir.client';
 
 const localResourceId = 'enc-local-42';
 const remoteResourceId = 'encounter-remote-42';
@@ -208,5 +209,57 @@ describe('SatusehatEncounterService sync', () => {
       }),
     });
     expect(context.linkUpsert).not.toHaveBeenCalled();
+  });
+
+  it('persists retry classification and backoff on a transient failure', async () => {
+    const context = buildService();
+    context.fhir.createEncounter.mockRejectedValue(
+      new SatusehatFhirError(
+        'SATUSEHAT_FHIR_REQUEST_FAILED',
+        'FHIR temporary outage',
+        503,
+      ),
+    );
+
+    await expect(
+      context.service.syncEncounter(localResourceId),
+    ).rejects.toBeInstanceOf(BadGatewayException);
+
+    const failureUpdate = context.syncLogUpdate.mock.calls.at(-1)?.[0] as {
+      data: { payload: { metadata: Record<string, unknown> } };
+    };
+    expect(failureUpdate.data.payload.metadata).toEqual(
+      expect.objectContaining({
+        errorCode: 'SATUSEHAT_FHIR_REQUEST_FAILED',
+        errorCategory: 'TRANSIENT',
+        retryable: true,
+        operatorAction: 'RETRY_WITH_BACKOFF',
+        retryAttempt: 0,
+        backoffMs: expect.any(Number),
+        retryAfterAt: expect.any(String),
+      }),
+    );
+  });
+
+  it('records retry context without changing the local resource identifier', async () => {
+    const context = buildService();
+
+    await context.service.syncEncounter(localResourceId, {
+      retryAttempt: 2,
+      retryOfLogId: 'sync-failed-1',
+    });
+
+    const pendingPayload = context.syncLogCreate.mock.calls[0]?.[0]?.data
+      ?.payload as Record<string, Record<string, unknown>>;
+    expect(pendingPayload.metadata).toEqual(
+      expect.objectContaining({
+        localResourceId,
+        retryAttempt: 2,
+        retryOfLogId: 'sync-failed-1',
+      }),
+    );
+    expect(context.fhir.createEncounter).toHaveBeenCalledWith(
+      expect.objectContaining({ resourceType: 'Encounter' }),
+    );
   });
 });

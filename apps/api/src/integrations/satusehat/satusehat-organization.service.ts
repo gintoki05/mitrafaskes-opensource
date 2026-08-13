@@ -15,6 +15,12 @@ import {
   SatusehatFhirClient,
   SatusehatFhirError,
 } from './satusehat-fhir.client';
+import type { IntegrationSyncContext } from '../integration.types';
+import {
+  addSatusehatSyncMetadata,
+  classifySatusehatSyncFailure,
+  retryAttemptFromContext,
+} from './satusehat-sync-log';
 import { SatusehatOrganizationTransformer } from './organization-transformer';
 
 const PROVIDER = 'SATUSEHAT';
@@ -81,8 +87,14 @@ export class SatusehatOrganizationService {
 
   async syncOrganization(
     localResourceId: string,
+    context?: IntegrationSyncContext,
   ): Promise<SatusehatOrganizationSyncResult> {
     const preview = await this.previewOrganization(localResourceId);
+    const retryAttempt = retryAttemptFromContext(context);
+    const attemptMetadata = {
+      retryAttempt,
+      ...(context?.retryOfLogId ? { retryOfLogId: context.retryOfLogId } : {}),
+    };
 
     if (preview.operation === 'LINK_EXISTING_ROOT') {
       const config = this.readConfig();
@@ -91,7 +103,10 @@ export class SatusehatOrganizationService {
           resourceType: RESOURCE_TYPE,
           resourceId: localResourceId,
           status: 'PENDING',
-          payload: preview.payload as unknown as Prisma.InputJsonValue,
+          payload: addSatusehatSyncMetadata(
+            preview.payload,
+            attemptMetadata,
+          ) as Prisma.InputJsonValue,
         },
       });
 
@@ -118,7 +133,10 @@ export class SatusehatOrganizationService {
           data: {
             status: 'SUCCESS',
             satusehatId: config.organizationId,
-            payload: preview.payload as unknown as Prisma.InputJsonValue,
+            payload: addSatusehatSyncMetadata(
+              preview.payload,
+              attemptMetadata,
+            ) as Prisma.InputJsonValue,
             errorMessage: null,
           },
         });
@@ -130,7 +148,14 @@ export class SatusehatOrganizationService {
           response,
         };
       } catch (error) {
-        await this.markSyncFailed(syncLog.id, error);
+        await this.markSyncFailed(
+          syncLog.id,
+          error,
+          addSatusehatSyncMetadata(preview.payload, {
+            ...attemptMetadata,
+            ...classifySatusehatSyncFailure(error, retryAttempt),
+          }) as Prisma.InputJsonValue,
+        );
         throw this.toHttpError(error);
       }
     }
@@ -140,7 +165,10 @@ export class SatusehatOrganizationService {
         resourceType: RESOURCE_TYPE,
         resourceId: localResourceId,
         status: 'PENDING',
-        payload: preview.payload as unknown as Prisma.InputJsonValue,
+        payload: addSatusehatSyncMetadata(
+          preview.payload,
+          attemptMetadata,
+        ) as Prisma.InputJsonValue,
       },
     });
 
@@ -184,7 +212,14 @@ export class SatusehatOrganizationService {
         response,
       };
     } catch (error) {
-      await this.markSyncFailed(syncLog.id, error);
+      await this.markSyncFailed(
+        syncLog.id,
+        error,
+        addSatusehatSyncMetadata(preview.payload, {
+          ...attemptMetadata,
+          ...classifySatusehatSyncFailure(error, retryAttempt),
+        }) as Prisma.InputJsonValue,
+      );
       throw this.toHttpError(error);
     }
   }
@@ -336,12 +371,14 @@ export class SatusehatOrganizationService {
   private async markSyncFailed(
     syncLogId: string,
     error: unknown,
+    payload: Prisma.InputJsonValue,
   ): Promise<void> {
     await this.prisma.satusehatSyncLog.update({
       where: { id: syncLogId },
       data: {
         status: 'FAILED',
         errorMessage: this.safeErrorMessage(error),
+        payload,
       },
     });
   }

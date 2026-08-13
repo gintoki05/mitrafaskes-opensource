@@ -87,8 +87,23 @@ export class IntegrationGatewayController {
 
   @Post(':provider/logs/:logId/retry')
   @RequirePermission(AccessPermission.SYNC_RETRY)
-  retryLog(@Param('provider') provider: string, @Param('logId') logId: string) {
-    return this.integrations.retryLog(provider, logId);
+  retryLog(
+    @Param('provider') provider: string,
+    @Param('logId') logId: string,
+    @Req() request: { user: AuthenticatedUser },
+  ) {
+    return this.integrations.retryLog(provider, logId, {
+      includePayload: evaluateAccess(
+        request.user.role,
+        AccessPermission.SYNC_PAYLOAD_READ,
+      ).allowed,
+    });
+  }
+
+  @Get(':provider/reconciliation')
+  @RequirePermission(AccessPermission.SYNC_STATUS_READ)
+  reconcile(@Param('provider') provider: string) {
+    return this.integrations.reconcile(provider);
   }
 
   @Get(':provider/resources/:resourceType/search')

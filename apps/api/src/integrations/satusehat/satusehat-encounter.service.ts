@@ -19,6 +19,11 @@ import {
   SatusehatFhirClient,
   SatusehatFhirError,
 } from './satusehat-fhir.client';
+import type { IntegrationSyncContext } from '../integration.types';
+import {
+  classifySatusehatSyncFailure,
+  retryAttemptFromContext,
+} from './satusehat-sync-log';
 
 @Injectable()
 export class SatusehatEncounterService {
@@ -36,26 +41,39 @@ export class SatusehatEncounterService {
 
   async syncEncounter(
     localResourceId: string,
+    context?: IntegrationSyncContext,
   ): Promise<SatusehatEncounterSyncResult> {
     const environment = this.readEnvironment();
+    const retryAttempt = retryAttemptFromContext(context);
     const syncLog = await this.prisma.satusehatSyncLog.create({
       data: {
         resourceType: ENCOUNTER_RESOURCE_TYPE,
         resourceId: localResourceId,
         status: 'PENDING',
-        payload: this.buildLogPayload(localResourceId, environment),
+        payload: this.buildLogPayload(localResourceId, environment, undefined, {
+          retryAttempt,
+          ...(context?.retryOfLogId
+            ? { retryOfLogId: context.retryOfLogId }
+            : {}),
+        }),
       },
     });
 
+    let preview: SatusehatEncounterPreview | undefined;
     try {
-      const preview = await this.preflight.preparePreview(
+      preview = await this.preflight.preparePreview(
         localResourceId,
         environment,
       );
       await this.prisma.satusehatSyncLog.update({
         where: { id: syncLog.id },
         data: {
-          payload: this.buildLogPayload(localResourceId, environment, preview),
+          payload: this.buildLogPayload(localResourceId, environment, preview, {
+            retryAttempt,
+            ...(context?.retryOfLogId
+              ? { retryOfLogId: context.retryOfLogId }
+              : {}),
+          }),
         },
       });
 
@@ -133,7 +151,17 @@ export class SatusehatEncounterService {
         response,
       };
     } catch (error) {
-      await this.markSyncFailed(syncLog.id, error);
+      const failure = classifySatusehatSyncFailure(error, retryAttempt);
+      await this.markSyncFailed(
+        syncLog.id,
+        error,
+        this.buildLogPayload(localResourceId, environment, preview, {
+          ...(context?.retryOfLogId
+            ? { retryOfLogId: context.retryOfLogId }
+            : {}),
+          ...failure,
+        }),
+      );
       throw this.toHttpError(error);
     }
   }
@@ -142,6 +170,7 @@ export class SatusehatEncounterService {
     localResourceId: string,
     environment: string,
     preview?: SatusehatEncounterPreview,
+    metadata: Record<string, unknown> = {},
   ): Prisma.InputJsonValue {
     return {
       metadata: {
@@ -154,6 +183,7 @@ export class SatusehatEncounterService {
         fhirProfileVersion: ENCOUNTER_FHIR_PROFILE_VERSION,
         playbookVersion: ENCOUNTER_PLAYBOOK_VERSION,
         operation: preview?.operation ?? 'PREFLIGHT',
+        ...metadata,
       },
       ...(preview
         ? { resource: preview.payload as unknown as Prisma.InputJsonValue }
@@ -170,12 +200,14 @@ export class SatusehatEncounterService {
   private async markSyncFailed(
     syncLogId: string,
     error: unknown,
+    payload: Prisma.InputJsonValue,
   ): Promise<void> {
     await this.prisma.satusehatSyncLog.update({
       where: { id: syncLogId },
       data: {
         status: 'FAILED',
         errorMessage: this.safeErrorMessage(error),
+        payload,
       },
     });
   }

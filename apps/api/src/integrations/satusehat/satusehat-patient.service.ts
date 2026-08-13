@@ -20,6 +20,12 @@ import {
   SatusehatFhirClient,
   SatusehatFhirError,
 } from './satusehat-fhir.client';
+import type { IntegrationSyncContext } from '../integration.types';
+import {
+  addSatusehatSyncMetadata,
+  classifySatusehatSyncFailure,
+  retryAttemptFromContext,
+} from './satusehat-sync-log';
 import { PatientsService } from '../../patients/patients.service';
 import {
   DEFAULT_SATUSEHAT_ENVIRONMENT,
@@ -79,14 +85,25 @@ export class SatusehatPatientService {
     };
   }
 
-  async syncPatient(localResourceId: string): Promise<SatusehatPatientSyncResult> {
+  async syncPatient(
+    localResourceId: string,
+    context?: IntegrationSyncContext,
+  ): Promise<SatusehatPatientSyncResult> {
     const preview = await this.previewPatient(localResourceId);
+    const retryAttempt = retryAttemptFromContext(context);
+    const attemptMetadata = {
+      retryAttempt,
+      ...(context?.retryOfLogId ? { retryOfLogId: context.retryOfLogId } : {}),
+    };
     const syncLog = await this.prisma.satusehatSyncLog.create({
       data: {
         resourceType: PATIENT_RESOURCE_TYPE,
         resourceId: localResourceId,
         status: 'PENDING',
-        payload: preview.payload as unknown as Prisma.InputJsonValue,
+        payload: addSatusehatSyncMetadata(
+          preview.payload,
+          attemptMetadata,
+        ) as Prisma.InputJsonValue,
       },
     });
 
@@ -129,7 +146,14 @@ export class SatusehatPatientService {
         response,
       };
     } catch (error) {
-      await this.markSyncFailed(syncLog.id, error);
+      await this.markSyncFailed(
+        syncLog.id,
+        error,
+        addSatusehatSyncMetadata(preview.payload, {
+          ...attemptMetadata,
+          ...classifySatusehatSyncFailure(error, retryAttempt),
+        }) as Prisma.InputJsonValue,
+      );
       throw this.toHttpError(error, 'SATUSEHAT_PATIENT_SYNC_FAILED');
     }
   }
@@ -320,13 +344,18 @@ export class SatusehatPatientService {
     });
   }
 
-  private async markSyncFailed(syncLogId: string, error: unknown): Promise<void> {
+  private async markSyncFailed(
+    syncLogId: string,
+    error: unknown,
+    payload?: Prisma.InputJsonValue,
+  ): Promise<void> {
     try {
       await this.prisma.satusehatSyncLog.update({
         where: { id: syncLogId },
         data: {
           status: 'FAILED',
           errorMessage: this.safeErrorMessage(error),
+          ...(payload ? { payload } : {}),
         },
       });
     } catch {

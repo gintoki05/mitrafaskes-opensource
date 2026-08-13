@@ -1,19 +1,35 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
+import { UserRole } from '@mitrafaskes/shared';
 import { SessionPermissionGuard } from '../auth/session-permission.guard';
 import { IntegrationGatewayController } from './integration-gateway.controller';
 
-function contextForSync(authorization?: string) {
+function contextFor(
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- prototype method metadata is the subject under test.
+  handler: Function,
+  authorization?: string,
+) {
   const request = {
     headers: authorization ? { authorization } : {},
   };
   return {
     // Metadata is attached to the prototype method; the guard only inspects it.
     // eslint-disable-next-line @typescript-eslint/unbound-method
-    getHandler: () => IntegrationGatewayController.prototype.sync,
+    getHandler: () => handler,
     getClass: () => IntegrationGatewayController,
     switchToHttp: () => ({ getRequest: () => request }),
   } as never;
+}
+
+function contextForSync(authorization?: string) {
+  return contextFor(IntegrationGatewayController.prototype.sync, authorization);
+}
+
+function contextForRetry(authorization?: string) {
+  return contextFor(
+    IntegrationGatewayController.prototype.retryLog,
+    authorization,
+  );
 }
 
 describe('IntegrationGatewayController sync permission', () => {
@@ -35,5 +51,42 @@ describe('IntegrationGatewayController sync permission', () => {
     expect(
       guard.canActivate(contextForSync('Bearer mock-jwt-token-admin')),
     ).toBe(true);
+    expect(
+      guard.canActivate(contextForSync('Bearer mock-jwt-token-perawat_ani')),
+    ).toBe(true);
+  });
+
+  it('protects the operator retry endpoint with sync.retry', () => {
+    expect(() =>
+      guard.canActivate(contextForRetry('Bearer mock-jwt-token-dr_budi')),
+    ).toThrow(ForbiddenException);
+    expect(
+      guard.canActivate(contextForRetry('Bearer mock-jwt-token-perawat_ani')),
+    ).toBe(true);
+  });
+});
+
+describe('IntegrationGatewayController retry payload visibility', () => {
+  it('keeps raw retry payloads limited to Admin while allowing Perawat retry', async () => {
+    const retryLog = jest.fn().mockResolvedValue({ ok: true });
+    const controller = new IntegrationGatewayController({ retryLog } as never);
+
+    await controller.retryLog('SATUSEHAT', 'log-perawat', {
+      user: {
+        id: 'usr-perawat_ani',
+        username: 'perawat_ani',
+        role: UserRole.PERAWAT,
+      },
+    });
+    await controller.retryLog('SATUSEHAT', 'log-admin', {
+      user: { id: 'usr-admin', username: 'admin', role: UserRole.ADMIN },
+    });
+
+    expect(retryLog).toHaveBeenNthCalledWith(1, 'SATUSEHAT', 'log-perawat', {
+      includePayload: false,
+    });
+    expect(retryLog).toHaveBeenNthCalledWith(2, 'SATUSEHAT', 'log-admin', {
+      includePayload: true,
+    });
   });
 });

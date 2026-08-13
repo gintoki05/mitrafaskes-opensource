@@ -9,6 +9,7 @@ import type {
   IntegrationCapability,
   IntegrationConnectionResponse,
   IntegrationLogListResponse,
+  IntegrationReconciliationResponse,
   ResourceIntegrationSummary,
 } from '@mitrafaskes/shared';
 import { INTEGRATION_CORE_OPTIONS } from './integration.tokens';
@@ -17,6 +18,7 @@ import type {
   IntegrationPlugin,
   IntegrationProviderDefinition,
   IntegrationQuery,
+  IntegrationRetryOptions,
   IntegrationResourceHandler,
 } from './integration.types';
 
@@ -99,8 +101,23 @@ export class IntegrationRegistry {
     return this.getPlugin(provider).listLogs(input);
   }
 
-  retryLog(provider: string, logId: string): Promise<unknown> {
-    return this.getPlugin(provider).retryLog(logId);
+  retryLog(
+    provider: string,
+    logId: string,
+    options: IntegrationRetryOptions = { includePayload: false },
+  ): Promise<unknown> {
+    return this.getPlugin(provider).retryLog(logId, options);
+  }
+
+  reconcile(provider: string): Promise<IntegrationReconciliationResponse> {
+    const plugin = this.getPlugin(provider);
+    if (!plugin.reconcile) {
+      throw new NotFoundException({
+        code: 'INTEGRATION_OPERATION_NOT_FOUND',
+        message: `Rekonsiliasi tidak didukung oleh provider ${provider}`,
+      });
+    }
+    return plugin.reconcile();
   }
 
   getResourceHandler(

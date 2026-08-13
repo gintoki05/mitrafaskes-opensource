@@ -1,4 +1,7 @@
-import { SatusehatAuthService } from './satusehat-auth.service';
+import {
+  SatusehatAuthError,
+  SatusehatAuthService,
+} from './satusehat-auth.service';
 import { SatusehatFhirClient } from './satusehat-fhir.client';
 
 describe('SatusehatFhirClient', () => {
@@ -443,5 +446,51 @@ describe('SatusehatFhirClient', () => {
       code: 'SATUSEHAT_FHIR_PAGINATION_URL_INVALID',
     });
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('captures Retry-After for transient remote failures', async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 503,
+      headers: { get: jest.fn().mockReturnValue('7') },
+      text: jest.fn().mockResolvedValue('{}'),
+    });
+    const auth = {
+      getAccessToken: jest.fn().mockResolvedValue('access-token'),
+    } as unknown as SatusehatAuthService;
+
+    await expect(
+      new SatusehatFhirClient(auth).getPatient('patient-1'),
+    ).rejects.toMatchObject({
+      code: 'SATUSEHAT_FHIR_REQUEST_FAILED',
+      retryAfterSeconds: 7,
+      classification: {
+        category: 'TRANSIENT',
+        retryable: true,
+      },
+    });
+  });
+
+  it('maps token authentication failures to the same non-retryable auth classification', async () => {
+    const auth = {
+      getAccessToken: jest.fn().mockRejectedValue(
+        new SatusehatAuthError(
+          'SATUSEHAT_TOKEN_REQUEST_FAILED',
+          'invalid credentials',
+          401,
+        ),
+      ),
+    } as unknown as SatusehatAuthService;
+    const client = new SatusehatFhirClient(auth);
+
+    await expect(client.getPatient('patient-1')).rejects.toMatchObject({
+      code: 'SATUSEHAT_TOKEN_REQUEST_FAILED',
+      httpStatus: 401,
+      classification: {
+        category: 'AUTH',
+        retryable: false,
+      },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

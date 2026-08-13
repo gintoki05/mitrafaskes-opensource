@@ -15,6 +15,14 @@ import { useSession } from '@/hooks/useSession';
 import { useSyncLogs } from '@/hooks/useSyncLogs';
 import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 import { toast } from 'sonner';
+import { SatusehatReconciliationPanel } from './satusehat/SatusehatReconciliationPanel';
+import {
+  backoffLabel,
+  failureCategoryLabel,
+  operatorActionLabel,
+  retryAfterLabel,
+  retryAvailable,
+} from './satusehat/satusehat-log-display';
 
 export default function SatusehatPage() {
   const session = useSession();
@@ -32,7 +40,11 @@ export default function SatusehatPage() {
     successMessage,
     refresh,
     retry,
+    reconcile,
     selectLog,
+    reconciliation,
+    reconciliationLoading,
+    reconciliationError,
   } = useSyncLogs(satusehat.available);
   const totalPages = Math.max(1, Math.ceil(logsMeta.total / logsMeta.pageSize));
 
@@ -76,6 +88,13 @@ export default function SatusehatPage() {
       />
 
       {error ? <ScreenState kind="error" title="Sinkronisasi tidak tersedia" description={error} compact /> : null}
+
+      <SatusehatReconciliationPanel
+        report={reconciliation}
+        loading={reconciliationLoading}
+        error={reconciliationError}
+        onReconcile={() => void reconcile()}
+      />
 
       <div className={`grid min-w-0 grid-cols-1 gap-6 lg:gap-8 ${canReadPayload ? 'lg:grid-cols-3' : ''}`}>
         {/* Left Column: Log List */}
@@ -128,6 +147,31 @@ export default function SatusehatPage() {
                         <span className="font-mono text-success">ID eksternal: {log.externalResourceId}</span>
                       )}
                     </div>
+                    {log.status === 'FAILED' ? (
+                      <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px]">
+                        <Badge variant="outline" className="text-[10px]">
+                          {failureCategoryLabel(log.errorCategory)}
+                        </Badge>
+                        <span className="text-muted-foreground">
+                          Tindakan: {operatorActionLabel(log.operatorAction)}
+                        </span>
+                        {log.retryable ? (
+                          <Badge className="border-primary/30 bg-primary/10 text-[10px] text-primary">
+                            Retryable
+                          </Badge>
+                        ) : null}
+                        {retryAfterLabel(log.retryAfterAt) ? (
+                          <span className="text-warning">
+                            {retryAfterLabel(log.retryAfterAt)}
+                          </span>
+                        ) : null}
+                        {backoffLabel(log.backoffMs) ? (
+                          <span className="text-muted-foreground">
+                            {backoffLabel(log.backoffMs)}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                   </button>
 
@@ -156,21 +200,30 @@ export default function SatusehatPage() {
                       )}
                     </Badge>
 
-                      {canRetry && log.status !== 'SUCCESS' && (
+                      {canRetry && log.status === 'FAILED' && log.retryable ? (
                         <Button
                           size="sm"
                         onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
                           void retry(log.id, logsMeta.page);
                         }}
-                          disabled={retryingId !== null || !satusehat.configured}
+                          disabled={
+                            retryingId !== null ||
+                            !satusehat.configured ||
+                            !retryAvailable(log)
+                          }
                           aria-busy={retryingId === log.id}
-                          title={!satusehat.configured ? 'Kredensial SATUSEHAT belum dikonfigurasi' : 'Retry sinkronisasi'}
+                          title={
+                            !satusehat.configured
+                              ? 'Kredensial SATUSEHAT belum dikonfigurasi'
+                              : retryAfterLabel(log.retryAfterAt) ??
+                                'Retry sinkronisasi'
+                          }
                         className="border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary hover:bg-primary/15"
                       >
                         {retryingId === log.id ? 'Mencoba ulang...' : 'Retry'}
-                      </Button>
-                    )}
+                        </Button>
+                      ) : null}
                   </div>
                 </div>
               ))}

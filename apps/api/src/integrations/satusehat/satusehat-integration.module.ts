@@ -17,6 +17,7 @@ import { SatusehatMasterWilayahAdapter } from './satusehat-master-wilayah.adapte
 import { SatusehatIntegrationPlugin } from './satusehat-integration.plugin';
 import { SatusehatEncounterService } from './satusehat-encounter.service';
 import { SatusehatEncounterPreflightService } from './satusehat-encounter-preflight.service';
+import { SatusehatReconciliationService } from './satusehat-reconciliation.service';
 import { SatusehatTerminologyRegistry } from './satusehat-terminology.registry';
 
 @Module({
@@ -40,6 +41,7 @@ import { SatusehatTerminologyRegistry } from './satusehat-terminology.registry';
     SatusehatMasterWilayahAdapter,
     SatusehatEncounterPreflightService,
     SatusehatEncounterService,
+    SatusehatReconciliationService,
     SatusehatTerminologyRegistry,
     SatusehatIntegrationPlugin,
   ],

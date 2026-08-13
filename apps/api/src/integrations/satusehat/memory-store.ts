@@ -1,9 +1,14 @@
 export interface SatusehatSyncLog {
   id: string;
-  resourceType: 'Organization' | 'Location' | 'Practitioner' | 'Patient';
+  resourceType:
+    | 'Organization'
+    | 'Location'
+    | 'Practitioner'
+    | 'Patient'
+    | 'Encounter';
   resourceId: string;
   status: 'PENDING' | 'SUCCESS' | 'FAILED';
-  payload: any;
+  payload: unknown;
   satusehatId?: string;
   errorMessage?: string;
   updatedAt: string;

@@ -1,4 +1,11 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  ConflictException,
+  HttpException,
+  HttpStatus,
+  Injectable,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import type {
   IntegrationCapability,
   IntegrationConnectionResponse,
@@ -19,13 +26,20 @@ import { SatusehatAuthService } from './satusehat-auth.service';
 import { SatusehatPatientService } from './satusehat-patient.service';
 import { SatusehatPractitionerService } from './satusehat-practitioner.service';
 import { SatusehatEncounterService } from './satusehat-encounter.service';
+import { SatusehatReconciliationService } from './satusehat-reconciliation.service';
 import { MemoryStore } from './memory-store';
 import { IntegrationRegistry } from '../integration-registry';
 import type {
   IntegrationPlugin,
   IntegrationQuery,
+  IntegrationRetryOptions,
   IntegrationResourceHandler,
+  IntegrationSyncContext,
 } from '../integration.types';
+import {
+  readRetryAfterAt,
+  readSatusehatFailureMetadata,
+} from './satusehat-sync-log';
 
 const PROVIDER = 'SATUSEHAT';
 const DEFAULT_ENVIRONMENT = 'sandbox';
@@ -39,7 +53,26 @@ const localResourceTypes: Record<string, string> = {
 };
 
 const resources = ['Organization', 'Location', 'Practitioner', 'Patient', 'Encounter'];
-const operations = ['search', 'import', 'preview', 'sync', 'link', 'logs'];
+const operations = [
+  'search',
+  'import',
+  'preview',
+  'sync',
+  'link',
+  'logs',
+  'reconcile',
+];
+
+interface SyncLogRecord {
+  id: string;
+  resourceType: string;
+  resourceId: string;
+  status: 'PENDING' | 'SUCCESS' | 'FAILED';
+  satusehatId?: string | null;
+  errorMessage?: string | null;
+  updatedAt: Date | string;
+  payload: unknown;
+}
 
 @Injectable()
 export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleInit {
@@ -70,6 +103,7 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
     private readonly satusehatLocationImport: SatusehatLocationImportService,
     private readonly satusehatLocationLink: SatusehatLocationLinkService,
     private readonly satusehatEncounters: SatusehatEncounterService,
+    private readonly reconciliation: SatusehatReconciliationService,
     private readonly masterWilayah: SatusehatMasterWilayahAdapter,
   ) {
     this.handlers = new Map([
@@ -80,7 +114,10 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
           search: (query) => this.satusehatPatients.lookupForDraft(query),
           lookup: (query) => this.satusehatPatients.lookupForDraft(query),
           preview: (id) => this.satusehatPatients.previewPatient(id),
-          sync: (id) => this.satusehatPatients.syncPatient(id),
+          sync: (id, context) =>
+            context
+              ? this.satusehatPatients.syncPatient(id, context)
+              : this.satusehatPatients.syncPatient(id),
           link: (id, input) => this.satusehatPatients.linkExisting(id, input),
         },
       ],
@@ -100,7 +137,10 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
           search: (query) => this.satusehatOrganizationImport.searchOrganizations(query),
           import: (input) => this.satusehatOrganizationImport.importOrganization(input),
           preview: (id) => this.satusehatOrganizations.previewOrganization(id),
-          sync: (id) => this.satusehatOrganizations.syncOrganization(id),
+          sync: (id, context) =>
+            context
+              ? this.satusehatOrganizations.syncOrganization(id, context)
+              : this.satusehatOrganizations.syncOrganization(id),
           link: (id, input) => this.satusehatOrganizationLink.linkExistingOrganization(id, input),
         },
       ],
@@ -111,7 +151,10 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
           search: (query) => this.satusehatLocationImport.searchLocations(query),
           import: (input) => this.satusehatLocationImport.importLocation(input),
           preview: (id) => this.satusehatLocations.previewLocation(id),
-          sync: (id) => this.satusehatLocations.syncLocation(id),
+          sync: (id, context) =>
+            context
+              ? this.satusehatLocations.syncLocation(id, context)
+              : this.satusehatLocations.syncLocation(id),
           link: (id, input) => this.satusehatLocationLink.linkExistingLocation(id, input),
         },
       ],
@@ -120,7 +163,10 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
         {
           resourceType: 'Encounter',
           preview: (id) => this.satusehatEncounters.previewEncounter(id),
-          sync: (id) => this.satusehatEncounters.syncEncounter(id),
+          sync: (id, context) =>
+            context
+              ? this.satusehatEncounters.syncEncounter(id, context)
+              : this.satusehatEncounters.syncEncounter(id),
         },
       ],
     ]);
@@ -163,51 +209,96 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
       return {
         items: records
           .slice((input.page - 1) * input.pageSize, input.page * input.pageSize)
-          .map((record) => ({
-            id: record.id,
-            provider: PROVIDER,
-            environment: this.readEnvironment(),
-            resourceType: record.resourceType,
-            resourceId: record.resourceId,
-            status: record.status,
-            externalResourceId: record.satusehatId,
-            updatedAt: record.updatedAt,
-            ...(input.includePayload ? { payload: record.payload } : {}),
-          })),
+          .map((record) => this.toLog(record, input.includePayload)),
         meta: { page: input.page, pageSize: input.pageSize, total: records.length },
       };
     }
   }
 
-  async retryLog(logId: string): Promise<unknown> {
-    try {
-      const log = await this.prisma.satusehatSyncLog.findUnique({ where: { id: logId } });
-      if (!log) throw new Error('SYNC_LOG_NOT_FOUND');
-      const updated = await this.prisma.satusehatSyncLog.update({
-        where: { id: logId },
-        data: {
-          status: 'SUCCESS',
-          satusehatId: log.satusehatId || `${log.resourceType.substring(0, 3).toUpperCase()}-SATUSEHAT-${Date.now()}`,
-          errorMessage: null,
+  async retryLog(
+    logId: string,
+    options: IntegrationRetryOptions = { includePayload: false },
+  ): Promise<unknown> {
+    const log = await this.findLog(logId);
+    if (!log) {
+      throw new NotFoundException({
+        code: 'SYNC_LOG_NOT_FOUND',
+        message: 'Log sinkronisasi tidak ditemukan.',
+      });
+    }
+    if (log.status !== 'FAILED') {
+      throw new ConflictException({
+        code: 'SYNC_RETRY_NOT_ALLOWED',
+        message: 'Hanya log sinkronisasi gagal yang dapat di-retry.',
+      });
+    }
+
+    const failure = readSatusehatFailureMetadata(log.payload);
+    if (failure.retryable !== true) {
+      throw new ConflictException({
+        code: 'SYNC_RETRY_NOT_ALLOWED',
+        message: 'Error ini tidak retryable. Jalankan tindakan operator yang ditampilkan.',
+        classification: {
+          category: failure.errorCategory ?? 'UNKNOWN',
+          retryable: false,
+          operatorAction: failure.operatorAction ?? 'INVESTIGATE',
         },
       });
-      return {
-        message: 'Sinkronisasi ulang diproses melalui integrasi SATUSEHAT',
-        log: this.toLog(updated, true),
-      };
-    } catch (error) {
-      if (error instanceof Error && error.message === 'SYNC_LOG_NOT_FOUND') {
-        const log = MemoryStore.syncLogs.find((entry) => entry.id === logId);
-        if (!log) {
-          throw new Error('SYNC_LOG_NOT_FOUND');
-        }
-        log.status = 'SUCCESS';
-        log.satusehatId = `${log.resourceType.substring(0, 3).toUpperCase()}-SATUSEHAT-${Date.now()}`;
-        log.updatedAt = new Date().toISOString();
-        return { message: 'Sinkronisasi ulang diproses melalui integrasi SATUSEHAT', log };
-      }
-      throw error;
     }
+
+    const retryAfterAt = readRetryAfterAt(log.payload);
+    if (retryAfterAt && retryAfterAt.getTime() > Date.now()) {
+      const retryAfterSeconds = Math.max(
+        1,
+        Math.ceil((retryAfterAt.getTime() - Date.now()) / 1000),
+      );
+      throw new HttpException(
+        {
+          code: 'SATUSEHAT_SYNC_RETRY_BACKOFF',
+          message: `Retry tersedia setelah ${retryAfterSeconds} detik sesuai backoff.`,
+          retryAfterAt: retryAfterAt.toISOString(),
+          retryAfterSeconds,
+          classification: {
+            category: failure.errorCategory ?? 'TRANSIENT',
+            retryable: true,
+            operatorAction: 'RETRY_WITH_BACKOFF',
+          },
+        },
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    const handler = this.handlers.get(log.resourceType);
+    if (!handler?.sync) {
+      throw new NotFoundException({
+        code: 'SYNC_RETRY_HANDLER_NOT_FOUND',
+        message: `Resource ${log.resourceType} tidak memiliki handler sync yang dapat di-retry.`,
+      });
+    }
+
+    const context: IntegrationSyncContext = {
+      retryAttempt: (failure.retryAttempt ?? 0) + 1,
+      retryOfLogId: log.id,
+    };
+    const result = await handler.sync(log.resourceId, context);
+    const retryLog = await this.findLogFromResult(result);
+    if (!retryLog) {
+      throw new HttpException(
+        {
+          code: 'SYNC_RETRY_AUDIT_MISSING',
+          message:
+            'Retry selesai tanpa log sinkronisasi baru. Status remote tidak ditandai sukses.',
+          sourceLogId: log.id,
+        },
+        HttpStatus.BAD_GATEWAY,
+      );
+    }
+
+    return {
+      message: 'Retry sinkronisasi dijalankan melalui handler resource SATUSEHAT.',
+      sourceLogId: log.id,
+      log: this.toLog(retryLog, options.includePayload),
+    };
   }
 
   async getResourceSummaries(
@@ -267,12 +358,21 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
             ? { externalResourceId: link.externalResourceId, lastSyncedAt: link.lastSyncedAt?.toISOString() }
             : undefined,
           latestSync: log
-            ? { status: log.status, errorMessage: log.errorMessage ?? undefined, updatedAt: log.updatedAt.toISOString() }
+            ? {
+                status: log.status,
+                errorMessage: log.errorMessage ?? undefined,
+                updatedAt: log.updatedAt.toISOString(),
+                ...readSatusehatFailureMetadata(log.payload),
+              }
             : undefined,
         },
       ]);
     }
     return result;
+  }
+
+  reconcile() {
+    return this.reconciliation.reconcile(this.readEnvironment());
   }
 
   getResourceHandler(resourceType: string): IntegrationResourceHandler | undefined {
@@ -301,30 +401,62 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
   }
 
   private toLog(
-    record: {
-      id: string;
-      resourceType: string;
-      resourceId: string;
-      status: 'PENDING' | 'SUCCESS' | 'FAILED';
-      satusehatId: string | null;
-      errorMessage: string | null;
-      updatedAt: Date;
-      payload: unknown;
-    },
+    record: SyncLogRecord,
     includePayload: boolean,
   ): IntegrationLog {
+    const failure = readSatusehatFailureMetadata(record.payload);
+    const environment = this.readLogEnvironment(record.payload);
     return {
       id: record.id,
       provider: PROVIDER,
-      environment: this.readEnvironment(),
+      environment,
       resourceType: record.resourceType,
       resourceId: record.resourceId,
       status: record.status,
       externalResourceId: record.satusehatId ?? undefined,
       errorMessage: record.errorMessage ?? undefined,
-      updatedAt: record.updatedAt.toISOString(),
+      updatedAt:
+        record.updatedAt instanceof Date
+          ? record.updatedAt.toISOString()
+          : record.updatedAt,
+      ...failure,
       ...(includePayload ? { payload: record.payload } : {}),
     };
+  }
+
+  private async findLog(logId: string): Promise<SyncLogRecord | undefined> {
+    try {
+      const record = await this.prisma.satusehatSyncLog.findUnique({
+        where: { id: logId },
+      });
+      if (record) return record;
+    } catch {
+      // Fall back to the in-memory adapter used by local/test runtimes.
+    }
+    return MemoryStore.syncLogs.find((entry) => entry.id === logId);
+  }
+
+  private async findLogFromResult(
+    result: unknown,
+  ): Promise<SyncLogRecord | undefined> {
+    const syncLogId = this.readSyncLogId(result);
+    if (!syncLogId) return undefined;
+    return this.findLog(syncLogId);
+  }
+
+  private readSyncLogId(result: unknown): string | undefined {
+    if (!this.isRecord(result) || typeof result.syncLogId !== 'string') {
+      return undefined;
+    }
+    return result.syncLogId.trim() || undefined;
+  }
+
+  private readLogEnvironment(payload: unknown): string {
+    const record = this.isRecord(payload) ? payload : undefined;
+    const metadata = record && this.isRecord(record.metadata) ? record.metadata : undefined;
+    return typeof metadata?.environment === 'string'
+      ? metadata.environment
+      : this.readEnvironment();
   }
 
   private readEnvironment(): string {
@@ -335,11 +467,11 @@ export class SatusehatIntegrationPlugin implements IntegrationPlugin, OnModuleIn
     payload: unknown,
     environment: string,
   ): boolean {
-    if (!this.isRecord(payload)) return false;
-    const metadata = payload.metadata;
-    return (
-      this.isRecord(metadata) && metadata.environment === environment
-    );
+    const record = this.isRecord(payload) ? payload : undefined;
+    const metadata =
+      record && this.isRecord(record.metadata) ? record.metadata : undefined;
+    const logEnvironment = metadata?.environment;
+    return typeof logEnvironment !== 'string' || logEnvironment === environment;
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

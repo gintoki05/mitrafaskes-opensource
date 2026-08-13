@@ -34,31 +34,45 @@ export interface SatusehatFhirFailureContext {
 }
 
 const AUTH_STATUSES = new Set([401, 403]);
-const TRANSIENT_STATUSES = new Set([408, 425, 500, 502, 503, 504]);
+const TRANSIENT_STATUSES = new Set([408, 425]);
 const VALIDATION_STATUSES = new Set([400, 422]);
 
 export function classifySatusehatFhirFailure(
   context: SatusehatFhirFailureContext,
 ): SatusehatFhirErrorClassification {
   const issueText = collectIssueText(context.operationOutcome);
+  const signalText = `${context.code} ${issueText}`.toLowerCase();
 
   if (
     context.code === 'SATUSEHAT_FHIR_BASE_URL_MISSING' ||
-    context.code === 'SATUSEHAT_FHIR_URL_INVALID'
+    context.code === 'SATUSEHAT_FHIR_URL_INVALID' ||
+    includesAny(signalText, [
+      'credentials_missing',
+      'configuration',
+      'organization_id',
+      'oauth_base_url',
+      'oauth_url',
+      'token_response_invalid',
+    ])
   ) {
     return classification('CONFIGURATION', false, 'CHECK_CONFIGURATION');
   }
 
   if (
-    context.code === 'SATUSEHAT_FHIR_TIMEOUT' ||
-    context.code === 'SATUSEHAT_FHIR_NETWORK_ERROR'
+    includesAny(signalText, [
+      'timeout',
+      'network error',
+      'network_error',
+      'connection reset',
+      'econnreset',
+    ])
   ) {
     return classification('TRANSIENT', true, 'RETRY_WITH_BACKOFF');
   }
 
   if (
     AUTH_STATUSES.has(context.httpStatus ?? 0) ||
-    includesAny(issueText, [
+    includesAny(signalText, [
       'unauthorized',
       'forbidden',
       'authentication',
@@ -70,23 +84,32 @@ export function classifySatusehatFhirFailure(
 
   if (
     context.httpStatus === 429 ||
-    includesAny(issueText, ['rate limit', 'too many requests', 'throttled'])
+    includesAny(signalText, ['rate limit', 'too many requests', 'throttled'])
   ) {
     return classification('RATE_LIMIT', true, 'RETRY_WITH_BACKOFF');
   }
 
   if (
-    context.httpStatus === 409 ||
-    includesAny(issueText, ['duplicate', 'already exists', 'conflict'])
+    includesAny(signalText, [
+      'id_missing',
+      'id_mismatch',
+      'response_invalid',
+      'response_incomplete',
+      'remote_id_mismatch',
+    ])
   ) {
-    return classification('DUPLICATE', false, 'RECONCILE');
-  }
-
-  if (TRANSIENT_STATUSES.has(context.httpStatus ?? 0)) {
-    return classification('TRANSIENT', true, 'RETRY_WITH_BACKOFF');
+    return classification('UNKNOWN', false, 'RECONCILE');
   }
 
   if (
+    includesAny(signalText, [
+      'dependency',
+      'reference',
+      'not_synced',
+      'not-linked',
+      'not_linked',
+      'missing_reference',
+    ]) ||
     includesAny(issueText, [
       'reference is required',
       'reference missing',
@@ -96,13 +119,16 @@ export function classifySatusehatFhirFailure(
       'linked organization reference',
       'linked patient reference',
       'linked practitioner reference',
+      'must be linked',
+      'belum terhubung',
+      'not linked',
     ])
   ) {
     return classification('REFERENCE_MISSING', false, 'FIX_REFERENCE');
   }
 
   if (
-    includesAny(issueText, [
+    includesAny(signalText, [
       'terminology',
       'value set',
       'valueset',
@@ -120,8 +146,7 @@ export function classifySatusehatFhirFailure(
   }
 
   if (
-    VALIDATION_STATUSES.has(context.httpStatus ?? 0) ||
-    includesAny(issueText, [
+    includesAny(signalText, [
       'invalid',
       'required',
       'invariant',
@@ -131,6 +156,26 @@ export function classifySatusehatFhirFailure(
     ])
   ) {
     return classification('VALIDATION', false, 'FIX_PAYLOAD');
+  }
+
+  if (
+    context.httpStatus === 409 ||
+    includesAny(signalText, ['duplicate', 'already exists', 'conflict'])
+  ) {
+    return classification('DUPLICATE', false, 'RECONCILE');
+  }
+
+  if (
+    VALIDATION_STATUSES.has(context.httpStatus ?? 0)
+  ) {
+    return classification('VALIDATION', false, 'FIX_PAYLOAD');
+  }
+
+  if (
+    TRANSIENT_STATUSES.has(context.httpStatus ?? 0) ||
+    ((context.httpStatus ?? 0) >= 500 && (context.httpStatus ?? 0) <= 599)
+  ) {
+    return classification('TRANSIENT', true, 'RETRY_WITH_BACKOFF');
   }
 
   return classification('UNKNOWN', false, 'INVESTIGATE');

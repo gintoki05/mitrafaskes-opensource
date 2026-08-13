@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { SatusehatAuthService } from './satusehat-auth.service';
+import {
+  SatusehatAuthError,
+  SatusehatAuthService,
+} from './satusehat-auth.service';
 import {
   getSatusehatOperationOutcomeMessage,
   parseSatusehatOperationOutcome,
@@ -25,13 +28,21 @@ export type SatusehatFhirErrorCode =
   | 'SATUSEHAT_FHIR_PAGINATION_RESPONSE_INVALID'
   | 'SATUSEHAT_FHIR_PAGINATION_URL_INVALID'
   | 'SATUSEHAT_FHIR_BASE_URL_MISSING'
-  | 'SATUSEHAT_FHIR_URL_INVALID';
+  | 'SATUSEHAT_FHIR_URL_INVALID'
+  | 'SATUSEHAT_CREDENTIALS_MISSING'
+  | 'SATUSEHAT_TOKEN_TIMEOUT'
+  | 'SATUSEHAT_TOKEN_NETWORK_ERROR'
+  | 'SATUSEHAT_TOKEN_REQUEST_FAILED'
+  | 'SATUSEHAT_TOKEN_RESPONSE_INVALID'
+  | 'SATUSEHAT_OAUTH_BASE_URL_MISSING'
+  | 'SATUSEHAT_OAUTH_URL_INVALID';
 
 export interface SatusehatFhirErrorContract {
   code: SatusehatFhirErrorCode;
   message: string;
   classification: SatusehatFhirErrorClassification;
   httpStatus?: number;
+  retryAfterSeconds?: number;
   operationOutcome?: SatusehatOperationOutcome;
 }
 
@@ -46,6 +57,7 @@ export class SatusehatFhirError
     message: string,
     public readonly httpStatus?: number,
     public readonly operationOutcome?: SatusehatOperationOutcome,
+    public readonly retryAfterSeconds?: number,
   ) {
     super(message);
     this.name = 'SatusehatFhirError';
@@ -62,6 +74,9 @@ export class SatusehatFhirError
       message: this.message,
       classification: this.classification,
       ...(this.httpStatus === undefined ? {} : { httpStatus: this.httpStatus }),
+      ...(this.retryAfterSeconds === undefined
+        ? {}
+        : { retryAfterSeconds: this.retryAfterSeconds }),
       ...(this.operationOutcome
         ? { operationOutcome: this.operationOutcome }
         : {}),
@@ -166,7 +181,19 @@ export class SatusehatFhirClient {
     method: FhirRequestMethod,
     body?: unknown,
   ): Promise<unknown> {
-    const accessToken = await this.auth.getAccessToken();
+    let accessToken: string;
+    try {
+      accessToken = await this.auth.getAccessToken();
+    } catch (error) {
+      if (error instanceof SatusehatAuthError) {
+        throw new SatusehatFhirError(
+          error.code as SatusehatFhirErrorCode,
+          error.message,
+          error.httpStatus,
+        );
+      }
+      throw error;
+    }
     const controller = new AbortController();
     const timeout = setTimeout(
       () => controller.abort(),
@@ -215,6 +242,7 @@ export class SatusehatFhirClient {
         getSatusehatOperationOutcomeMessage(operationOutcome, response.status),
         response.status,
         operationOutcome,
+        this.readRetryAfterSeconds(response.headers?.get?.('retry-after')),
       );
     }
 
@@ -373,6 +401,18 @@ export class SatusehatFhirClient {
   ): number {
     const parsed = Number(value);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+  }
+
+  private readRetryAfterSeconds(value: string | null): number | undefined {
+    if (!value) return undefined;
+    const seconds = Number(value.trim());
+    if (Number.isFinite(seconds) && seconds >= 0) {
+      return Math.ceil(seconds);
+    }
+
+    const retryAt = Date.parse(value);
+    if (Number.isNaN(retryAt)) return undefined;
+    return Math.max(0, Math.ceil((retryAt - Date.now()) / 1000));
   }
 
   private isRecord(value: unknown): value is Record<string, unknown> {

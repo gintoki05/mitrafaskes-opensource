@@ -2,10 +2,20 @@ import type {
   IntegrationCapability,
   IntegrationConnectionResponse,
   IntegrationLogListResponse,
+  IntegrationReconciliationResponse,
   ResourceIntegrationSummary,
 } from '@mitrafaskes/shared';
 
 export type IntegrationQuery = Record<string, string | undefined>;
+
+export interface IntegrationSyncContext {
+  retryAttempt: number;
+  retryOfLogId?: string;
+}
+
+export interface IntegrationRetryOptions {
+  includePayload: boolean;
+}
 
 export interface IntegrationResourceHandler {
   resourceType: string;
@@ -13,7 +23,7 @@ export interface IntegrationResourceHandler {
   lookup?(query: IntegrationQuery): Promise<unknown>;
   import?(input: unknown): Promise<unknown>;
   preview?(localResourceId: string): Promise<unknown>;
-  sync?(localResourceId: string): Promise<unknown>;
+  sync?(localResourceId: string, context?: IntegrationSyncContext): Promise<unknown>;
   link?(localResourceId: string, input: unknown): Promise<unknown>;
 }
 
@@ -26,7 +36,8 @@ export interface IntegrationPlugin {
     pageSize: number;
     includePayload: boolean;
   }): Promise<IntegrationLogListResponse>;
-  retryLog(logId: string): Promise<unknown>;
+  retryLog(logId: string, options?: IntegrationRetryOptions): Promise<unknown>;
+  reconcile?(): Promise<IntegrationReconciliationResponse>;
   getResourceSummaries(
     resourceType: string,
     localResourceIds: readonly string[],

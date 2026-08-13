@@ -124,6 +124,96 @@ describe('SATUSEHAT FHIR error classification', () => {
     });
   });
 
+  it('treats dependency failures as non-retryable even when the API uses 409', () => {
+    expect(
+      classifySatusehatFhirFailure({
+        code: 'SATUSEHAT_ENCOUNTER_DEPENDENCY_MISSING',
+        httpStatus: 409,
+      }),
+    ).toEqual({
+      category: 'REFERENCE_MISSING',
+      retryable: false,
+      operatorAction: 'FIX_REFERENCE',
+    });
+  });
+
+  it('classifies every transient 5xx response as retryable', () => {
+    expect(
+      classifySatusehatFhirFailure({
+        code: 'SATUSEHAT_FHIR_REQUEST_FAILED',
+        httpStatus: 501,
+      }),
+    ).toEqual({
+      category: 'TRANSIENT',
+      retryable: true,
+      operatorAction: 'RETRY_WITH_BACKOFF',
+    });
+  });
+
+  it('treats missing OAuth configuration as a permanent operator fix', () => {
+    expect(
+      classifySatusehatFhirFailure({
+        code: 'SATUSEHAT_OAUTH_BASE_URL_MISSING',
+        httpStatus: 503,
+      }),
+    ).toEqual({
+      category: 'CONFIGURATION',
+      retryable: false,
+      operatorAction: 'CHECK_CONFIGURATION',
+    });
+  });
+
+  it('classifies provider terminology errors even without an OperationOutcome', () => {
+    expect(
+      classifySatusehatFhirFailure({
+        code: 'SATUSEHAT_TERMINOLOGY_MISSING',
+      }),
+    ).toEqual({
+      category: 'TERMINOLOGY',
+      retryable: false,
+      operatorAction: 'FIX_TERMINOLOGY',
+    });
+  });
+
+  it('keeps explicit validation failures non-retryable even when wrapped as HTTP 5xx', () => {
+    expect(
+      classifySatusehatFhirFailure({
+        code: 'SATUSEHAT_ENCOUNTER_LOCAL_DATA_INVALID',
+        httpStatus: 502,
+      }),
+    ).toEqual({
+      category: 'VALIDATION',
+      retryable: false,
+      operatorAction: 'FIX_PAYLOAD',
+    });
+  });
+
+  it('requires reconciliation when a remote response cannot prove the resource id', () => {
+    expect(
+      classifySatusehatFhirFailure({
+        code: 'SATUSEHAT_ENCOUNTER_ID_MISSING',
+        httpStatus: 502,
+      }),
+    ).toEqual({
+      category: 'UNKNOWN',
+      retryable: false,
+      operatorAction: 'RECONCILE',
+    });
+  });
+
+  it('treats an invalid token response as configuration, not a remote retry', () => {
+    expect(
+      classifySatusehatFhirFailure({
+        code: 'SATUSEHAT_TOKEN_RESPONSE_INVALID',
+        httpStatus: 502,
+      }),
+    ).toEqual({
+      category: 'CONFIGURATION',
+      retryable: false,
+      operatorAction: 'CHECK_CONFIGURATION',
+    });
+  });
+
   it('serializes the classification through the public error contract', () => {
     const error = new SatusehatFhirError(
       'SATUSEHAT_FHIR_NETWORK_ERROR',
