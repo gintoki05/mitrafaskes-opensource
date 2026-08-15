@@ -8,7 +8,9 @@ import {
   OUTPATIENT_GENERAL_VALIDATION_PROFILE,
   OutpatientDisposition,
   type DiagnosisDto,
+  type CompleteTriageDto,
   type PrescriptionDto,
+  type SaveTriageDraftDto,
   type SaveMedicalRecordDraftDto,
 } from '@mitrafaskes/shared';
 import type {
@@ -34,6 +36,14 @@ export type ValidatedClinicalHistoryEntry = Omit<
   'onset'
 > & {
   onsetAt?: Date;
+};
+
+export type ValidatedTriageDraft = Omit<
+  SaveTriageDraftDto,
+  'histories' | 'observations'
+> & {
+  histories: ValidatedClinicalHistoryEntry[];
+  observations: RmeObservationDraft[];
 };
 
 const recordOf = (input: unknown): Record<string, unknown> =>
@@ -392,6 +402,34 @@ export function parseDraftInput(input: unknown): ValidatedMedicalRecordDraft {
   };
 }
 
+export function parseTriageDraftInput(input: unknown): ValidatedTriageDraft {
+  const body = recordOf(input);
+  const observations = (
+    Array.isArray(body.observations) ? body.observations : []
+  ).map((observation, index) => parseObservationDraft(observation, index));
+  return {
+    encounterId: requiredString(body.encounterId, 'encounterId'),
+    expectedVersion: expectedVersion(body.expectedVersion),
+    chiefComplaint: optionalString(body.chiefComplaint),
+    presentIllness: optionalString(body.presentIllness),
+    allergyReviewStatus: optionalEnum(
+      body.allergyReviewStatus,
+      Object.values(AllergyReviewStatus),
+      'allergyReviewStatus',
+    ),
+    allergyDetails: optionalString(body.allergyDetails),
+    anamnesis: optionalString(body.anamnesis),
+    histories: parseClinicalHistories(body.histories),
+    systolic: optionalNumber(body.systolic, 'systolic'),
+    diastolic: optionalNumber(body.diastolic, 'diastolic'),
+    heartRate: optionalNumber(body.heartRate, 'heartRate'),
+    temperature: optionalNumber(body.temperature, 'temperature'),
+    weight: optionalNumber(body.weight, 'weight'),
+    height: optionalNumber(body.height, 'height'),
+    observations,
+  };
+}
+
 export function parsePreflightInput(input: unknown): {
   encounterId: string;
   expectedVersion: number;
@@ -418,4 +456,21 @@ export function parseFinalizeInput(input: unknown): {
     expectedVersion: expectedVersion(body.expectedVersion),
     idempotencyKey,
   };
+}
+
+export function parseCompleteTriageInput(input: unknown): {
+  encounterId: string;
+  expectedVersion: number;
+  idempotencyKey: string;
+} {
+  const body = recordOf(input);
+  const idempotencyKey = requiredString(body.idempotencyKey, 'idempotencyKey');
+  if (!/^[A-Za-z0-9._:-]{8,128}$/.test(idempotencyKey)) {
+    throw validationError('idempotencyKey harus sepanjang 8-128 karakter aman');
+  }
+  return {
+    encounterId: requiredString(body.encounterId, 'encounterId'),
+    expectedVersion: expectedVersion(body.expectedVersion),
+    idempotencyKey,
+  } satisfies CompleteTriageDto;
 }

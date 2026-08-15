@@ -18,19 +18,25 @@ const satusehatColumn: ColumnDef<PractitionerSummary> = {
   id: 'satusehat',
   header: 'SATUSEHAT',
   enableSorting: false,
-  cell: ({ row }) => (
-    <div className="space-y-1">
-      <SatusehatLinkageBadge
-        linkage={getIntegrationLinkage(row.original.integrations, 'SATUSEHAT')}
-        resourceName={row.original.fullName}
-      />
-      {getLatestIntegrationSync(row.original.integrations, 'SATUSEHAT')?.status === 'FAILED' ? (
-        <p className="max-w-44 text-[10px] font-semibold text-destructive" title={getLatestIntegrationSync(row.original.integrations, 'SATUSEHAT')?.errorMessage}>
-          Sinkronisasi terakhir gagal
-        </p>
-      ) : null}
-    </div>
-  ),
+  cell: ({ row }) => {
+    if (row.original.role === 'PETUGAS_PENDAFTARAN') {
+      return <span className="text-xs text-muted-foreground">Tidak berlaku</span>;
+    }
+
+    return (
+      <div className="space-y-1">
+        <SatusehatLinkageBadge
+          linkage={getIntegrationLinkage(row.original.integrations, 'SATUSEHAT')}
+          resourceName={row.original.fullName}
+        />
+        {getLatestIntegrationSync(row.original.integrations, 'SATUSEHAT')?.status === 'FAILED' ? (
+          <p className="max-w-44 text-[10px] font-semibold text-destructive" title={getLatestIntegrationSync(row.original.integrations, 'SATUSEHAT')?.errorMessage}>
+            Sinkronisasi terakhir gagal
+          </p>
+        ) : null}
+      </div>
+    );
+  },
 };
 
 export function getPractitionerColumns({
@@ -47,7 +53,7 @@ export function getPractitionerColumns({
         <div className="min-w-48">
           <div className="font-semibold text-foreground">{row.original.fullName}</div>
           <div className="mt-1 text-[11px] text-muted-foreground">
-            @{row.original.username} · {row.original.role === 'DOKTER' ? 'Dokter' : 'Perawat'}
+            @{row.original.username} · {row.original.role === 'DOKTER' ? 'Dokter' : row.original.role === 'PETUGAS_PENDAFTARAN' ? 'Petugas pendaftaran' : 'Perawat'}
           </div>
         </div>
       ),
@@ -139,12 +145,14 @@ export function getPractitionerColumns({
         <div className="flex flex-wrap justify-end gap-1">
           {canWrite ? (
             <>
-              <SatusehatActionGroup
-                resourceName={row.original.fullName}
-                onLink={() => onLink(row.original)}
-                linkDisabled={!row.original.nik}
-                linkDisabledReason="NIK wajib diisi untuk lookup Practitioner SATUSEHAT"
-              />
+              {row.original.role !== 'PETUGAS_PENDAFTARAN' ? (
+                <SatusehatActionGroup
+                  resourceName={row.original.fullName}
+                  onLink={() => onLink(row.original)}
+                  linkDisabled={!row.original.nik}
+                  linkDisabledReason="NIK wajib diisi untuk lookup Practitioner SATUSEHAT"
+                />
+              ) : null}
               <Button
                 type="button"
                 variant="outline"

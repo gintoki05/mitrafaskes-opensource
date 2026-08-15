@@ -6,12 +6,10 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AccessPermission } from '@mitrafaskes/shared';
 import { RequirePermission } from '../auth/access-control.decorator';
-import { SessionPermissionGuard } from '../auth/session-permission.guard';
 import { PatientsService } from './patients.service';
 
 type PatientHttpQuery = Record<string, string | undefined>;
@@ -33,7 +31,6 @@ const parseOptionalBoolean = (
 };
 
 @Controller('api/patients')
-@UseGuards(SessionPermissionGuard)
 @ApiTags('Patients')
 export class PatientsController {
   constructor(private readonly patients: PatientsService) {}

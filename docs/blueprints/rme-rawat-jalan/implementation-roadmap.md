@@ -11,6 +11,7 @@ bagi issue terkait.
 | 0. Blueprint | Journey, model domain, kamus data, mapping, wireframe | PRI-5, PRI-25 | Review produk + klinis awal |
 | 1. RME lifecycle foundation | `DRAFT`/`FINAL`, versioning, ownership, migration | PRI-17 | Draft tersimpan tanpa menutup Encounter; final immutable |
 | 2. Workspace konsultasi | Persistent patient context, section UX, state lengkap | PRI-18, PRI-19 | Empty/loading/error/conflict dan data kosong aman |
+| 2a. Triase klinis | Role `PERAWAT` klinis, `PETUGAS_PENDAFTARAN`, triage draft/complete, audit koreksi, dan gate `WAITING` | Scope saat ini | Perawat dapat mengisi triase; Encounter tetap `WAITING`; dokter dapat mulai dengan warning |
 | 3. Finalisasi aman | Preflight, transaction, audit, idempotency | PRI-20, PRI-21 | RME final + Encounter complete atomik |
 | 4. Encounter remote | Create/update, linkage/log, UI, repeat sync | PRI-23, PRI-24 | **API/plugin dan UI tersedia; sandbox create + update ID sama masih perlu diverifikasi** |
 | 5. Condition | Model diagnosis/complaint + terminology + adapter | PRI-19, PRI-23, PRI-29 | **Adapter, dependency preflight, linkage/log, dan UI sync tersedia; sandbox perlu diverifikasi** |
@@ -28,9 +29,46 @@ Condition, lalu Observation. Ketiga adapter tersebut sudah tersedia di codebase;
 pekerjaan berikutnya adalah verifikasi sandbox, rekonsiliasi, dan perluasan
 klinis yang belum menjadi resource aktif.
 
+## Snapshot status delivery
+
+Pada 15 Agustus 2026, fase lokal inti sudah memiliki fondasi `DRAFT`/`FINAL`,
+versioning, preflight, finalisasi atomik, audit event, typed history/Observation,
+serta adapter Condition dan Observation. Status remote tetap mengikuti bukti
+sandbox, bukan hanya keberadaan adapter atau unit test:
+
+- Encounter: create dan repeat update pernah **PASS** pada run manual sebelumnya;
+- Condition: adapter/test **tersedia**, manual rerun **BLOCKED** pada laporan terakhir;
+- Observation: adapter/test **tersedia**, manual rerun **BLOCKED** pada laporan terakhir;
+- amendment, outbox klinis, Procedure, MedicationOrder, FollowUpPlan, odontogram,
+  dan evidence center masih merupakan pekerjaan target.
+
+## Gate kontrak MVP `OUTPATIENT_GENERAL_V1`
+
+Kontrak minimal untuk alur pendaftaran → Encounter → konsultasi → draft → final
+sekarang menjadi batas delivery lokal. Acceptance profile saat ini mencakup:
+
+- konteks Encounter yang valid dan `IN_PROGRESS` dengan actor dokter yang sesuai;
+- anamnesis utama, review alergi eksplisit, empat vital inti, pemeriksaan fisik,
+  diagnosis utama ICD-10, edukasi, rencana, dan disposisi;
+- resep sebagai kelompok opsional, dengan validasi minimal hanya bila baris resep
+  diisi.
+
+Riwayat tambahan, vital tambahan, diagnosis sekunder, dan detail resep non-esensial
+tetap dapat disimpan tanpa menjadi blocker. Tidak ada schema atau kode baru yang
+diperlukan untuk gate ini. Sebelum memperluas profile, owner harus menyelesaikan
+review klinis atas kewajiban vital menurut usia/jenis kunjungan, semantik alergi,
+serta struktur edukasi/rencana/disposisi.
+
+Pekerjaan yang sengaja tidak masuk gate ini adalah Procedure, MedicationOrder,
+FollowUpPlan terstruktur, amendment, outbox klinis, odontogram, dan evidence
+center. Item tersebut baru masuk roadmap setelah workflow lokal MVP dan decision
+gate klinisnya disetujui.
+
 ## Slice implementasi terdekat
 
 ### Slice A — hilangkan false clinical data dan bypass finalisasi
+
+Status: **selesai pada snapshot codebase**.
 
 - hapus nilai klinis contoh dari initial state `RmeForm`;
 - bedakan placeholder dari value;
@@ -41,6 +79,8 @@ Masuk ke PRI-18/PRI-20 dan dapat dilakukan sebelum migration besar karena
 bernilai keselamatan langsung.
 
 ### Slice B — RME lifecycle
+
+Status: **fondasi selesai; triase klinis dan audit koreksi tersedia; amendment dan outbox masih terbuka**.
 
 - migration `MedicalRecord.status`, `version`, authored/finalized metadata;
 - endpoint/command `save draft` dan `finalize` terpisah;

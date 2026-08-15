@@ -18,6 +18,9 @@ type RmeEncounterQueueProps = {
   onSelectEncounter: (encounter: Encounter) => void;
   onPageChange: (page: number) => void;
   onRetry: () => void;
+  canStart: boolean;
+  startingEncounterId: string | null;
+  onStartEncounter: (encounter: Encounter) => void;
 };
 
 export function RmeEncounterQueue({
@@ -29,6 +32,9 @@ export function RmeEncounterQueue({
   onSelectEncounter,
   onPageChange,
   onRetry,
+  canStart,
+  startingEncounterId,
+  onStartEncounter,
 }: RmeEncounterQueueProps) {
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
 
@@ -63,24 +69,34 @@ export function RmeEncounterQueue({
               description="Pasien yang siap diperiksa akan tampil di sini."
             />
           ) : encounters.map((encounter) => (
-            <button
+            <div
               key={encounter.id}
-              onClick={() => onSelectEncounter(encounter)}
-              aria-pressed={selectedEncounter?.id === encounter.id}
-              className={`flex w-full items-center justify-between rounded-[var(--radius-card)] border p-3 text-left transition-colors ${
+              className={`flex w-full items-center gap-2 rounded-[var(--radius-card)] border p-3 text-left transition-colors ${
                 selectedEncounter?.id === encounter.id
                   ? 'border-primary/50 bg-primary/10 text-foreground shadow-sm'
                   : 'border-border bg-background text-muted-foreground hover:bg-muted'
               }`}
             >
-              <div className="min-w-0">
+              <button
+                type="button"
+                onClick={() => onSelectEncounter(encounter)}
+                aria-pressed={selectedEncounter?.id === encounter.id}
+                className="min-w-0 flex-1 text-left"
+              >
                 <div className="truncate text-xs font-bold text-foreground">{encounter.patient?.fullName}</div>
                 <div className="font-mono text-[11px] text-muted-foreground">{encounter.patient?.medicalRecNo}</div>
-              </div>
-              <Badge className="bg-muted font-mono text-xs font-bold text-primary">
-                #{encounter.queueNumber}
-              </Badge>
-            </button>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  <Badge className="bg-muted font-mono text-[10px] font-bold text-primary">#{encounter.queueNumber}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{encounter.status === 'WAITING' ? 'Menunggu' : 'Sedang diperiksa'}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{encounter.triage?.status === 'COMPLETED' ? 'Triase selesai' : encounter.triage?.status === 'DRAFT' ? 'Triase draft' : 'Triase belum selesai'}</Badge>
+                </div>
+              </button>
+              {encounter.status === 'WAITING' && canStart ? (
+                <Button type="button" size="sm" disabled={Boolean(startingEncounterId)} onClick={() => onStartEncounter(encounter)}>
+                  {startingEncounterId === encounter.id ? 'Memulai...' : 'Mulai'}
+                </Button>
+              ) : null}
+            </div>
           ))}
           {totalPages > 1 ? (
             <div className="border-t border-border pt-3">

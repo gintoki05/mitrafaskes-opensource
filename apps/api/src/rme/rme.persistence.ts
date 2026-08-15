@@ -55,6 +55,7 @@ export type LockedMedicalRecord = {
   id: string;
   status: PrismaMedicalRecordStatus;
   version: number;
+  triageStatus?: string;
 };
 
 export async function replaceDraftDiagnoses(
@@ -320,7 +321,7 @@ export async function lockMedicalRecord(
   encounterId: string,
 ): Promise<LockedMedicalRecord | null> {
   const rows = await transaction.$queryRaw<LockedMedicalRecord[]>(
-    Prisma.sql`SELECT "id", "status", "version" FROM "MedicalRecord" WHERE "encounterId" = ${encounterId} FOR UPDATE`,
+    Prisma.sql`SELECT "id", "status", "version", "triageStatus" FROM "MedicalRecord" WHERE "encounterId" = ${encounterId} FOR UPDATE`,
   );
   return rows[0] ?? null;
 }

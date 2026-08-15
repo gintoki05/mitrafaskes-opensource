@@ -154,11 +154,11 @@ function PractitionerProfileDialogContent({
         <div className="rounded-[var(--radius-control)] border border-border bg-muted/40 p-3 text-sm">
           <strong>{practitioner.fullName}</strong>
           <p className="mt-1 text-xs text-muted-foreground">
-            @{practitioner.username} · {practitioner.role === 'DOKTER' ? 'Dokter' : 'Perawat'}
+            @{practitioner.username} · {practitioner.role === 'DOKTER' ? 'Dokter' : practitioner.role === 'PETUGAS_PENDAFTARAN' ? 'Petugas pendaftaran' : 'Perawat'}
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {satusehat.available ? (
+          {satusehat.available && practitioner.role !== 'PETUGAS_PENDAFTARAN' ? (
             <div>
               <FieldLabel htmlFor="practitioner-profile-satusehat-id">
                 ID SATUSEHAT

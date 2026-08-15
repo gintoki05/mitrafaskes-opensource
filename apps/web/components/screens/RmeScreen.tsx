@@ -3,6 +3,7 @@
 import { useCallback, useState } from 'react';
 import { RefreshCw, Stethoscope, Zap } from 'lucide-react';
 import { AccessPermission } from '@mitrafaskes/shared';
+import { EncounterStatus } from '@mitrafaskes/shared';
 import { RouteGuard } from '@/components/RouteGuard';
 import { PageHeader } from '@/components/PageHeader';
 import { ScreenState } from '@/components/ScreenState';
@@ -20,6 +21,7 @@ import { resolveRmeWorkspaceViewState } from './rme/rme-workspace-model';
 import type { RmeFormValues } from './rme/rme-form-schema';
 import { useConditionActions } from './rme/useConditionActions';
 import { useObservationActions } from './rme/useObservationActions';
+import { useEncounterActions } from '@/hooks/useEncounterActions';
 
 function errorDescription(error: unknown): string {
   if (error instanceof RmeApiError && error.issues.length > 0) {
@@ -51,6 +53,8 @@ export default function RmePage() {
   const lifecycle = useRmeLifecycle(selectedEncounter?.id ?? null);
   const conditionActions = useConditionActions();
   const observationActions = useObservationActions();
+  const encounterActions = useEncounterActions();
+  const [startingEncounterId, setStartingEncounterId] = useState<string | null>(null);
   const canSyncDiagnosis = can(
     session?.user ?? null,
     AccessPermission.SYNC_RETRY,
@@ -58,6 +62,10 @@ export default function RmePage() {
   const canSyncObservation = can(
     session?.user ?? null,
     AccessPermission.SYNC_RETRY,
+  );
+  const canStartEncounter = can(
+    session?.user ?? null,
+    AccessPermission.QUEUE_START,
   );
   const workspaceState = resolveRmeWorkspaceViewState({
     encountersLoading,
@@ -168,6 +176,32 @@ export default function RmePage() {
     }
   };
 
+  const handleStartEncounter = async (encounter: (typeof encounters)[number]) => {
+    if (startingEncounterId) return;
+    setStartingEncounterId(encounter.id);
+    try {
+      await encounterActions.updateStatus(
+        encounter.id,
+        EncounterStatus.IN_PROGRESS,
+        encounter.version,
+      );
+      await refreshEncounters(encountersMeta.page, { retainMissingSelection: true });
+      if (encounter.triage?.status !== 'COMPLETED') {
+        toast.warning('Pemeriksaan dimulai dengan triase belum selesai', {
+          description: 'Lengkapi dan verifikasi data awal sebelum finalisasi RME.',
+        });
+      } else {
+        toast.success('Pemeriksaan dimulai');
+      }
+    } catch (error) {
+      toast.error('Pemeriksaan belum dapat dimulai', {
+        description: error instanceof Error ? error.message : 'Status Encounter tidak dapat diperbarui.',
+      });
+    } finally {
+      setStartingEncounterId(null);
+    }
+  };
+
   return (
     <RouteGuard permission={AccessPermission.RME_READ}>
       <div className="min-w-0 space-y-6 sm:space-y-8">
@@ -193,6 +227,9 @@ export default function RmePage() {
             onSelectEncounter={selectEncounter}
             onPageChange={(page) => void refreshEncounters(page)}
             onRetry={() => void refreshEncounters(encountersMeta.page)}
+            canStart={canStartEncounter}
+            startingEncounterId={startingEncounterId}
+            onStartEncounter={(encounter) => void handleStartEncounter(encounter)}
           />
 
           <div className="min-w-0 space-y-6 lg:col-span-3">
@@ -216,6 +253,13 @@ export default function RmePage() {
                     Muat ulang RME
                   </Button>
                 }
+              />
+            ) : workspaceState === 'ready' && selectedEncounter && selectedEncounter.status === EncounterStatus.WAITING ? (
+              <ScreenState
+                kind="empty"
+                title="Pasien menunggu pemeriksaan"
+                description="Mulai pemeriksaan untuk membuka dan mengisi RME dokter. Triase yang belum selesai tetap dapat dilengkapi saat konsultasi."
+                action={canStartEncounter ? <Button type="button" onClick={() => void handleStartEncounter(selectedEncounter)} disabled={Boolean(startingEncounterId)}>Mulai pemeriksaan</Button> : undefined}
               />
             ) : workspaceState === 'ready' && selectedEncounter ? (
               <RmeForm

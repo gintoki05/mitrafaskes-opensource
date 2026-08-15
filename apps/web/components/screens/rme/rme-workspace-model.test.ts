@@ -54,6 +54,8 @@ function record(
     serviceProfile: MedicalRecordServiceProfile.OUTPATIENT_GENERAL,
     validationProfile: 'OUTPATIENT_GENERAL_V1',
     anamnesis,
+    histories: [],
+    observations: [],
     diagnoses: [],
     prescriptions: [],
     createdAt: '2026-08-13T01:25:00.000Z',

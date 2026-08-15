@@ -25,11 +25,12 @@ export function PractitionerCreateClinicalFields({
       <div>
         <h2 className="text-sm font-bold text-foreground">Data Practitioner</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Lengkapi data lokal secara manual
-            {satusehat.configured ? ', atau tarik identitas bila tersedia di SATUSEHAT.' : '.'}
+          {form.role === 'PETUGAS_PENDAFTARAN'
+            ? 'Lengkapi profil akun pendaftaran secara lokal.'
+            : `Lengkapi data lokal secara manual${satusehat.configured ? ', atau tarik identitas bila tersedia di SATUSEHAT.' : '.'}`}
         </p>
       </div>
-      {satusehat.configured ? (
+      {satusehat.configured && form.role !== 'PETUGAS_PENDAFTARAN' ? (
         <PractitionerSatusehatLookupPanel
           nik={form.nik ?? ''}
           disabled={disabled}
@@ -38,7 +39,7 @@ export function PractitionerCreateClinicalFields({
         />
       ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
-        {satusehat.available ? (
+        {satusehat.available && form.role !== 'PETUGAS_PENDAFTARAN' ? (
           <div>
             <FieldLabel htmlFor="practitioner-create-satusehat-id">
               ID SATUSEHAT

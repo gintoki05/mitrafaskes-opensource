@@ -107,7 +107,7 @@ export default function PractitionerListScreen() {
         <PageHeader
           icon={<Stethoscope className="h-6 w-6" />}
           title="Practitioner / Tenaga Kesehatan"
-          description="Kelola profil dokter dan perawat secara lokal; sinkronisasi ke provider eksternal tersedia bila integrasi diaktifkan."
+          description="Kelola profil dokter, perawat klinis, dan petugas pendaftaran secara lokal; sinkronisasi eksternal hanya berlaku untuk tenaga klinis bila integrasi diaktifkan."
           action={
             canWrite ? (
               <Button type="button" onClick={() => setCreateDialogOpen(true)}>
@@ -121,7 +121,7 @@ export default function PractitionerListScreen() {
         <MasterFaskesTable
           caption="Daftar Practitioner / tenaga kesehatan"
           emptyTitle="Belum ada tenaga kesehatan"
-          emptyDescription="User dengan peran dokter atau perawat akan tampil di sini."
+          emptyDescription="User dengan peran dokter, perawat klinis, atau petugas pendaftaran akan tampil di sini."
           data={items}
           columns={columns}
           meta={meta}

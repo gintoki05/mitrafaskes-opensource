@@ -43,13 +43,15 @@ export function validatePractitionerCreate(
   const password = readRequiredText(body.password, 'password', 128, issues);
   const fullName = readRequiredText(body.fullName, 'fullName', 150, issues);
   const role =
-    body.role === Role.DOKTER || body.role === Role.PERAWAT
+    body.role === Role.DOKTER ||
+    body.role === Role.PERAWAT ||
+    body.role === Role.PETUGAS_PENDAFTARAN
       ? body.role
       : undefined;
   if (!role) {
     issues.push({
       field: 'role',
-      message: 'Role harus DOKTER atau PERAWAT.',
+      message: 'Role harus DOKTER, PERAWAT, atau PETUGAS_PENDAFTARAN.',
     });
   }
   if (username && !/^[a-zA-Z0-9._-]+$/.test(username)) {

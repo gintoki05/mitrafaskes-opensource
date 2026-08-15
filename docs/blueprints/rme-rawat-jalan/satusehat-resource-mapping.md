@@ -54,10 +54,10 @@ gigi baru diaktifkan setelah gate Encounter, Condition, dan Observation lulus.
 
 ## Matriks implementasi
 
-Status di bawah ini diperbarui pada 13 Agustus 2026 berdasarkan adapter API,
-gateway integrasi, UI RME, dan test yang ada di codebase. Status **aktif** berarti
-jalur kode dan kontrak pengujian tersedia; verifikasi sandbox SATUSEHAT tetap
-menjadi gate delivery terpisah.
+Status di bawah ini memakai snapshot codebase 15 Agustus 2026 berdasarkan adapter
+API, gateway integrasi, UI RME, dan test yang ada di codebase. Status **aktif**
+berarti jalur kode dan kontrak pengujian tersedia; verifikasi sandbox SATUSEHAT
+tetap menjadi gate delivery terpisah.
 
 | Resource | Peran dalam RME | Status codebase saat ini | Fase |
 | --- | --- | --- | --- |
@@ -75,6 +75,22 @@ menjadi gate delivery terpisah.
 | Medication + MedicationRequest | Identitas obat dan resep | Resep masih string | Lanjutan inti |
 | ServiceRequest/CarePlan | Rujukan, pemeriksaan, tindak lanjut | Belum terstruktur | Lanjutan |
 | Composition | Ringkasan final yang mereferensikan resource | Belum ada | Terakhir |
+
+### Bukti delivery terbaru
+
+Laporan manual sandbox terakhir pada 13 Agustus 2026 berstatus **PARTIAL / BLOCKED**:
+
+- Encounter create dan repeat update pernah berhasil pada run sebelumnya dengan
+  remote ID yang tetap;
+- Condition dan Observation sudah memiliki adapter, mapper, linkage, dan test,
+  tetapi manual rerun setelah migration masih blocked karena API/web dan assignment
+  dokter belum tersedia pada run tersebut;
+- karena itu status **aktif** pada tabel di atas tidak boleh dibaca sebagai bukti
+  sandbox remote sudah lulus.
+
+Rerun manual harus dicatat kembali pada
+`docs/satusehat-sandbox-e2e-2026-08-13.md` atau laporan baru dengan local ID,
+remote ID, operasi create/update, status setelah refresh, dan error terakhir.
 
 ## Gate per resource aktif
 

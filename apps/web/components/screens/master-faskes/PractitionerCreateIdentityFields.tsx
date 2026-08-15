@@ -50,6 +50,7 @@ export function PractitionerCreateIdentityFields({
           >
             <option value="DOKTER">Dokter</option>
             <option value="PERAWAT">Perawat</option>
+            <option value="PETUGAS_PENDAFTARAN">Petugas pendaftaran</option>
           </SelectField>
         </div>
         <div>

@@ -17,6 +17,9 @@ export enum AccessPermission {
   RME_READ = 'rme.read',
   RME_WRITE_DRAFT = 'rme.write-draft',
   RME_FINALIZE = 'rme.finalize',
+  RME_TRIAGE_READ = 'rme.triage-read',
+  RME_TRIAGE_WRITE = 'rme.triage-write',
+  RME_TRIAGE_COMPLETE = 'rme.triage-complete',
   SYNC_STATUS_READ = 'sync.status-read',
   SYNC_RETRY = 'sync.retry',
   SYNC_PAYLOAD_READ = 'sync.payload-read',
@@ -25,20 +28,23 @@ export enum AccessPermission {
 }
 
 export const ALL_USER_ROLES = [
-  UserRole.PERAWAT,
   UserRole.DOKTER,
+  UserRole.PERAWAT,
+  UserRole.PETUGAS_PENDAFTARAN,
   UserRole.ADMIN,
 ] as const;
 
 export const ROLE_LABELS: Readonly<Record<UserRole, string>> = {
-  [UserRole.PERAWAT]: 'Petugas pendaftaran',
   [UserRole.DOKTER]: 'Dokter',
+  [UserRole.PERAWAT]: 'Perawat klinis',
+  [UserRole.PETUGAS_PENDAFTARAN]: 'Petugas pendaftaran',
   [UserRole.ADMIN]: 'Admin',
 };
 
 export const DEFAULT_ROUTE_BY_ROLE: Readonly<Record<UserRole, string>> = {
-  [UserRole.PERAWAT]: '/pendaftaran',
   [UserRole.DOKTER]: '/rme',
+  [UserRole.PERAWAT]: '/triase',
+  [UserRole.PETUGAS_PENDAFTARAN]: '/pendaftaran',
   [UserRole.ADMIN]: '/master-faskes',
 };
 
@@ -50,6 +56,14 @@ export const ROLE_PERMISSIONS: Readonly<
   Record<UserRole, ReadonlySet<AccessPermission>>
 > = {
   [UserRole.PERAWAT]: new Set([
+    AccessPermission.PATIENT_READ,
+    AccessPermission.QUEUE_READ,
+    AccessPermission.RME_TRIAGE_READ,
+    AccessPermission.RME_TRIAGE_WRITE,
+    AccessPermission.RME_TRIAGE_COMPLETE,
+    AccessPermission.MASTER_DATA_READ,
+  ]),
+  [UserRole.PETUGAS_PENDAFTARAN]: new Set([
     AccessPermission.PATIENT_READ,
     AccessPermission.PATIENT_WRITE,
     AccessPermission.QUEUE_READ,

@@ -3,6 +3,15 @@ import type { UserRole } from './auth';
 import type { ResourceIntegrationSummary } from './integrations';
 import type { Gender } from './patient';
 
+export type TriageStatus = 'NOT_STARTED' | 'DRAFT' | 'COMPLETED';
+
+export interface TriageSummary {
+  status: TriageStatus;
+  updatedAt?: string;
+  completedAt?: string;
+  completedBy?: string;
+}
+
 export enum EncounterStatus {
   WAITING = "WAITING",
   IN_PROGRESS = "IN_PROGRESS",
@@ -39,6 +48,7 @@ export interface Encounter {
   createdAt: string;
   updatedAt: string;
   integrations: ResourceIntegrationSummary[];
+  triage?: TriageSummary;
   patient?: {
     nik?: string;
     fullName: string;
@@ -82,6 +92,7 @@ export interface EncounterListQuery {
   queueDate?: string;
   locationId?: string;
   status?: EncounterStatus;
+  statuses?: EncounterStatus[];
 }
 
 export type EncounterListResponse = PaginatedListResponse<Encounter>;

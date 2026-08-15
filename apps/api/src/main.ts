@@ -1,11 +1,39 @@
 import './env';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { getAllowedWebOrigins } from './auth/auth.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  app.use(
+    helmet({
+      // The Next.js app and API normally use different origins in development
+      // and may do so behind a SaaS gateway in production. CORS remains the
+      // read-access boundary for those origins.
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
+  app.use(cookieParser());
+
+  const allowedOrigins = new Set(getAllowedWebOrigins());
+  app.enableCors({
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Origin tidak diizinkan oleh konfigurasi CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  });
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Mitra Faskes API')

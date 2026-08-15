@@ -89,6 +89,28 @@ export const parseEncounterStatus = (
   return value as EncounterStatus;
 };
 
+export const parseEncounterStatuses = (
+  value: string | undefined,
+): EncounterStatus[] | undefined => {
+  if (!value) return undefined;
+  const statuses = value
+    .split(',')
+    .map((status) => status.trim())
+    .filter(Boolean);
+  if (
+    statuses.length === 0 ||
+    statuses.some(
+      (status) =>
+        !Object.values(EncounterStatus).includes(status as EncounterStatus),
+    )
+  ) {
+    throw new EncounterValidationError('Filter status Encounter tidak valid', [
+      { field: 'statuses', message: 'Status Encounter tidak valid' },
+    ]);
+  }
+  return [...new Set(statuses)] as EncounterStatus[];
+};
+
 export interface ValidatedEncounterHistoryDateRange {
   fromDate: Date;
   toDate: Date;

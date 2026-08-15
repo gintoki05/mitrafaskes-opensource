@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { SessionPermissionGuard } from './auth/session-permission.guard';
+import { AuthModule } from './auth/auth.module';
 import { IntegrationCoreModule } from './integrations/integration-core.module';
 import { PatientsModule } from './patients/patients.module';
 import { MasterDataModule } from './master-data/master-data.module';
@@ -14,6 +14,7 @@ const satusehatEnabled = process.env.INTEGRATION_SATUSEHAT_ENABLED === 'true';
 
 @Module({
   imports: [
+    AuthModule,
     IntegrationCoreModule.register({
       masterDataProvider: { provider: 'SATUSEHAT', domain: 'WILAYAH' },
       providers: [
@@ -50,6 +51,6 @@ const satusehatEnabled = process.env.INTEGRATION_SATUSEHAT_ENABLED === 'true';
     ...(satusehatEnabled ? [SatusehatIntegrationModule] : []),
   ],
   controllers: [AppController],
-  providers: [AppService, SessionPermissionGuard],
+  providers: [AppService],
 })
 export class AppModule {}

@@ -2,6 +2,7 @@
 
 Status: **baseline produk; bukan opini hukum atau hasil survei**  
 Baseline sumber: 12 Agustus 2026  
+Snapshot codebase: 15 Agustus 2026
 Fokus awal: Klinik Pratama/Utama rawat jalan
 
 ## Keputusan utama
@@ -140,11 +141,11 @@ Ini bukan audit akreditasi resmi, melainkan gap teknis awal.
 
 | Area | Status | Catatan |
 | --- | --- | --- |
-| Encounter dan antrean lokal | Parsial | Lifecycle tersedia, tetapi finalisasi RME masih dapat terlewati |
-| RME kronologis draft/final/amendemen | Belum memenuhi target | `MedicalRecord` belum mempunyai lifecycle dokumen yang aman |
-| Data klinis terstruktur | Parsial | Vital, diagnosis, dan resep masih terlalu sederhana |
-| Audit akses dan koreksi klinis | Belum diverifikasi/target | Perlu audit event, permission matrix, dan amendment workflow eksplisit |
-| Interoperabilitas | Parsial | Empat master linked; Encounter masih preview; Condition/Observation belum aktif |
+| Encounter dan antrean lokal | Parsial | Lifecycle, status history, optimistic concurrency, dan guard finalisasi tersedia; kontrol administratif dan bukti operasional masih perlu review |
+| RME kronologis draft/final/amendemen | Parsial | `DRAFT`/`FINAL`, version, preflight, finalisasi atomik, dan audit event tersedia; amendment belum tersedia |
+| Data klinis terstruktur | Parsial | History/Observation typed dan diagnosis terstruktur tersedia; allergy, procedure, resep, dan follow-up masih sederhana/target |
+| Audit akses dan koreksi klinis | Parsial | Permission dan audit event RME tersedia; audit akses menyeluruh, disclosure, dan amendment workflow belum tersedia |
+| Interoperabilitas | Parsial | Adapter Organization sampai Observation tersedia; Encounter pernah PASS pada run sebelumnya, Condition/Observation manual rerun terakhir masih BLOCKED |
 | Audit mutu RME | Target | Belum ada sampling, review, temuan, dan CAPA khusus |
 | Indikator mutu/insiden/risiko | Target | Perlu domain terpisah dengan akses dan pelaporan yang tepat |
 | Evidence center akreditasi | Target | Belum ada versioned standard/evidence pack |

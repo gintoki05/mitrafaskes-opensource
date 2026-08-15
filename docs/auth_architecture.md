@@ -26,19 +26,25 @@ Mitra Faskes menggunakan autentikasi lokal yang dimiliki NestJS API:
   kemudian melalui adapter autentikasi NestJS tanpa mengubah domain role dan
   permission.
 
-## Status implementasi saat dokumen dibuat
+## Status implementasi vertical slice
 
-Auth saat ini masih merupakan scaffold development:
+Fondasi auth lokal sudah diimplementasikan pada vertical slice pertama tanpa
+mengubah `User.role` yang masih dipakai workflow klinis saat ini:
 
-- endpoint login berada di `apps/api/src/app.controller.ts`;
-- username dan token demo masih hard-coded;
-- password demo belum diverifikasi sebagai hash yang aman;
-- `SessionPermissionGuard` masih membaca token mock;
-- frontend masih menyimpan token di `localStorage`.
+- `AuthModule` berada di `apps/api/src/auth` dan guard session/permission
+  dipasang global;
+- `AuthSession` menyimpan digest SHA-256 dari opaque token, bukan token asli;
+- password seed dan pembuatan practitioner baru memakai Argon2id;
+- browser memakai cookie `HttpOnly`, sedangkan client non-browser memakai
+  endpoint bearer terpisah;
+- frontend melakukan bootstrap sesi melalui `/api/auth/me` dan tidak lagi
+  menyimpan token auth di `localStorage`;
+- Helmet, CORS allowlist, CSRF double-submit, dan throttling sudah aktif.
 
-Kondisi tersebut bukan kontrak production. Implementasi auth berikutnya harus
-mengganti scaffold ini secara bertahap tanpa mengubah workflow klinis yang
-sudah berjalan.
+Multi-organisasi, multi-role, `AuthIdentity`/OIDC, audit event auth khusus, dan
+policy object-level tetap merupakan tahap berikutnya. Implementasi saat ini
+mempertahankan role `ADMIN`, `DOKTER`, dan `PERAWAT`, serta menambahkan
+`PETUGAS_PENDAFTARAN` sebagai role administratif eksplisit.
 
 ## Batas tanggung jawab
 
@@ -58,6 +64,8 @@ menggantikan guard atau pemeriksaan domain di API.
 AuthModule
 ├── AuthController
 │   ├── POST /api/auth/login
+│   ├── POST /api/auth/token
+│   ├── GET  /api/auth/csrf
 │   ├── GET  /api/auth/me
 │   ├── POST /api/auth/logout
 │   ├── POST /api/auth/logout-all
@@ -65,9 +73,9 @@ AuthModule
 ├── AuthService
 │   └── orkestrasi login, logout, dan perubahan password
 ├── PasswordService
-│   └── hash, verify, dan rehash Argon2id
+│   └── hash dan verify Argon2id
 ├── SessionService
-│   └── create, resolve, rotate, expire, dan revoke sesi
+│   └── create, resolve, idle/absolute expiry, dan revoke sesi
 ├── SessionGuard
 │   └── membangun request principal yang terautentikasi
 └── PermissionGuard
@@ -113,10 +121,9 @@ Pada migrasi awal, `User.passwordHash` yang sudah ada boleh dipakai sebagai
 credential lokal sementara. Pemisahan ke `AuthIdentity` dan
 `PasswordCredential` dilakukan sebelum provider OIDC kedua diperkenalkan.
 
-Nilai `PERAWAT` saat ini merupakan kode legacy untuk petugas pendaftaran.
-Arsitektur target menggunakan kode produk `PENDAFTARAN` secara eksplisit dan
-mempertahankan compatibility mapping sampai migrasi data selesai. Role
-`PERAWAT` selanjutnya mewakili profesi perawat, bukan petugas pendaftaran.
+Nilai `PERAWAT` sekarang mewakili profesi perawat klinis untuk triase. Role
+`PETUGAS_PENDAFTARAN` dipakai untuk akun administratif pendaftaran; akun
+`PERAWAT` lama tidak dipindahkan menjadi pendaftaran.
 
 ## Password dan credential
 
@@ -166,19 +173,30 @@ concurrent session, dan penemuan sesi bermasalah dapat dilakukan server-side.
 Redis boleh ditambahkan sebagai cache atau shared rate-limit store pada SaaS
 multi-instance, tetapi PostgreSQL tetap menjadi sumber kebenaran sesi.
 
+Pada vertical slice ini, perubahan password mencabut seluruh sesi lain dan
+mempertahankan sesi aktif agar pengguna tidak terputus di tengah pekerjaan.
+Rotasi sesi aktif setelah kejadian sensitif dan rehash transparan saat login
+merupakan penguatan tahap berikutnya.
+
 ## Alur autentikasi
 
-### Login
+### Login browser
 
 ```text
-Browser -> POST /api/auth/login
+Browser -> GET  /api/auth/csrf
+Browser -> POST /api/auth/login + X-CSRF-Token
 NestJS  -> validasi DTO dan rate limit
 NestJS  -> cari identity lokal dan user aktif
 NestJS  -> verifikasi Argon2id
-NestJS  -> buat session dan audit event
+NestJS  -> buat AuthSession
 NestJS  -> Set-Cookie HttpOnly
 Browser -> GET /api/auth/me
 ```
+
+`POST /api/auth/login` mengembalikan `{ user }` tanpa raw token. Untuk mobile,
+CLI, integration test, atau client yang memang tidak memakai cookie, gunakan
+`POST /api/auth/token`; endpoint ini mengembalikan `{ accessToken, user }` dan
+tidak mengatur cookie.
 
 ### Request terlindungi
 
@@ -245,7 +263,9 @@ aturan object-level menjadi sulit dipelihara secara konsisten.
 NestJS menggunakan Helmet untuk security headers response API. Middleware
 dipasang sebelum route atau middleware lain yang perlu dilindungi. Header CSP
 untuk HTML Next.js dikonfigurasi terpisah di aplikasi web karena Helmet pada
-origin API tidak melindungi dokumen yang dirender Next.js.
+origin API tidak melindungi dokumen yang dirender Next.js. Karena API dan web
+dapat berbeda origin, `Cross-Origin-Resource-Policy` API memakai `cross-origin`;
+CORS allowlist tetap menjadi batas akses baca.
 
 ### CORS
 
@@ -263,10 +283,10 @@ lapisan tambahan, bukan pengganti validasi CSRF.
 ### Rate limiting
 
 `@nestjs/throttler` digunakan secara global dengan kebijakan lebih ketat untuk
-login, reset password, perubahan password, dan endpoint auth sensitif. Login
-dibatasi berdasarkan kombinasi sinyal seperti alamat jaringan dan username
-yang dinormalisasi agar serangan terdistribusi maupun penguncian akun palsu
-lebih sulit dilakukan.
+login, perubahan password, dan endpoint auth sensitif. Baseline saat ini adalah
+120 request/menit per tracker API dan 5 request/15 menit untuk login/token per
+IP. Storage throttler masih in-memory untuk single instance/local; SaaS
+multi-instance wajib menggantinya dengan shared storage atau edge limiter.
 
 Deployment di belakang reverse proxy harus mempercayai proxy yang benar-benar
 dikenal agar IP client tidak dapat dipalsukan melalui header forwarding. SaaS
@@ -308,28 +328,32 @@ memindahkan authorization domain ke provider.
 | Terkena rate limit | `429 TOO_MANY_REQUESTS` |
 | CSRF tidak valid | `403 FORBIDDEN` dengan kode aman yang konsisten |
 
-Audit auth minimal mencatat login berhasil/gagal, logout, logout-all, perubahan
-password, pencabutan sesi, dan perubahan membership/role. Event menyimpan actor,
-waktu, hasil, request/correlation ID, dan metadata aman; tidak menyimpan secret.
+Audit auth khusus belum menjadi tabel pada vertical slice ini. Logging aplikasi
+tidak boleh mencatat password, hash, cookie, token, atau secret. Tabel/event
+audit auth dan correlation ID wajib ditambahkan sebelum kebutuhan compliance
+produksi diaktifkan.
 
 ## Tahapan migrasi
 
-1. Tambahkan model session dan fondasi membership/role tanpa mengubah alur
-   klinis.
-2. Buat `AuthModule`, Argon2id password service, dan endpoint login/me/logout.
-3. Ganti mock token dengan global `SessionGuard` dan `PermissionGuard`.
-4. Migrasikan credential seed development menjadi hash Argon2id.
-5. Ganti penyimpanan frontend dari `localStorage` ke cookie session dan CSRF.
-6. Aktifkan Helmet, CORS allowlist, CSRF, serta rate limiting.
-7. Migrasikan kode legacy `PERAWAT` menuju `PENDAFTARAN` dengan compatibility
-   test.
-8. Verifikasi session lifecycle, `401`/`403`, permission, audit, dan isolasi
-   lintas tenant sebelum menghapus scaffold auth lama.
+1. ~~Tambahkan model session~~ **selesai**: `AuthSession` dan migrasi database.
+2. ~~Buat `AuthModule`, Argon2id password service, dan endpoint
+   login/me/logout~~ **selesai**.
+3. ~~Ganti mock token dengan global `SessionGuard` dan `PermissionGuard`~~
+   **selesai**.
+4. ~~Migrasikan credential seed development menjadi hash Argon2id~~
+   **selesai**.
+5. ~~Ganti penyimpanan frontend dari `localStorage` ke cookie session dan
+   CSRF~~ **selesai**.
+6. ~~Aktifkan Helmet, CORS allowlist, CSRF, serta rate limiting~~ **selesai**.
+7. Pertahankan akun `PERAWAT` sebagai role klinis dan buat akun
+   `PETUGAS_PENDAFTARAN` untuk tugas administratif.
+8. Tambahkan audit event auth, membership scope, OIDC adapter, dan verifikasi
+   tenant isolation sebelum SaaS multi-organisasi diaktifkan.
 
 ## Gate verifikasi
 
 - Unit test hash/verify, login generik, expiry, rotasi, dan revokasi sesi.
-- E2E login, `/auth/me`, logout, logout-all, dan perubahan password.
+- E2E login cookie, `/auth/me`, bearer token, logout, dan CSRF.
 - E2E setiap role terhadap endpoint yang diizinkan dan ditolak.
 - Uji dependency bahwa user nonaktif dan membership dicabut kehilangan akses.
 - Uji CSRF, CORS origin ditolak, cookie flags, dan rate limit auth.
@@ -337,6 +361,58 @@ waktu, hasil, request/correlation ID, dan metadata aman; tidak menyimpan secret.
 - Uji bahwa password, hash, cookie, token, dan secret tidak muncul pada log atau
   response.
 - Browser test login, refresh, multi-tab, expiry, `401`, `403`, dan logout.
+
+## Checklist hardening sebelum SaaS production
+
+Checklist ini berasal dari pentest lokal dan menjadi gate sebelum deployment
+production. Jangan menganggap auth siap SaaS hanya karena login lokal sudah
+berhasil.
+
+### Prioritas wajib sebelum production
+
+- [ ] Nonaktifkan akun demo dan password default dari `prisma/seed.ts` ketika
+  `NODE_ENV=production`; bootstrap admin harus memakai secret/environment yang
+  berbeda dan password awal wajib diganti.
+- [ ] Tolak `AUTH_CSRF_SECRET` yang kosong, placeholder, atau terlalu pendek;
+  gunakan secret manager dan rotasi secret sesuai prosedur deployment.
+- [ ] Paksa `AUTH_COOKIE_SECURE=true` pada production. Jangan mengizinkan
+  konfigurasi sample development menurunkan flag `Secure`.
+- [ ] Ubah penolakan CORS origin menjadi respons terkontrol `403` tanpa
+  exception stack trace atau error log yang dapat dibanjiri.
+- [ ] Audit dan upgrade dependency rentan sebelum build production. Pindahkan
+  package tooling seperti `shadcn` ke `devDependencies`, gunakan install
+  production tanpa dev dependency, lalu jalankan `npm audit` kembali pada image
+  final.
+
+### Prioritas wajib sebelum multi-tenant SaaS
+
+- [ ] Pisahkan akses berdasarkan `OrganizationMembership` dan `location scope`;
+  setiap query/mutation wajib menerima tenant context dari principal server,
+  bukan dari ID yang dipercaya dari browser.
+- [ ] Tambahkan pengujian lintas tenant untuk detail, list, update, dan endpoint
+  integrasi; record tenant lain harus ditolak tanpa membocorkan detail.
+- [ ] Ganti throttler in-memory dengan shared store seperti Redis atau edge
+  rate-limiter ketika API berjalan multi-instance.
+- [ ] Atur `trust proxy` hanya untuk proxy yang dikenal agar IP client dan
+  kebijakan rate limit/CSRF tidak dapat dimanipulasi melalui forwarding header.
+
+### Hardening lanjutan
+
+- [ ] Tambahkan audit event untuk login sukses/gagal, logout, logout-all,
+  perubahan password, revoke session, perubahan membership, dan perubahan
+  permission; sertakan correlation ID tanpa menyimpan password/token/secret.
+- [ ] Aktifkan MFA untuk admin dan akun dengan permission sensitif.
+- [ ] Disable Swagger atau lindungi `/api/docs` dan `/api/docs-json` di
+  production.
+- [ ] Tambahkan monitoring dan alert untuk brute force, lonjakan `401`/`403`,
+  `429`, dan perubahan pola session.
+
+### Keputusan arsitektur yang dipertahankan
+
+Local auth tetap menjadi pilihan utama: NestJS API memegang identity, session,
+role, permission, dan tenant authorization. Auth.js tidak perlu ditambahkan.
+Provider OIDC/SSO dapat ditambahkan kemudian hanya sebagai pembuktian identity;
+authorization klinis tetap berada di domain Mitra Faskes.
 
 ## Referensi resmi
 

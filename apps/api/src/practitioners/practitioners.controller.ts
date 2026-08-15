@@ -6,7 +6,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -15,7 +14,6 @@ import {
   MasterDataListSort,
   MasterDataSortDirection,
 } from '@mitrafaskes/shared';
-import { SessionPermissionGuard } from '../auth/session-permission.guard';
 import { RequirePermission } from '../auth/access-control.decorator';
 import { PractitionersService } from './practitioners.service';
 
@@ -24,7 +22,6 @@ type PractitionerHttpQuery = Record<string, string | undefined>;
 const listSorts: MasterDataListSort[] = ['name', 'active', 'createdAt'];
 
 @Controller('api/practitioners')
-@UseGuards(SessionPermissionGuard)
 @ApiTags('Practitioners')
 export class PractitionersController {
   constructor(private readonly practitioners: PractitionersService) {}
@@ -79,7 +76,9 @@ export class PractitionersController {
       organizationId: query.organizationId,
       locationId: query.locationId,
       role:
-        query.role === 'DOKTER' || query.role === 'PERAWAT'
+        query.role === 'DOKTER' ||
+        query.role === 'PERAWAT' ||
+        query.role === 'PETUGAS_PENDAFTARAN'
           ? query.role
           : undefined,
       page: parsePositiveInteger(query.page),

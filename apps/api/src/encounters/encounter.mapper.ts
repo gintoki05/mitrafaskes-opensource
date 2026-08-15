@@ -38,6 +38,18 @@ export function toEncounter(
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
     integrations,
+    triage: {
+      status: record.medicalRecord?.triageStatus ?? 'NOT_STARTED',
+      ...(record.medicalRecord?.triageUpdatedAt
+        ? { updatedAt: record.medicalRecord.triageUpdatedAt.toISOString() }
+        : {}),
+      ...(record.medicalRecord?.triageCompletedAt
+        ? { completedAt: record.medicalRecord.triageCompletedAt.toISOString() }
+        : {}),
+      ...(record.medicalRecord?.triageCompletedBy
+        ? { completedBy: record.medicalRecord.triageCompletedBy }
+        : {}),
+    },
     patient: {
       nik: record.patient.nik ?? undefined,
       fullName: record.patient.fullName,

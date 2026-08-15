@@ -9,6 +9,7 @@ import {
   Database,
   ChevronDown,
   HelpCircle,
+  HeartPulse,
   History,
   LogOut,
   RefreshCw,
@@ -19,7 +20,7 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { AccessPermission, ROLE_LABELS } from '@mitrafaskes/shared';
-import { can, clearSession, defaultRoute } from '@/lib/auth';
+import { apiFetch, can, clearSession, defaultRoute } from '@/lib/auth';
 import { useSession } from '@/hooks/useSession';
 import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
@@ -56,6 +57,13 @@ const navigationItems: readonly NavigationItem[] = [
     shortLabel: 'Dokter',
     permission: AccessPermission.RME_READ,
     icon: Stethoscope,
+  },
+  {
+    href: '/triase',
+    label: 'Triase Perawat',
+    shortLabel: 'Triase',
+    permission: AccessPermission.RME_TRIAGE_READ,
+    icon: HeartPulse,
   },
   {
     href: '/master-data',
@@ -103,8 +111,10 @@ export function Navbar() {
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   const handleLogout = () => {
-    clearSession();
-    router.replace('/login');
+    void apiFetch('/api/auth/logout', { method: 'POST' }).finally(() => {
+      clearSession();
+      router.replace('/login');
+    });
   };
 
   if (pathname === '/login') return null;

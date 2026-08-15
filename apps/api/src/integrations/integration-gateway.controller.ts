@@ -7,15 +7,11 @@ import {
   Query,
   Req,
   NotFoundException,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AccessPermission, evaluateAccess } from '@mitrafaskes/shared';
 import { RequirePermission } from '../auth/access-control.decorator';
-import {
-  AuthenticatedUser,
-  SessionPermissionGuard,
-} from '../auth/session-permission.guard';
+import { AuthenticatedUser } from '../auth/session-permission.guard';
 import { IntegrationRegistry } from './integration-registry';
 import type { IntegrationResourceHandler } from './integration.types';
 
@@ -49,7 +45,6 @@ function requireOperation(
 }
 
 @Controller('api/integrations')
-@UseGuards(SessionPermissionGuard)
 @ApiTags('Integrations')
 export class IntegrationGatewayController {
   constructor(private readonly integrations: IntegrationRegistry) {}

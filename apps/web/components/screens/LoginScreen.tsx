@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { z } from 'zod';
-import { apiFetch, defaultRoute, saveSession } from '@/lib/auth';
+import { apiFetch, defaultRoute, setSession } from '@/lib/auth';
 import { getLastRoute } from '@/lib/route-state';
 import { useSession } from '@/hooks/useSession';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 function getSessionEntryRoute(user: Parameters<typeof defaultRoute>[0]): string {
   return getLastRoute(user) ?? defaultRoute(user);
 }
-
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -68,7 +67,7 @@ export default function LoginPage() {
       }
 
       const data = await res.json();
-      saveSession(data.accessToken, data.user);
+      setSession(data.user);
       router.replace(getSessionEntryRoute(data.user));
     } catch (err: unknown) {
       toast.error('Tidak dapat masuk', {

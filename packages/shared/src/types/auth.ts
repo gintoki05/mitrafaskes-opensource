@@ -1,11 +1,10 @@
 export enum UserRole {
   ADMIN = 'ADMIN',
   DOKTER = 'DOKTER',
-  /**
-   * Legacy persisted value for the phase-one registration officer role.
-   * The product-facing label is "Petugas pendaftaran".
-   */
+  /** Clinical nurse role for triage and initial clinical documentation. */
   PERAWAT = 'PERAWAT',
+  /** Non-clinical registration/queue operator role. */
+  PETUGAS_PENDAFTARAN = 'PETUGAS_PENDAFTARAN',
 }
 
 export interface UserProfile {
@@ -19,10 +18,14 @@ export interface UserProfile {
 
 export interface LoginRequest {
   username: string;
-  passwordHash: string;
+  password: string;
 }
 
 export interface LoginResponse {
+  user: UserProfile;
+}
+
+export interface TokenResponse {
   accessToken: string;
   user: UserProfile;
 }

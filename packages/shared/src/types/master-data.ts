@@ -64,7 +64,7 @@ export interface PractitionerSummary {
   id: string;
   username: string;
   fullName: string;
-  role: 'DOKTER' | 'PERAWAT';
+  role: 'DOKTER' | 'PERAWAT' | 'PETUGAS_PENDAFTARAN';
   nik?: string;
   birthDate?: string;
   gender?: 'MALE' | 'FEMALE';
@@ -85,7 +85,7 @@ export interface PractitionerCreateRequest {
   username: string;
   password: string;
   fullName: string;
-  role: 'DOKTER' | 'PERAWAT';
+  role: 'DOKTER' | 'PERAWAT' | 'PETUGAS_PENDAFTARAN';
   nik?: string | null;
   birthDate?: string | null;
   gender?: 'MALE' | 'FEMALE' | null;
@@ -115,7 +115,7 @@ export interface MasterDataListQuery {
   status?: string;
   organizationId?: string;
   locationId?: string;
-  role?: 'DOKTER' | 'PERAWAT';
+  role?: 'DOKTER' | 'PERAWAT' | 'PETUGAS_PENDAFTARAN';
   page?: number;
   pageSize?: number;
   sort?: MasterDataListSort;

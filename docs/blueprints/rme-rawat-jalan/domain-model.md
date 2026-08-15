@@ -90,6 +90,26 @@ Invariant:
 - penghapusan child saat update draft harus menghasilkan audit yang benar dan
   tidak menghapus histori record final.
 
+### Batas aggregate untuk MVP `OUTPATIENT_GENERAL_V1`
+
+Untuk alur pertama, `MedicalRecord` tidak perlu menunggu semua entitas target di
+bawah. Sumber kebenaran lokal yang benar-benar dipakai adalah:
+
+| Bagian | Model saat ini | Peran dalam kontrak MVP |
+| --- | --- | --- |
+| Konteks kunjungan | `Patient`, `Encounter`, `EncounterStatusHistory`, `User` dokter | Menetapkan pasien, faskes, Location, dokter, antrean, lifecycle, dan actor. |
+| Root RME | `MedicalRecord` | Menyimpan `DRAFT`/`FINAL`, version, profile, narasi klinis, metadata author/finalizer, dan plan minimal. |
+| Riwayat | `ClinicalHistoryEntry[]` | Menyimpan riwayat tambahan bila dokter memilikinya; bukan syarat finalisasi. |
+| Observasi | `ClinicalObservation[]` | Menyimpan vital typed; empat vital inti menjadi syarat profile, vital tambahan opsional. |
+| Diagnosis | `Diagnosis[]` | Menyimpan ICD-10 dan `isPrimary`; tepat satu diagnosis utama diperlukan. |
+| Resep | `Prescription[]` | Opsional; validasi hanya berlaku pada baris resep yang diisi. |
+
+`Complaint`, `AllergyRecord`, `PhysicalExam`, `ProcedureRecord`, `MedicationOrder`,
+dan `FollowUpPlan` pada diagram adalah target domain, bukan tabel yang harus
+ditambahkan agar kontrak MVP berjalan. `chiefComplaint`, `allergyDetails`, dan
+`physicalExam` masih berupa field naratif pada root RME; keputusan untuk
+menormalkannya ditunda sampai ada review klinis dan kebutuhan reuse yang nyata.
+
 ### Extension konsultasi gigi
 
 `OUTPATIENT_DENTAL` memperluas `MedicalRecord` dengan satu `DentalExam`. Sumber
@@ -116,7 +136,10 @@ risiko, dokumen kebijakan, dan audit kelengkapan berada pada module governance
 terpisah. Module tersebut boleh mereferensikan metadata klinis sesuai izin,
 tetapi tidak menjadi child `MedicalRecord` dan tidak mengubah isi final.
 
-## Entitas target minimum
+## Entitas target setelah MVP
+
+Tabel berikut tetap menjadi arah domain setelah workflow MVP stabil. Keberadaan
+nama entitas di sini tidak mengubah batas kontrak `OUTPATIENT_GENERAL_V1`.
 
 | Entitas | Field penting | Catatan |
 | --- | --- | --- |
@@ -165,16 +188,16 @@ dan remote ID.
 
 | Area | Saat ini | Target |
 | --- | --- | --- |
-| Encounter | Lifecycle lokal dan history tersedia | Tambah reason/disposition yang terstruktur dan gate finalisasi |
-| RME | Upsert satu kali, lalu Encounter langsung selesai | `DRAFT` tersimpan berkali-kali; `FINAL` eksplisit dan immutable |
-| Vital signs | Kolom pada `MedicalRecord` | `ClinicalObservation` typed + LOINC/UCUM, dengan read model ringkas bila perlu |
-| Anamnesis | Satu teks panjang | Narasi tetap ada, bagian penting dapat terstruktur |
-| Diagnosis | Code/name/primary minimal | category, rank, status, onset, terminology snapshot |
+| Encounter | Lifecycle lokal, status history, optimistic concurrency, dan guard finalisasi tersedia | Reason/disposition lebih terstruktur dan bukti sandbox create/update |
+| RME | `DRAFT`/`FINAL`, version, preflight, finalisasi atomik, audit event, dan idempotency tersedia | Amendment, outbox klinis, dan workflow koreksi setelah final |
+| Vital signs | Typed `ClinicalObservation` tersedia dengan proyeksi kompatibilitas kolom lama | LOINC/UCUM profile aktif dan validasi sandbox |
+| Anamnesis | Field narasi lama tetap tersedia; `ClinicalHistoryEntry` sudah mendukung kategori/period | Review klinis untuk struktur riwayat dan migrasi field legacy |
+| Diagnosis | Stable local ID, ICD-10 code, dan primary flag; adapter Condition tersedia | category, rank/status/onset, terminology snapshot, dan sandbox create/update |
 | Prescription | Nama, dosis, frekuensi string | Medication identity + dosage/timing/quantity terstruktur |
 | Procedure/follow-up | Belum menjadi child entity | Entity eksplisit, hanya dibuat bila relevan |
 | Konsultasi gigi/odontogram | Belum ada model atau UI | Extension dental terstruktur + projection longitudinal |
-| Finalisasi | Save RME sekaligus menyelesaikan Encounter | Preflight + commit atomik + audit + outbox |
-| Integrasi | Encounter preview saja | Operasi remote bertahap, linkage dan sync log yang benar |
+| Finalisasi | Preflight, commit atomik, audit event, dan idempotency tersedia | Outbox, amendment, dan disclosure/access audit |
+| Integrasi | Adapter Encounter, Condition, dan Observation aktif dengan linkage/sync log | Verifikasi sandbox manual dan rekonsiliasi remote |
 
 ## Boundary integrasi
 

@@ -1,16 +1,19 @@
 import { ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { UserRole } from '@mitrafaskes/shared';
-import { SessionPermissionGuard } from '../auth/session-permission.guard';
+import { PermissionGuard } from '../auth/permission.guard';
 import { IntegrationGatewayController } from './integration-gateway.controller';
 
 function contextFor(
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type -- prototype method metadata is the subject under test.
   handler: Function,
-  authorization?: string,
+  role?: UserRole,
 ) {
   const request = {
-    headers: authorization ? { authorization } : {},
+    headers: {},
+    user: role
+      ? { id: `usr-${role.toLowerCase()}`, username: role, role }
+      : undefined,
   };
   return {
     // Metadata is attached to the prototype method; the guard only inspects it.
@@ -20,19 +23,16 @@ function contextFor(
   } as never;
 }
 
-function contextForSync(authorization?: string) {
-  return contextFor(IntegrationGatewayController.prototype.sync, authorization);
+function contextForSync(role?: UserRole) {
+  return contextFor(IntegrationGatewayController.prototype.sync, role);
 }
 
-function contextForRetry(authorization?: string) {
-  return contextFor(
-    IntegrationGatewayController.prototype.retryLog,
-    authorization,
-  );
+function contextForRetry(role?: UserRole) {
+  return contextFor(IntegrationGatewayController.prototype.retryLog, role);
 }
 
 describe('IntegrationGatewayController sync permission', () => {
-  const guard = new SessionPermissionGuard(new Reflector());
+  const guard = new PermissionGuard(new Reflector());
 
   it('rejects an unauthenticated sync request', () => {
     expect(() => guard.canActivate(contextForSync())).toThrow(
@@ -41,26 +41,24 @@ describe('IntegrationGatewayController sync permission', () => {
   });
 
   it('rejects a doctor without the sync.retry permission', () => {
-    expect(() =>
-      guard.canActivate(contextForSync('Bearer mock-jwt-token-dr_budi')),
-    ).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(contextForSync(UserRole.DOKTER))).toThrow(
+      ForbiddenException,
+    );
   });
 
   it('allows an authorized integration operator', () => {
+    expect(guard.canActivate(contextForSync(UserRole.ADMIN))).toBe(true);
     expect(
-      guard.canActivate(contextForSync('Bearer mock-jwt-token-admin')),
-    ).toBe(true);
-    expect(
-      guard.canActivate(contextForSync('Bearer mock-jwt-token-perawat_ani')),
+      guard.canActivate(contextForSync(UserRole.PETUGAS_PENDAFTARAN)),
     ).toBe(true);
   });
 
   it('protects the operator retry endpoint with sync.retry', () => {
-    expect(() =>
-      guard.canActivate(contextForRetry('Bearer mock-jwt-token-dr_budi')),
-    ).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(contextForRetry(UserRole.DOKTER))).toThrow(
+      ForbiddenException,
+    );
     expect(
-      guard.canActivate(contextForRetry('Bearer mock-jwt-token-perawat_ani')),
+      guard.canActivate(contextForRetry(UserRole.PETUGAS_PENDAFTARAN)),
     ).toBe(true);
   });
 });
@@ -74,7 +72,7 @@ describe('IntegrationGatewayController retry payload visibility', () => {
       user: {
         id: 'usr-perawat_ani',
         username: 'perawat_ani',
-        role: UserRole.PERAWAT,
+        role: UserRole.PETUGAS_PENDAFTARAN,
       },
     });
     await controller.retryLog('SATUSEHAT', 'log-admin', {
@@ -116,7 +114,7 @@ describe('IntegrationGatewayController resource payload visibility', () => {
       user: {
         id: 'usr-perawat_ani',
         username: 'perawat_ani',
-        role: UserRole.PERAWAT,
+        role: UserRole.PETUGAS_PENDAFTARAN,
       },
     };
     const admin = {

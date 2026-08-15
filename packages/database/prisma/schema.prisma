@@ -11,6 +11,7 @@ enum Role {
   ADMIN
   DOKTER
   PERAWAT
+  PETUGAS_PENDAFTARAN
 }
 
 enum Gender {
@@ -88,6 +89,12 @@ enum EncounterStatus {
 enum MedicalRecordStatus {
   DRAFT
   FINAL
+}
+
+enum TriageStatus {
+  NOT_STARTED
+  DRAFT
+  COMPLETED
 }
 
 enum AllergyReviewStatus {
@@ -297,10 +304,28 @@ model User {
   encounters             Encounter[]                      @relation("DoctorEncounters")
   encounterStatusHistory EncounterStatusHistory[]         @relation("EncounterStatusActor")
   clinicalObservations   ClinicalObservation[]            @relation("ObservationPerformer")
+  authSessions           AuthSession[]                     @relation("UserAuthSessions")
 
   @@index([role, active, fullName])
   @@index([organizationId, active, fullName])
   @@index([locationId, active, fullName])
+}
+
+model AuthSession {
+  id           String    @id @default(uuid())
+  userId       String
+  tokenHash    String    @unique @db.VarChar(64)
+  createdAt    DateTime  @default(now())
+  lastSeenAt   DateTime  @default(now())
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  revokeReason String?   @db.VarChar(64)
+  userAgent    String?   @db.VarChar(512)
+  ipAddress    String?   @db.VarChar(64)
+  user         User      @relation("UserAuthSessions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt, expiresAt])
+  @@index([expiresAt])
 }
 
 model PractitionerLocationAssignment {
@@ -534,6 +559,11 @@ model MedicalRecord {
   finalizedAt         DateTime?
   serviceProfile      String                    @default("OUTPATIENT_GENERAL") @db.VarChar(64)
   validationProfile   String                    @default("OUTPATIENT_GENERAL_V1") @db.VarChar(64)
+  triageStatus        TriageStatus              @default(NOT_STARTED)
+  triageUpdatedBy     String?                   @db.VarChar(128)
+  triageUpdatedAt     DateTime?
+  triageCompletedBy   String?                   @db.VarChar(128)
+  triageCompletedAt   DateTime?
   chiefComplaint      String?
   presentIllness      String?
   allergyReviewStatus AllergyReviewStatus?

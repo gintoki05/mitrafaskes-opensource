@@ -5,8 +5,10 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { MedicalRecordStatus as PrismaMedicalRecordStatus } from '@prisma/client';
 import {
+  UserRole,
   type MedicalRecord,
   type ResourceIntegrationSummary,
   type RmePreflightResult,
@@ -132,8 +134,15 @@ export class RmeService {
         authoredAt: now,
         serviceProfile: draft.serviceProfile,
         validationProfile: draft.validationProfile,
+        ...(locked?.triageStatus === 'COMPLETED' &&
+        actor.role === UserRole.DOKTER
+          ? { triageUpdatedBy: actor.username, triageUpdatedAt: now }
+          : {}),
       };
 
+      const correctingCompletedTriage =
+        locked?.triageStatus === 'COMPLETED' && actor.role === UserRole.DOKTER;
+      let saved: MedicalRecordWithRelations;
       if (!locked) {
         const created = await transaction.medicalRecord.create({
           data: {
@@ -153,30 +162,51 @@ export class RmeService {
         });
         await replaceDraftObservations(transaction, created.id, observations);
         await replaceDraftHistories(transaction, created.id, draft.histories);
-        return readMedicalRecordAfterChildReplacement(
+        saved = await readMedicalRecordAfterChildReplacement(
           transaction,
           created.id,
           created,
         );
+      } else {
+        const updated = await transaction.medicalRecord.update({
+          where: { id: locked.id },
+          data: {
+            ...clinicalData,
+            version: { increment: 1 },
+            prescriptions: { deleteMany: {}, create: draft.prescriptions },
+          },
+          include: medicalRecordInclude,
+        });
+        await replaceDraftDiagnoses(transaction, locked.id, draft.diagnoses);
+        await replaceDraftHistories(transaction, locked.id, draft.histories);
+        await replaceDraftObservations(transaction, locked.id, observations);
+        saved = await readMedicalRecordAfterChildReplacement(
+          transaction,
+          locked.id,
+          updated,
+        );
       }
 
-      const updated = await transaction.medicalRecord.update({
-        where: { id: locked.id },
-        data: {
-          ...clinicalData,
-          version: { increment: 1 },
-          prescriptions: { deleteMany: {}, create: draft.prescriptions },
-        },
-        include: medicalRecordInclude,
-      });
-      await replaceDraftDiagnoses(transaction, locked.id, draft.diagnoses);
-      await replaceDraftHistories(transaction, locked.id, draft.histories);
-      await replaceDraftObservations(transaction, locked.id, observations);
-      return readMedicalRecordAfterChildReplacement(
-        transaction,
-        locked.id,
-        updated,
-      );
+      if (correctingCompletedTriage && transaction.medicalRecordAuditEvent) {
+        const requestId = randomUUID();
+        await transaction.medicalRecordAuditEvent.create({
+          data: {
+            medicalRecordId: saved.id,
+            actorUserId,
+            actorUsername: actor.username,
+            actorRole: actor.role,
+            action: 'RME_TRIAGE_CORRECTED_BY_DOCTOR',
+            entityType: 'MedicalRecord',
+            entityId: saved.id,
+            entityVersion: saved.version,
+            expectedVersion: draft.expectedVersion,
+            requestId,
+            correlationId: requestId,
+            idempotencyKey: `RME_TRIAGE_CORRECTED_BY_DOCTOR:${saved.id}:${saved.version}`,
+          },
+        });
+      }
+      return saved;
     });
     return this.toResponse(record);
   }

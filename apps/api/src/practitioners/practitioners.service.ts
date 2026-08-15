@@ -5,7 +5,6 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { randomBytes, scryptSync } from 'node:crypto';
 import { Prisma, Role } from '@prisma/client';
 import type {
   MasterDataListQuery,
@@ -14,6 +13,7 @@ import type {
   ResourceIntegrationSummary,
 } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
+import { hashPassword } from '../auth/password.service';
 import { IntegrationRegistry } from '../integrations/integration-registry';
 import { toPractitionerSummary } from './practitioner.mapper';
 import {
@@ -22,7 +22,11 @@ import {
   validatePractitionerUpdate,
 } from './practitioner.validation';
 
-const PRACTITIONER_ROLES = [Role.DOKTER, Role.PERAWAT];
+const PRACTITIONER_ROLES = [
+  Role.DOKTER,
+  Role.PERAWAT,
+  Role.PETUGAS_PENDAFTARAN,
+];
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -75,7 +79,7 @@ export class PractitionersService {
         data: {
           ...profile,
           locationId: locationIds[0] ?? null,
-          passwordHash: this.hashPassword(password),
+          passwordHash: await hashPassword(password),
           locationAssignments: locationIds.length
             ? { create: locationIds.map((locationId) => ({ locationId })) }
             : undefined,
@@ -163,7 +167,9 @@ export class PractitionersService {
       this.prisma.user.count({ where: inactiveWhere }),
     ]);
 
-    const ids = records.map((record) => record.id);
+    const ids = records
+      .filter((record) => record.role !== Role.PETUGAS_PENDAFTARAN)
+      .map((record) => record.id);
     const integrations = this.integrations
       ? await this.integrations.findResourceSummaries('Practitioner', ids)
       : new Map<string, ResourceIntegrationSummary[]>();
@@ -267,7 +273,9 @@ export class PractitionersService {
     });
     if (
       !record ||
-      (record.role !== Role.DOKTER && record.role !== Role.PERAWAT)
+      (record.role !== Role.DOKTER &&
+        record.role !== Role.PERAWAT &&
+        record.role !== Role.PETUGAS_PENDAFTARAN)
     ) {
       throw new NotFoundException('Tenaga kesehatan tidak ditemukan');
     }
@@ -320,17 +328,26 @@ export class PractitionersService {
   }
 
   async getPractitionerForExternalIntegration(id: string) {
-    return this.getPractitionerRecord(id);
+    const record = await this.getPractitionerRecord(id);
+    if (record.role === Role.PETUGAS_PENDAFTARAN) {
+      throw new ConflictException({
+        code: 'EXTERNAL_PRACTITIONER_ROLE_UNSUPPORTED',
+        message:
+          'Petugas pendaftaran dikelola sebagai akun lokal dan tidak dapat dihubungkan sebagai Practitioner eksternal.',
+      });
+    }
+    return record;
   }
 
   private async toSummary(
     record: Awaited<ReturnType<PractitionersService['getPractitionerRecord']>>,
   ) {
-    const integrations = this.integrations
-      ? await this.integrations.findResourceSummaries('Practitioner', [
-          record.id,
-        ])
-      : new Map<string, ResourceIntegrationSummary[]>();
+    const integrations =
+      this.integrations && record.role !== Role.PETUGAS_PENDAFTARAN
+        ? await this.integrations.findResourceSummaries('Practitioner', [
+            record.id,
+          ])
+        : new Map<string, ResourceIntegrationSummary[]>();
     return toPractitionerSummary(record, integrations.get(record.id) ?? []);
   }
 
@@ -358,11 +375,5 @@ export class PractitionersService {
     if (Array.isArray(target) && target.includes('nik')) return 'nik';
     if (Array.isArray(target) && target.includes('username')) return 'username';
     return undefined;
-  }
-
-  private hashPassword(password: string): string {
-    const salt = randomBytes(16).toString('hex');
-    const derivedKey = scryptSync(password, salt, 64).toString('hex');
-    return `${salt}:${derivedKey}`;
   }
 }

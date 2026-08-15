@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { EncounterStatus } from '@mitrafaskes/shared';
 import {
   defaultVisitHistoryFilters,
   VISIT_HISTORY_RANGE_DAYS,
@@ -29,7 +30,7 @@ test('history query serializes the date range, search, and status filters', () =
     fromDate: '2026-08-01',
     toDate: '2026-08-13',
     search: 'Siti Aminah',
-    status: 'COMPLETED',
+    status: EncounterStatus.COMPLETED,
   });
 
   assert.equal(

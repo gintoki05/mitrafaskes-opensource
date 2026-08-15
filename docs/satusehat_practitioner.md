@@ -2,8 +2,10 @@
 
 `Practitioner` merepresentasikan tenaga kesehatan lokal yang akan menjadi
 referensi pada `Encounter` dan resource klinis lainnya. Implementasi ini
-menggunakan data lokal `User` dengan role `DOKTER` atau `PERAWAT`; ID eksternal
-SATUSEHAT tetap disimpan di `ExternalResourceLink`.
+menggunakan data lokal `User` dengan role `DOKTER` atau `PERAWAT`; role
+`PETUGAS_PENDAFTARAN` tetap dapat dikelola sebagai akun lokal tetapi bukan
+resource Practitioner SATUSEHAT. ID eksternal tetap disimpan di
+`ExternalResourceLink`.
 
 Referensi resmi:
 

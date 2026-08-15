@@ -1,7 +1,8 @@
 # Blueprint RME Rawat Jalan
 
 Status: **draft untuk review produk, klinis, rekam medis, dan akreditasi**  
-Baseline: 12 Agustus 2026; status implementasi diperbarui 13 Agustus 2026
+Baseline sumber: 12 Agustus 2026; snapshot codebase: 15 Agustus 2026; bukti
+sandbox manual terakhir: 13 Agustus 2026
 Ruang lingkup: pendaftaran sampai kunjungan selesai untuk rawat jalan FKTP,
 termasuk profil konsultasi umum dan gigi
 
@@ -115,6 +116,64 @@ CarePlan, asesmen khusus, imunisasi, dan use case klinis lain. Modul ini mengiku
 aggregate inti dan ditambahkan berdasarkan jenis layanan, bukan dipaksakan ke
 setiap kunjungan.
 
+## Kontrak MVP `OUTPATIENT_GENERAL_V1`
+
+Kontrak ini adalah batas acceptance untuk satu kunjungan rawat jalan umum:
+pendaftaran, Encounter, konsultasi dokter, simpan draft RME, lalu finalisasi.
+Kontrak ini mengkodifikasi perilaku preflight dan form yang sudah ada pada
+snapshot codebase; kontrak ini tidak menambah schema, resource, atau kebijakan
+klinis baru. Rincian field-level dan pemetaan model/form ada di
+[kamus data klinis](./clinical-data-dictionary.md).
+
+### Batas alur pendaftaran dan Encounter
+
+- Pendaftaran menerima `patientId`, `locationId`, dan `doctorId` dari form yang
+  sudah ada. Organization diturunkan dari Location; nomor Encounter, nomor
+  antrean, tanggal antrean, waktu tiba, status awal `WAITING`, dan status history
+  dibuat server-side.
+- Dokter aktif harus ter-assign ke Organization dan Location tersebut. Hanya
+  Encounter `IN_PROGRESS` yang dapat memiliki draft klinis aktif dan difinalisasi.
+- Workspace RME menampilkan identitas pasien, nomor Encounter, Location, dokter,
+  profil layanan, dan validation profile; konteks ini bukan diisi ulang sebagai
+  field klinis.
+
+### Kelompok field kontrak
+
+**Wajib untuk finalisasi**
+
+- konteks sistem: Patient, Organization, Location, dokter, Encounter berstatus
+  `IN_PROGRESS`, `OUTPATIENT_GENERAL`, `OUTPATIENT_GENERAL_V1`, actor yang berizin,
+  dan versi yang cocok;
+- `chiefComplaint` dan `presentIllness`;
+- `allergyReviewStatus` yang dipilih eksplisit; `allergyDetails` wajib bila
+  statusnya `KNOWN`, sedangkan `NOT_REVIEWED` memblokir finalisasi;
+- `systolic`, `diastolic`, `heartRate`, `temperature`, dan `physicalExam`;
+- tepat satu diagnosis utama dengan kode ICD-10; setiap diagnosis tambahan yang
+  dimasukkan juga harus memiliki kode;
+- `education`, `carePlan`, dan `disposition`;
+- bila ada baris resep, `medicineName`, `dosage`, `frequency`, dan `quantity`
+  pada baris tersebut.
+
+**Opsional**
+
+Riwayat klinis terstruktur, berat badan, tinggi badan, laju napas, saturasi
+oksigen, diagnosis sekunder, dan resep sebagai satu kelompok. Kode KFA serta
+instruksi resep boleh diisi tetapi belum menjadi syarat profile. Kunjungan tanpa
+resep tetap dapat difinalisasi.
+
+**Ditunda ke fase berikutnya**
+
+`AllergyRecord` terstruktur, pemeriksaan fisik per sistem/body site, `Procedure`,
+`MedicationOrder` terstruktur, tanggal kontrol/rujukan sebagai child plan,
+Composition/outbox klinis, amendemen setelah final, profil gigi/odontogram, dan
+evidence center akreditasi. Data tersebut tidak boleh menjadi syarat finalisasi
+MVP melalui asumsi atau placeholder.
+
+Keputusan klinis yang masih terbuka—terutama apakah empat vital inti berlaku
+untuk semua usia/jenis kunjungan, arti “tidak dilakukan” versus “tidak diketahui”,
+dan tingkat struktur minimum untuk edukasi, rencana, serta disposisi—dicatat
+sebagai decision gate di bawah, bukan dianggap sebagai kebijakan klinis final.
+
 ## Gate implementasi aktif
 
 Urutan resource integrasi yang tidak boleh dilompati adalah:
@@ -150,6 +209,36 @@ lain tetap tercantum sebagai rancangan target, bukan status implementasi.
 Daftar tersebut membedakan fitur yang sudah tersedia dari gap roadmap. Status
 adapter yang aktif tetap belum menjadi klaim bahwa sandbox SATUSEHAT, validasi
 klinis, atau kesiapan produksi telah selesai.
+
+## Status blueprint inti pada snapshot codebase
+
+Status berikut dipakai sebagai sumber navigasi dokumen, bukan sebagai klaim
+akreditasi atau kesiapan produksi:
+
+| Area | Status snapshot 15 Agustus 2026 | Gate berikutnya |
+| --- | --- | --- |
+| Encounter dan antrean | Lifecycle lokal, status history, optimistic concurrency, dan guard finalisasi tersedia | Review klinis untuk reason/disposition dan rerun sandbox Encounter bila diperlukan |
+| RME lokal | `DRAFT`/`FINAL`, versioning, preflight, finalisasi atomik, audit event, dan idempotency tersedia | Amendment setelah final, outbox klinis, serta acceptance manual lengkap |
+| Riwayat dan Observation | `ClinicalHistoryEntry` dan typed `ClinicalObservation` tersedia secara local-first | Review terminologi aktif dan rerun sandbox Condition/Observation |
+| Diagnosis dan integrasi | Diagnosis memiliki stable local ID dan adapter Condition; adapter Observation tersedia | Lengkapi terminology profile dan bukti remote create/update |
+| Resep dan tindak lanjut | Masih berupa model sederhana/string | Review farmasi sebelum MedicationOrder, dispense, rujukan, dan CarePlan |
+| Profil gigi | Target blueprint; belum ada entity, route, form, atau visual odontogram | Review dokter gigi sebelum dipetakan menjadi issue implementasi |
+| Akreditasi/evidence | Target governance; belum ada evidence center | Tetapkan facility type, owner, versi standar, dan scope produk |
+
+## Keputusan yang masih perlu disahkan
+
+Blueprint inti dapat dianggap siap menjadi acceptance source setelah keputusan
+berikut memiliki owner dan hasil review tertulis:
+
+| Keputusan | Owner review | Batas keputusan |
+| --- | --- | --- |
+| Field wajib `OUTPATIENT_GENERAL_V1` per usia/jenis layanan | Dokter + rekam medis | Snapshot MVP mewajibkan empat vital inti untuk profile ini; pengecualian usia/layanan harus diputuskan sebelum profile diubah. Tidak ada auto-fill klinis. |
+| Semantik alergi, “tidak dilakukan”, dan “tidak diketahui” | Dokter + keselamatan pasien | Status review harus eksplisit dan tidak disimpulkan dari field kosong |
+| Tingkat struktur edukasi, rencana, dan disposisi | Dokter + rekam medis | Snapshot MVP menerima narasi/enum yang sudah ada; struktur child dan reason menunggu keputusan klinis |
+| Resep, identitas obat, KFA, order versus dispense | Farmasi + product | `MedicationOrder` tidak boleh disamakan dengan dispense/administration |
+| Amendment, disclosure, retention, dan audit akses | Rekam medis + privasi | Koreksi final tidak menghapus histori dan setiap disclosure dapat ditelusuri |
+| Gate sandbox Encounter/Condition/Observation | Integration owner | Codebase aktif tidak dianggap remote verified sebelum create/update diuji |
+| Scope profil gigi dan evidence akreditasi | Dokter gigi + PMKP/product | Dipisahkan dari core sampai facility type dan reviewer disepakati |
 
 ## Batasan
 

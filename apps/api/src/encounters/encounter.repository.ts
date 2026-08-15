@@ -1,4 +1,7 @@
-import { Prisma } from '@prisma/client';
+import {
+  Prisma,
+  EncounterStatus as PrismaEncounterStatus,
+} from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../database/prisma.service';
 
@@ -40,6 +43,14 @@ export const encounterInclude = {
   statusHistory: {
     orderBy: { periodStart: 'asc' as const },
   },
+  medicalRecord: {
+    select: {
+      triageStatus: true,
+      triageUpdatedAt: true,
+      triageCompletedAt: true,
+      triageCompletedBy: true,
+    },
+  },
 } satisfies Prisma.EncounterInclude;
 
 export type EncounterWithRelations = Prisma.EncounterGetPayload<{
@@ -49,8 +60,10 @@ export type EncounterWithRelations = Prisma.EncounterGetPayload<{
 export interface EncounterListWhere {
   queueDate: Date;
   locationId?: string;
+  locationIds?: string[];
   doctorId?: string;
   status?: Prisma.EncounterWhereInput['status'];
+  statuses?: PrismaEncounterStatus[];
 }
 
 export interface EncounterHistoryListWhere {
@@ -71,9 +84,13 @@ export class EncounterRepository {
   ): Promise<{ records: EncounterWithRelations[]; total: number }> {
     const prismaWhere: Prisma.EncounterWhereInput = {
       queueDate: where.queueDate,
-      locationId: where.locationId,
+      ...(where.locationIds
+        ? { locationId: { in: where.locationIds } }
+        : { locationId: where.locationId }),
       doctorId: where.doctorId,
-      status: where.status,
+      ...(where.statuses
+        ? { status: { in: where.statuses } }
+        : { status: where.status }),
     };
     const [records, total] = await this.prisma.$transaction([
       this.prisma.encounter.findMany({

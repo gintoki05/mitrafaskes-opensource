@@ -67,7 +67,12 @@ export function toPractitionerSummary(
     id: record.id,
     username: record.username,
     fullName: record.fullName,
-    role: record.role === 'DOKTER' ? 'DOKTER' : 'PERAWAT',
+    role:
+      record.role === 'DOKTER'
+        ? 'DOKTER'
+        : record.role === 'PETUGAS_PENDAFTARAN'
+          ? 'PETUGAS_PENDAFTARAN'
+          : 'PERAWAT',
     nik: record.nik ?? undefined,
     birthDate: record.birthDate?.toISOString().slice(0, 10),
     gender: record.gender ?? undefined,

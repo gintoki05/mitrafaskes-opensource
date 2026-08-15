@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  ClinicalHistoryCategory,
+  ClinicalHistoryStatus,
   MedicalRecordServiceProfile,
   MedicalRecordStatus,
 } from "@mitrafaskes/shared";
@@ -18,9 +20,9 @@ test("RME mapper restores structured histories, added vitals, and prescription d
     histories: [
       {
         id: "history-1",
-        category: "FAMILY",
+        category: ClinicalHistoryCategory.FAMILY,
         text: "Ayah dengan diabetes",
-        status: "ACTIVE",
+        status: ClinicalHistoryStatus.ACTIVE,
         onset: "2018-01-01T00:00:00.000Z",
         note: "Informasi dari pasien",
       },

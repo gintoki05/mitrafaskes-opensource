@@ -206,6 +206,70 @@ describe('RmeService lifecycle', () => {
     expect(completion).not.toHaveBeenCalled();
   });
 
+  it('attributes a doctor correction of completed triage in the audit event', async () => {
+    const saved = {
+      ...medicalRecord(),
+      version: 2,
+      triageStatus: 'COMPLETED',
+      triageCompletedBy: 'perawat_ani',
+    };
+    const audit = { create: jest.fn().mockResolvedValue({ id: 'audit-1' }) };
+    const transaction = {
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            id: 'encounter-1',
+            status: 'IN_PROGRESS',
+            version: 2,
+            doctorId: 'doctor-1',
+            organizationId: 'organization-1',
+            locationId: 'location-1',
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            id: 'rme-1',
+            status: MedicalRecordStatus.DRAFT,
+            version: 1,
+            triageStatus: 'COMPLETED',
+          },
+        ]),
+      medicalRecord: {
+        update: jest.fn().mockResolvedValue(saved),
+      },
+      medicalRecordAuditEvent: audit,
+    };
+    const { service } = createHarness(transaction);
+
+    await service.saveDraft(
+      {
+        encounterId: 'encounter-1',
+        expectedVersion: 1,
+        diagnoses: [],
+        prescriptions: [],
+      },
+      actor,
+    );
+
+    expect(transaction.medicalRecord.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          triageUpdatedBy: 'dr_budi',
+          triageUpdatedAt: expect.any(Date),
+        }),
+      }),
+    );
+    expect(audit.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'RME_TRIAGE_CORRECTED_BY_DOCTOR',
+        actorUsername: 'dr_budi',
+        actorRole: 'DOKTER',
+        entityVersion: 2,
+      }),
+    });
+  });
+
   it('stores an unmapped local diagnosis without requiring the terminology catalog', async () => {
     const saved = {
       ...medicalRecord(),

@@ -10,16 +10,12 @@ import {
   Body,
   Query,
   Req,
-  UseGuards,
   NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AccessPermission, evaluateAccess } from '@mitrafaskes/shared';
 import { RequirePermission } from '../auth/access-control.decorator';
-import {
-  AuthenticatedUser,
-  SessionPermissionGuard,
-} from '../auth/session-permission.guard';
+import { AuthenticatedUser } from '../auth/session-permission.guard';
 import {
   EncounterConflictError,
   EncounterContextError,
@@ -30,13 +26,13 @@ import {
 import { EncountersService } from './encounters.service';
 import {
   parseEncounterStatus,
+  parseEncounterStatuses,
   parsePositiveInteger,
 } from './encounter.validation';
 
 type EncounterHttpQuery = Record<string, string | undefined>;
 
 @Controller('api/encounters')
-@UseGuards(SessionPermissionGuard)
 @ApiTags('Encounters')
 export class EncountersController {
   constructor(private readonly encounters: EncountersService) {}
@@ -78,6 +74,7 @@ export class EncountersController {
           queueDate: query.queueDate,
           locationId: query.locationId,
           status: parseEncounterStatus(query.status),
+          statuses: parseEncounterStatuses(query.statuses),
         },
         request.user,
       );

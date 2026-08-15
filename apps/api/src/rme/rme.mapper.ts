@@ -67,6 +67,11 @@ export function toMedicalRecord(
       MEDICAL_RECORD_VALIDATION_PROFILE[
         MedicalRecordServiceProfile.OUTPATIENT_GENERAL
       ],
+    triageStatus: record.triageStatus ?? 'NOT_STARTED',
+    triageUpdatedBy: record.triageUpdatedBy ?? undefined,
+    triageUpdatedAt: record.triageUpdatedAt?.toISOString(),
+    triageCompletedBy: record.triageCompletedBy ?? undefined,
+    triageCompletedAt: record.triageCompletedAt?.toISOString(),
     chiefComplaint: record.chiefComplaint ?? undefined,
     presentIllness: record.presentIllness ?? undefined,
     allergyReviewStatus:

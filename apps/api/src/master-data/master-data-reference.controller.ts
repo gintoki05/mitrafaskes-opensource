@@ -6,16 +6,12 @@ import {
   Post,
   Query,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AccessPermission, UserRole } from '@mitrafaskes/shared';
 import { Request } from 'express';
 import { RequirePermission } from '../auth/access-control.decorator';
-import {
-  AuthenticatedUser,
-  SessionPermissionGuard,
-} from '../auth/session-permission.guard';
+import { AuthenticatedUser } from '../auth/session-permission.guard';
 import { MasterWilayahService } from './master-wilayah.service';
 import { MasterMaritalStatusService } from './master-marital-status.service';
 import { MasterIcd10Service } from './master-icd10.service';
@@ -38,7 +34,6 @@ const parsePositiveInteger = (
 };
 
 @Controller('api/master-data')
-@UseGuards(SessionPermissionGuard)
 @ApiTags('Master Data')
 export class MasterDataReferenceController {
   constructor(

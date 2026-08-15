@@ -9,6 +9,7 @@ const LAST_ROUTE_STORAGE_KEY = 'mitrafaskes:last-route';
 const ROUTE_PERMISSIONS = [
   { prefix: '/pendaftaran', permission: AccessPermission.QUEUE_READ },
   { prefix: '/rme', permission: AccessPermission.RME_READ },
+  { prefix: '/triase', permission: AccessPermission.RME_TRIAGE_READ },
   { prefix: '/master-data', permission: AccessPermission.MASTER_DATA_READ },
   { prefix: '/master-faskes', permission: AccessPermission.MASTER_DATA_READ },
   { prefix: '/satusehat', permission: AccessPermission.SYNC_STATUS_READ },

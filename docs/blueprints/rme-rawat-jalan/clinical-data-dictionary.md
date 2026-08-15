@@ -14,7 +14,10 @@ aturan validasinya tetap dipertahankan.
 | T | Tahap lanjutan; tidak menghalangi MVP |
 
 Draft boleh parsial. Tingkat wajib diterapkan pada **preflight finalisasi**,
-bukan dengan mengisi nilai klinis palsu.
+bukan dengan mengisi nilai klinis palsu. Tingkat tersebut dibaca terhadap
+validation profile yang aktif; untuk MVP, bagian [kontrak minimal
+`OUTPATIENT_GENERAL_V1`](#kontrak-minimal-outpatient_general_v1-pada-mvp) menjadi
+acuan yang lebih spesifik daripada tabel target lintas profile.
 
 ## Konvensi pemodelan
 
@@ -85,14 +88,14 @@ sebelum adapter produksi dibekukan.
 
 | Pengukuran | Tingkat | Value + unit | Kandidat LOINC |
 | --- | --- | --- | --- |
-| Tekanan darah sistolik | K | decimal mm[Hg] | 8480-6 |
-| Tekanan darah diastolik | K | decimal mm[Hg] | 8462-4 |
-| Nadi | K | decimal /min | 8867-4 |
-| Laju napas | K | decimal /min | 9279-1 |
-| Suhu tubuh | K | decimal Cel | 8310-5 |
+| Tekanan darah sistolik | W | decimal mm[Hg] | 8480-6 |
+| Tekanan darah diastolik | W | decimal mm[Hg] | 8462-4 |
+| Nadi | W | decimal /min | 8867-4 |
+| Laju napas | O | decimal /min | 9279-1 |
+| Suhu tubuh | W | decimal Cel | 8310-5 |
 | Saturasi oksigen | O | decimal % | 2708-6 |
-| Berat badan | K | decimal kg | 29463-7 |
-| Tinggi badan | K | decimal cm | 8302-2 |
+| Berat badan | O | decimal kg | 29463-7 |
+| Tinggi badan | O | decimal cm | 8302-2 |
 | BMI | O | decimal kg/m2; dapat dihitung dan ditandai derived | 39156-5 |
 | Kesadaran/keadaan umum | O | coded/text | Registry terminology aktif |
 | Nyeri | O | score + scale | Code sesuai instrumen yang dipakai |
@@ -113,11 +116,11 @@ Setiap observation minimal menyimpan:
 
 | Elemen | Tingkat | Tipe/makna lokal | Acuan pertukaran |
 | --- | --- | --- | --- |
-| Keadaan umum | W | Coded/text + note | Observation/ClinicalImpression |
-| Pemeriksaan per sistem | K | body system/site, normal/abnormal, finding, note | Observation atau Condition sesuai makna |
-| Laterality | K | left/right/bilateral | Coding/bodySite |
-| Metode/alat | O | Code/text | Observation.method/device |
-| Ringkasan asesmen | O | Narasi klinisi | ClinicalImpression.summary |
+| Keadaan umum/ringkasan pemeriksaan | W | Narasi text pada `physicalExam` | Observation/ClinicalImpression |
+| Pemeriksaan per sistem | T | body system/site, normal/abnormal, finding, note | Observation atau Condition sesuai makna |
+| Laterality | T | left/right/bilateral | Coding/bodySite |
+| Metode/alat | T | Code/text | Observation.method/device |
+| Ringkasan asesmen terstruktur | T | Narasi klinisi terpisah | ClinicalImpression.summary |
 
 UI boleh menyediakan template “dalam batas normal”, tetapi pengguna harus
 memilihnya secara eksplisit; sistem tidak mengisi hasil normal otomatis.
@@ -128,12 +131,12 @@ memilihnya secara eksplisit; sistem tidak mengisi hasil normal otomatis.
 | --- | --- | --- | --- |
 | Diagnosis utama | W | ICD-10 code + display snapshot | Condition.code |
 | Diagnosis sekunder | O | Satu atau lebih ICD-10 | Condition.code |
-| Category | W | encounter-diagnosis/problem-list/other lokal | Condition.category |
-| Rank/primary flag | W | Integer rank; tepat satu utama untuk profile standar | Encounter.diagnosis rank/use |
-| Clinical status | K | active/resolved/dll | Condition.clinicalStatus |
-| Verification status | K | provisional/confirmed/differential/dll | Condition.verificationStatus |
-| Onset/abatement | O | Date/time/period/string terkontrol | Condition onset/abatement |
-| Evidence/note | O | Reference/text | Condition.evidence/note |
+| Category | T | encounter-diagnosis/problem-list/other lokal | Condition.category |
+| Rank/primary flag | W | `isPrimary`; tepat satu utama untuk profile MVP | Encounter.diagnosis rank/use |
+| Clinical status | T | active/resolved/dll | Condition.clinicalStatus |
+| Verification status | T | provisional/confirmed/differential/dll | Condition.verificationStatus |
+| Onset/abatement | T | Date/time/period/string terkontrol | Condition onset/abatement |
+| Evidence/note | T | Reference/text | Condition.evidence/note |
 
 Versi ICD-10 dan source registry harus dicatat. Pencarian boleh menyimpan istilah
 Indonesia, sedangkan code tetap canonical.
@@ -142,13 +145,13 @@ Indonesia, sedangkan code tetap canonical.
 
 | Elemen | Tingkat | Tipe/makna lokal | Acuan pertukaran |
 | --- | --- | --- | --- |
-| Procedure code/text | K | ICD-9-CM/terminologi aktif atau teks lokal | Procedure.code |
-| Status | K | completed/not-done/dll | Procedure.status |
-| Performed time/period | K | DateTime/Period | Procedure.performed |
-| Performer | K | Practitioner + role | Procedure.performer |
-| Body site | O | Coded | Procedure.bodySite |
-| Outcome/complication | O | Coded/text | Procedure.outcome/complication |
-| Not-done reason | K | Coded/text bila tidak dilakukan | Procedure.statusReason |
+| Procedure code/text | T | ICD-9-CM/terminologi aktif atau teks lokal | Procedure.code |
+| Status | T | completed/not-done/dll | Procedure.status |
+| Performed time/period | T | DateTime/Period | Procedure.performed |
+| Performer | T | Practitioner + role | Procedure.performer |
+| Body site | T | Coded | Procedure.bodySite |
+| Outcome/complication | T | Coded/text | Procedure.outcome/complication |
+| Not-done reason | T | Coded/text bila tidak dilakukan | Procedure.statusReason |
 
 Record Procedure hanya dibuat ketika ada tindakan yang dilakukan atau secara
 eksplisit tidak dilakukan. Ketiadaan tindakan bukan error finalisasi.
@@ -157,17 +160,17 @@ eksplisit tidak dilakukan. Ketiadaan tindakan bukan error finalisasi.
 
 | Elemen | Tingkat | Tipe/makna lokal | Acuan pertukaran |
 | --- | --- | --- | --- |
-| Medication identity | K | KFA/local catalog code, name snapshot, form, strength | Medication |
-| Order status/intent | K | Enum terkontrol | MedicationRequest.status/intent |
-| Dose | K | Quantity/range | dosageInstruction.doseAndRate |
-| Route | K | Coded | dosageInstruction.route |
-| Timing/frequency | K | Struktur timing, bukan string saja | dosageInstruction.timing |
-| Duration | K | Quantity + unit | timing repeat/bounds atau dispense request |
-| Quantity | K | Quantity + unit | dispenseRequest.quantity |
-| Patient instruction | K | Text yang siap dicetak | dosageInstruction.patientInstruction |
-| Indication | O | Reference diagnosis/complaint | MedicationRequest.reasonReference/code |
-| Substitution rule | O | Allowed + reason | substitution |
-| Prescriber/authoredAt | K | Practitioner + server time | requester/authoredOn |
+| Medication identity | K | `medicineName`; KFA/local catalog code masih opsional | Medication |
+| Order status/intent | T | Enum terkontrol | MedicationRequest.status/intent |
+| Dose | K | `dosage` text yang dapat dipahami | dosageInstruction.doseAndRate |
+| Route | T | Coded | dosageInstruction.route |
+| Timing/frequency | K | `frequency` string pada model MVP | dosageInstruction.timing |
+| Duration | T | Quantity + unit | timing repeat/bounds atau dispense request |
+| Quantity | K | Bilangan bulat positif pada model MVP | dispenseRequest.quantity |
+| Patient instruction | O | `instructions` text | dosageInstruction.patientInstruction |
+| Indication | T | Reference diagnosis/complaint | MedicationRequest.reasonReference/code |
+| Substitution rule | T | Allowed + reason | substitution |
+| Prescriber/authoredAt | T | Metadata order terpisah dari author RME | requester/authoredOn |
 
 Jika kunjungan tidak menghasilkan resep, RME tetap dapat final. Order, dispense,
 dan administration adalah kejadian berbeda dan tidak boleh digabung menjadi
@@ -178,11 +181,11 @@ satu status lokal.
 | Elemen | Tingkat | Tipe/makna lokal | Acuan pertukaran |
 | --- | --- | --- | --- |
 | Edukasi/instruksi | W | Text + topic + recipient bila perlu | CarePlan/Communication/Composition section |
-| Rencana terapi | W | Structured items + narasi | CarePlan |
-| Kontrol ulang | K | Date/period + reason | CarePlan/Appointment sesuai use case |
-| Rujukan/order pemeriksaan | K | Target/service/reason/priority | ServiceRequest |
-| Prognosis | O | Coded/text | ClinicalImpression.prognosis |
-| Kondisi saat pulang | O | Coded/text | Encounter/clinical summary |
+| Rencana terapi | W | Narasi `carePlan`; item terstruktur ditunda | CarePlan |
+| Kontrol ulang | T | Date/period + reason | CarePlan/Appointment sesuai use case |
+| Rujukan/order pemeriksaan | T | Target/service/reason/priority | ServiceRequest |
+| Prognosis | T | Coded/text | ClinicalImpression.prognosis |
+| Kondisi saat pulang | T | Coded/text | Encounter/clinical summary |
 | Disposisi | W | pulang, rujuk, rawat, lainnya | Encounter disposition/profile aktif |
 
 ## J. Profil konsultasi gigi
@@ -217,7 +220,7 @@ tidak boleh mengisi semua gigi sehat secara otomatis.
 | Author/recorder | W | User dan Practitioner lokal yang dapat ditelusuri |
 | Authored/finalized time | W | Server timestamp |
 | Validation profile | W | ID + version profile yang dipakai saat final |
-| Amendment reason/link | K | Wajib untuk koreksi final |
+| Amendment reason/link | T | Wajib untuk koreksi final setelah workflow amendment tersedia |
 | Audit correlation | W | Request/correlation ID tanpa clinical payload di log |
 | Signature/attestation | T | Dirancang sebagai metadata terpisah sesuai kebijakan |
 
@@ -229,8 +232,11 @@ tidak boleh mengisi semua gigi sehat secara otomatis.
 - patient, organization, location, dan clinician tersedia;
 - keluhan utama dan riwayat penyakit sekarang terisi;
 - status review alergi eksplisit;
-- pemeriksaan/asesmen yang diwajibkan profile terisi;
-- tepat satu diagnosis utama dengan kode valid;
+- detail alergi terisi bila statusnya `KNOWN`;
+- tekanan darah sistolik/diastolik, denyut nadi, suhu tubuh, dan pemeriksaan
+  fisik terisi;
+- tepat satu diagnosis utama dengan kode ICD-10 terisi; validasi terminology
+  yang lebih ketat tetap menjadi gate terpisah;
 - edukasi/rencana dan disposisi terisi;
 - setiap resep mempunyai medication identity dan dosage yang dapat dipahami;
 - author/finalizer memiliki permission dan hubungan organisasi yang sah.
@@ -242,3 +248,76 @@ lain tanpa menambah `if` tersebar di form dan service.
 odontogram, validasi FDI/surface, target diagnosis/tindakan, dan rule tindakan
 invasif. Indeks gigi tidak menjadi wajib universal; kewajiban mengikuti usia,
 jenis kunjungan, risiko, dan kebijakan klinis yang sudah direview dokter gigi.
+
+## Kontrak minimal `OUTPATIENT_GENERAL_V1` pada MVP
+
+Bagian ini adalah daftar field yang benar-benar dipakai untuk alur pendaftaran →
+Encounter → konsultasi → draft → final. Jika tabel target di atas lebih luas,
+klasifikasi di bagian ini menjadi acuan profile MVP. `W`/`K` pada tabel target
+tidak boleh dibaca sebagai kewajiban yang harus dipenuhi oleh profile lain.
+
+### Wajib untuk finalisasi
+
+| Kelompok | Field/kondisi | Model atau form saat ini | Aturan MVP |
+| --- | --- | --- | --- |
+| Konteks | `patientId`, `organizationId`, `locationId`, `doctorId` | `Encounter` | Dibentuk saat pendaftaran; Organization diturunkan dari Location dan dokter harus aktif serta ter-assign. |
+| Lifecycle | `status`, `version`, `serviceProfile`, `validationProfile` | `Encounter`, `MedicalRecord` | Status harus `IN_PROGRESS`; profile harus `OUTPATIENT_GENERAL` + `OUTPATIENT_GENERAL_V1`; version dijaga optimistic concurrency. |
+| Anamnesis | `chiefComplaint`, `presentIllness` | Field `RmeFormValues` → kolom `MedicalRecord` | Narasi tidak boleh kosong/whitespace. Field legacy `anamnesis` bukan pengganti dua field ini. |
+| Alergi | `allergyReviewStatus` | Select `RmeForm` → enum `AllergyReviewStatus` | Harus dipilih eksplisit; `NOT_REVIEWED` memblokir finalisasi. |
+| Alergi kondisional | `allergyDetails` bila status `KNOWN` | Text `RmeForm` → `MedicalRecord` | Zat/produk penyebab wajib ditulis; status `NONE_KNOWN` tidak memerlukan detail. |
+| Vital | `systolic`, `diastolic`, `heartRate`, `temperature` | Input `RmeVitalSigns` → typed `ClinicalObservation` + proyeksi kompatibilitas | Keempatnya wajib pada profile saat ini; unit dan terminologi mengikuti mapper yang ada. |
+| Pemeriksaan | `physicalExam` | Text `RmePhysicalExamSection` → kolom `MedicalRecord` | Satu ringkasan naratif wajib; pemeriksaan per sistem belum menjadi child terstruktur. |
+| Diagnosis | tepat satu `isPrimary = true`; semua `icd10Code` terisi | `Diagnosis[]`, `RmeDiagnosisSection` | Diagnosis sekunder boleh ada; form menawarkan pencarian katalog ICD-10, sedangkan validasi terminology penuh belum menjadi syarat profile. |
+| Rencana | `education`, `carePlan`, `disposition` | `RmeCarePlanSection` → kolom `MedicalRecord`/enum | Ketiganya wajib diisi; bentuk terstruktur yang lebih kaya belum dipaksakan. |
+| Resep kondisional | bila ada resep: `medicineName`, `dosage`, `frequency`, `quantity >= 1` | `Prescription[]`, `RmePrescriptionSection` | Resep sebagai kelompok tetap opsional; baris setengah terisi ditolak saat preflight. |
+| Metadata server | author/finalizer, timestamp, audit, idempotency key | `MedicalRecord` + `MedicalRecordAuditEvent` | Diisi/ditetapkan server; bukan input klinis yang boleh dipalsukan form. |
+
+### Opsional
+
+| Field/kelompok | Model atau form saat ini | Batasan |
+| --- | --- | --- |
+| `histories[]` untuk riwayat dahulu, keluarga, obat, atau risiko | `ClinicalHistoryEntry[]`, `RmeHistorySection` | Setiap entry yang ditambahkan harus memiliki kategori dan text; entry kosong tidak dikirim. |
+| `weight`, `height` | Input `RmeVitalSigns` → typed Observation | Disimpan bila diketahui; BMI dapat menjadi hasil turunan dari adapter, bukan input wajib. |
+| `respiratoryRate`, `oxygenSaturation` | Input `RmeVitalSigns` → typed Observation | Tidak menghalangi finalisasi profile saat ini. |
+| Diagnosis sekunder | `Diagnosis[]`, `RmeDiagnosisSection` | Setiap item yang ada tetap membutuhkan kode ICD-10. |
+| Resep sebagai kelompok | `Prescription[]` | Kunjungan tanpa resep valid; `kfaCode` dan `instructions` belum wajib. |
+
+### Ditunda ke fase berikutnya
+
+| Area | Alasan tidak masuk kontrak MVP |
+| --- | --- |
+| `AllergyRecord` terstruktur serta status clinical/verification, criticality, reaction, dan severity | Model/form saat ini hanya menyediakan review status + detail text; jangan menyimpulkan struktur klinis dari text. |
+| Pemeriksaan fisik per sistem, body site, laterality, metode, dan alat | Form saat ini hanya memiliki `physicalExam` naratif. |
+| `ProcedureRecord` dan alasan tindakan tidak dilakukan | Tidak ada entity, route, atau form; ketiadaan tindakan bukan error finalisasi MVP. |
+| `MedicationOrder`/Medication + route, durasi, timing terstruktur, indikasi, substitution, dispense | Model saat ini adalah `Prescription` dengan beberapa field text; order tidak boleh disamakan dengan dispense/administration. |
+| `FollowUpPlan` terstruktur, tanggal kontrol, rujukan, order pemeriksaan, prognosis, dan kondisi pulang | `carePlan`/`disposition` text/enum cukup untuk slice ini; detail lanjutan menunggu keputusan klinis. |
+| `Composition`, outbox klinis, amendment, disclosure/access audit, odontogram, dan evidence center | Tidak diperlukan untuk menyimpan serta memfinalisasi RME lokal pertama. |
+
+### Pemetaan pendaftaran, model, dan form
+
+| Tahap | Kontrak UI/API | Penyimpanan saat ini |
+| --- | --- | --- |
+| Pendaftaran | `EncounterRegistrationDialog` meminta Location dan dokter untuk Patient yang sudah dipilih | `CreateEncounterDto` → `Encounter`; Organization, nomor antrean, waktu, dan status dibuat server-side |
+| Mulai konsultasi | Dokter mengubah `WAITING` menjadi `IN_PROGRESS` | `Encounter.status`, `startedAt`, dan `EncounterStatusHistory` |
+| Isi draft | `RmeForm` mengirim `SaveMedicalRecordDraftDto` dengan `expectedVersion` | `MedicalRecord` + `ClinicalHistoryEntry` + `ClinicalObservation` + `Diagnosis` + `Prescription` |
+| Preflight/final | `PreflightMedicalRecordDto`, lalu `FinalizeMedicalRecordDto` dengan idempotency key | `MedicalRecord` menjadi `FINAL`, Encounter menjadi `COMPLETED`, audit tercatat dalam satu transaksi |
+
+Tidak ada gap penghalang workflow yang membutuhkan schema atau kode baru pada
+kontrak ini. Perubahan berikutnya harus dimulai dari decision gate klinis, bukan
+dari menambah field target ke form secara otomatis.
+
+## Status kontrak versus implementasi
+
+Kamus ini adalah target contract data; keberadaan field di dokumen tidak berarti
+semua modul sudah tersedia. Pada snapshot codebase 15 Agustus 2026:
+
+- konteks Encounter, lifecycle `DRAFT`/`FINAL`, version, validation profile,
+  finalisasi atomik, dan audit event sudah tersedia;
+- `ClinicalHistoryEntry` dan typed `ClinicalObservation` sudah tersedia secara
+  local-first, dengan sebagian field legacy tetap dipertahankan untuk kompatibilitas;
+- Diagnosis memiliki stable local ID, ICD-10 code, primary flag, serta adapter
+  Condition; Observation mempunyai adapter typed per item;
+- `AllergyRecord`, `ProcedureRecord`, `MedicationOrder`, `FollowUpPlan`,
+  `MedicalRecordRevision`, dan `DentalExam` masih merupakan target blueprint;
+- kewajiban finalisasi tetap harus disahkan oleh reviewer klinis sebelum profile
+  dianggap sebagai kebijakan operasional setiap jenis fasilitas.

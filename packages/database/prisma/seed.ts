@@ -29,6 +29,7 @@ import {
   MASTER_ICD10_SNAPSHOT_SOURCE,
   MASTER_ICD10_SNAPSHOT_VERSION,
 } from "./seed-data/master-icd10.snapshot";
+import argon2 from "argon2";
 
 const prisma = new PrismaClient();
 
@@ -279,16 +280,28 @@ async function main() {
   });
 
   console.log("Seeding Initial Demo Users...");
+  const [
+    adminPasswordHash,
+    doctorPasswordHash,
+    nursePasswordHash,
+    registrationPasswordHash,
+  ] =
+    await Promise.all(
+      ["admin123", "dok123", "perawat123", "daftar123"].map((password) =>
+        argon2.hash(password, { type: argon2.argon2id }),
+      ),
+    );
   const adminUser = await prisma.user.upsert({
     where: { username: "admin" },
     update: {
+      passwordHash: adminPasswordHash,
       organizationId: "org-demo-clinic",
       locationId: "loc-demo-poli-umum",
       active: true,
     },
     create: {
       username: "admin",
-      passwordHash: "admin123", // Demo hash
+      passwordHash: adminPasswordHash,
       fullName: "Siti Rahma (Admin Pendaftaran)",
       role: Role.ADMIN,
       organizationId: "org-demo-clinic",
@@ -299,6 +312,7 @@ async function main() {
   const doctorUser = await prisma.user.upsert({
     where: { username: "dr_budi" },
     update: {
+      passwordHash: doctorPasswordHash,
       organizationId: "org-demo-clinic",
       locationId: "loc-demo-poli-umum",
       role: Role.DOKTER,
@@ -306,7 +320,7 @@ async function main() {
     },
     create: {
       username: "dr_budi",
-      passwordHash: "dok123",
+      passwordHash: doctorPasswordHash,
       fullName: "dr. Budi Santoso, Sp.PD",
       role: Role.DOKTER,
       organizationId: "org-demo-clinic",
@@ -319,6 +333,7 @@ async function main() {
   const nurseUser = await prisma.user.upsert({
     where: { username: "perawat_ani" },
     update: {
+      passwordHash: nursePasswordHash,
       organizationId: "org-demo-clinic",
       locationId: "loc-demo-poli-umum",
       role: Role.PERAWAT,
@@ -326,7 +341,7 @@ async function main() {
     },
     create: {
       username: "perawat_ani",
-      passwordHash: "perawat123",
+      passwordHash: nursePasswordHash,
       fullName: "Ani Wijaya, S.Kep",
       role: Role.PERAWAT,
       organizationId: "org-demo-clinic",
@@ -334,7 +349,31 @@ async function main() {
     },
   });
 
-  for (const practitionerId of [adminUser.id, doctorUser.id, nurseUser.id]) {
+  const registrationUser = await prisma.user.upsert({
+    where: { username: "pendaftaran_siti" },
+    update: {
+      passwordHash: registrationPasswordHash,
+      organizationId: "org-demo-clinic",
+      locationId: "loc-demo-poli-umum",
+      role: Role.PETUGAS_PENDAFTARAN,
+      active: true,
+    },
+    create: {
+      username: "pendaftaran_siti",
+      passwordHash: registrationPasswordHash,
+      fullName: "Siti Rahma, A.Md.RMIK",
+      role: Role.PETUGAS_PENDAFTARAN,
+      organizationId: "org-demo-clinic",
+      locationId: "loc-demo-poli-umum",
+    },
+  });
+
+  for (const practitionerId of [
+    adminUser.id,
+    doctorUser.id,
+    nurseUser.id,
+    registrationUser.id,
+  ]) {
     await prisma.practitionerLocationAssignment.upsert({
       where: {
         practitionerId_locationId: {

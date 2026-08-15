@@ -2,6 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
+import { ThrottlerStorage } from '@nestjs/throttler';
 import { AppModule } from './../src/app.module';
 import {
   AddressType,
@@ -15,6 +16,7 @@ import {
   PatientRelationshipCode,
   TelecomSystem,
   TelecomUse,
+  UserRole,
 } from '@mitrafaskes/shared';
 import {
   PatientIdentityConflictError,
@@ -24,8 +26,15 @@ import { ValidatedPatientInput } from './../src/patients/patient.validation';
 import { PatientAddressRegionValidator } from './../src/patients/patient-address-region.validator';
 import { EncountersService } from './../src/encounters/encounters.service';
 import { RmeService } from './../src/rme/rme.service';
+import { TriageService } from './../src/rme/triage.service';
+import { PrismaService } from './../src/database/prisma.service';
+import { createInMemoryAuthPrisma } from './in-memory-auth-prisma';
 
-const bearer = (token: string) => ({ Authorization: `Bearer ${token}` });
+let activeTokens: Record<string, string> = {};
+
+const bearer = (token: string) => ({
+  Authorization: `Bearer ${activeTokens[token] ?? token}`,
+});
 
 class InMemoryPatientRepository {
   private readonly patients: Patient[] = [];
@@ -135,12 +144,25 @@ class InMemoryPatientRepository {
 
 describe('Access control (e2e)', () => {
   let app: INestApplication<App>;
+  let tokens: Record<UserRole, string>;
 
   beforeEach(async () => {
     const patientRepository = new InMemoryPatientRepository();
+    const authPrisma = await createInMemoryAuthPrisma();
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
+      .overrideProvider(ThrottlerStorage)
+      .useValue({
+        increment: async () => ({
+          totalHits: 1,
+          timeToExpire: 60_000,
+          isBlocked: false,
+          timeToBlockExpire: 0,
+        }),
+      })
+      .overrideProvider(PrismaService)
+      .useValue(authPrisma)
       .overrideProvider(PatientRepository)
       .useValue(patientRepository)
       .overrideProvider(PatientAddressRegionValidator)
@@ -166,24 +188,161 @@ describe('Access control (e2e)', () => {
           .fn()
           .mockResolvedValue({ id: 'rme-test-1', status: 'FINAL' }),
       })
+      .overrideProvider(TriageService)
+      .useValue({
+        findByEncounterId: jest.fn().mockResolvedValue(null),
+        saveDraft: jest
+          .fn()
+          .mockResolvedValue({ id: 'rme-triage-test-1', status: 'DRAFT' }),
+        complete: jest
+          .fn()
+          .mockResolvedValue({ id: 'rme-triage-test-1', status: 'COMPLETED' }),
+      })
       .compile();
 
     app = moduleFixture.createNestApplication();
     await app.init();
+
+    tokens = {
+      [UserRole.ADMIN]: (
+        await request(app.getHttpServer())
+          .post('/api/auth/token')
+          .send({ username: 'admin', password: 'admin123' })
+          .expect(200)
+      ).body.accessToken,
+      [UserRole.DOKTER]: (
+        await request(app.getHttpServer())
+          .post('/api/auth/token')
+          .send({ username: 'dr_budi', password: 'dok123' })
+          .expect(200)
+      ).body.accessToken,
+      [UserRole.PERAWAT]: (
+        await request(app.getHttpServer())
+          .post('/api/auth/token')
+          .send({ username: 'perawat_ani', password: 'perawat123' })
+          .expect(200)
+      ).body.accessToken,
+      [UserRole.PETUGAS_PENDAFTARAN]: (
+        await request(app.getHttpServer())
+          .post('/api/auth/token')
+          .send({ username: 'pendaftaran_siti', password: 'daftar123' })
+          .expect(200)
+      ).body.accessToken,
+    };
+    activeTokens = {
+      'mock-jwt-token-admin': tokens[UserRole.ADMIN],
+      'mock-jwt-token-dr_budi': tokens[UserRole.DOKTER],
+      'mock-jwt-token-perawat_ani': tokens[UserRole.PERAWAT],
+      'mock-jwt-token-pendaftaran_siti': tokens[UserRole.PETUGAS_PENDAFTARAN],
+    };
   });
 
   afterEach(async () => {
     await app.close();
   });
 
-  it('allows the public login endpoint and returns a reusable session token', async () => {
+  it('sets a cookie session without returning the raw token', async () => {
+    const csrf = await request(app.getHttpServer())
+      .get('/api/auth/csrf')
+      .expect(200);
+    const csrfCookie = csrf.headers['set-cookie'][0];
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .set('Cookie', csrfCookie)
+      .set('X-CSRF-Token', csrf.body.csrfToken)
+      .send({ username: 'dr_budi', password: 'dok123' })
+      .expect(200);
+
+    expect(response.body.accessToken).toBeUndefined();
+    expect(response.body.user.role).toBe('DOKTER');
+    expect(response.headers['set-cookie']).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/mitrafaskes_session=.*HttpOnly/i),
+      ]),
+    );
+  });
+
+  it('keeps bearer token issuance separate and exposes the current user', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/token')
+      .send({ username: 'dr_budi', password: 'dok123' })
+      .expect(200);
+
+    expect(response.body.accessToken).toEqual(expect.any(String));
+    expect(response.headers['set-cookie']).toBeUndefined();
+
+    const currentUser = await request(app.getHttpServer())
+      .get('/api/auth/me')
+      .set(bearer(response.body.accessToken))
+      .expect(200);
+
+    expect(currentUser.body.user).toEqual(
+      expect.objectContaining({ username: 'dr_budi', role: 'DOKTER' }),
+    );
+  });
+
+  it('returns a generic error for invalid credentials', async () => {
+    const response = await request(app.getHttpServer())
+      .post('/api/auth/token')
+      .send({ username: 'dr_budi', password: 'wrong-password' })
+      .expect(401);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({ code: 'INVALID_CREDENTIALS' }),
+    );
+    expect(JSON.stringify(response.body)).not.toContain('dok123');
+  });
+
+  it('rejects cookie login without a valid CSRF token', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/auth/login')
       .send({ username: 'dr_budi', password: 'dok123' })
-      .expect(201);
+      .expect(403);
 
-    expect(response.body.accessToken).toBe('mock-jwt-token-dr_budi');
-    expect(response.body.user.role).toBe('DOKTER');
+    expect(response.body.code).toBe('CSRF_INVALID');
+  });
+
+  it('revokes a cookie session on logout', async () => {
+    const csrf = await request(app.getHttpServer())
+      .get('/api/auth/csrf')
+      .expect(200);
+    const csrfCookie = csrf.headers['set-cookie'][0];
+    const login = await request(app.getHttpServer())
+      .post('/api/auth/login')
+      .set('Cookie', csrfCookie)
+      .set('X-CSRF-Token', csrf.body.csrfToken)
+      .send({ username: 'dr_budi', password: 'dok123' })
+      .expect(200);
+    const sessionCookie = login.headers['set-cookie'][0];
+
+    await request(app.getHttpServer())
+      .post('/api/auth/logout')
+      .set('Cookie', `${csrfCookie}; ${sessionCookie}`)
+      .set('X-CSRF-Token', csrf.body.csrfToken)
+      .expect(204);
+
+    await request(app.getHttpServer())
+      .get('/api/auth/me')
+      .set('Cookie', sessionCookie)
+      .expect(401);
+  });
+
+  it('changes the password and invalidates other sessions', async () => {
+    await request(app.getHttpServer())
+      .post('/api/auth/change-password')
+      .set(bearer(tokens[UserRole.DOKTER]))
+      .send({ currentPassword: 'dok123', newPassword: 'dok12345' })
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/api/auth/token')
+      .send({ username: 'dr_budi', password: 'dok123' })
+      .expect(401);
+
+    await request(app.getHttpServer())
+      .post('/api/auth/token')
+      .send({ username: 'dr_budi', password: 'dok12345' })
+      .expect(200);
   });
 
   it('rejects protected endpoints without a session', async () => {
@@ -203,10 +362,38 @@ describe('Access control (e2e)', () => {
     expect(response.status).toBe(200);
   });
 
+  it('keeps triage endpoints limited to the clinical nurse role', async () => {
+    await request(app.getHttpServer())
+      .get('/api/rme/triage/encounter/enc-001')
+      .set(bearer('mock-jwt-token-perawat_ani'))
+      .expect(200);
+
+    await request(app.getHttpServer())
+      .post('/api/rme/triage/draft')
+      .set(bearer('mock-jwt-token-perawat_ani'))
+      .send({ encounterId: 'enc-001', expectedVersion: 0 })
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .get('/api/rme/triage/encounter/enc-001')
+      .set(bearer('mock-jwt-token-pendaftaran_siti'))
+      .expect(403);
+
+    await request(app.getHttpServer())
+      .post('/api/rme/triage/complete')
+      .set(bearer('mock-jwt-token-dr_budi'))
+      .send({
+        encounterId: 'enc-001',
+        expectedVersion: 1,
+        idempotencyKey: 'triage-doctor-denied',
+      })
+      .expect(403);
+  });
+
   it('returns server-side pagination metadata for collection endpoints', async () => {
     const encounters = await request(app.getHttpServer())
       .get('/api/encounters?page=2&pageSize=1')
-      .set(bearer('mock-jwt-token-perawat_ani'))
+      .set(bearer('mock-jwt-token-pendaftaran_siti'))
       .expect(200);
 
     expect(encounters.body.meta).toEqual({ page: 2, pageSize: 1, total: 0 });
@@ -277,7 +464,7 @@ describe('Access control (e2e)', () => {
   it('enforces the Encounter lifecycle permission matrix at the API boundary', async () => {
     await request(app.getHttpServer())
       .post('/api/encounters')
-      .set(bearer('mock-jwt-token-perawat_ani'))
+      .set(bearer('mock-jwt-token-pendaftaran_siti'))
       .send({
         patientId: 'patient-1',
         locationId: 'location-1',
@@ -287,7 +474,7 @@ describe('Access control (e2e)', () => {
 
     await request(app.getHttpServer())
       .patch('/api/encounters/enc-test-1/status')
-      .set(bearer('mock-jwt-token-perawat_ani'))
+      .set(bearer('mock-jwt-token-pendaftaran_siti'))
       .send({ status: 'CANCELLED', expectedVersion: 1 })
       .expect(200);
 
@@ -427,7 +614,7 @@ describe('Access control (e2e)', () => {
   it('allows registration staff to create structured multi-value patient data atomically', async () => {
     const response = await request(app.getHttpServer())
       .post('/api/patients')
-      .set(bearer('mock-jwt-token-perawat_ani'))
+      .set(bearer('mock-jwt-token-pendaftaran_siti'))
       .send({
         fullName: 'Bayi Ny. Sari',
         birthDate: '2026-07-31',

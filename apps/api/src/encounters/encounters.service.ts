@@ -91,15 +91,22 @@ export class EncountersService {
       actor?.role === UserRole.DOKTER
         ? await this.resolveActorUserId(actor)
         : undefined;
+    const locationIds =
+      actor?.role === UserRole.PERAWAT
+        ? await this.resolveActorLocationIds(actor)
+        : undefined;
     const { records, total } = await this.repository.findMany(
       {
         queueDate,
-        locationId: query.locationId,
+        locationId:
+          actor?.role === UserRole.PERAWAT ? undefined : query.locationId,
+        locationIds,
         doctorId:
           actor?.role === UserRole.DOKTER
             ? (doctorId ?? '__unknown_doctor__')
             : undefined,
         status: query.status ? mapStatusToPrisma(query.status) : undefined,
+        statuses: query.statuses?.map(mapStatusToPrisma),
       },
       page,
       pageSize,
@@ -445,6 +452,25 @@ export class EncountersService {
       select: { id: true },
     });
     return user?.id;
+  }
+
+  private async resolveActorLocationIds(
+    actor: EncounterActor,
+  ): Promise<string[]> {
+    const user = await this.prisma.user.findUnique({
+      where: { username: actor.username },
+      select: {
+        locationId: true,
+        locationAssignments: { select: { locationId: true } },
+      },
+    });
+    const ids = [
+      ...(user?.locationId ? [user.locationId] : []),
+      ...(user?.locationAssignments ?? []).map(
+        (assignment) => assignment.locationId,
+      ),
+    ];
+    return [...new Set(ids)];
   }
 
   private normalizePositiveInteger(

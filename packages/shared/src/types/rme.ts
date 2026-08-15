@@ -1,4 +1,5 @@
 import type { ResourceIntegrationSummary } from "./integrations";
+import type { TriageStatus } from "./encounter";
 
 export interface MasterIcd10 {
   code: string;
@@ -209,6 +210,11 @@ export interface MedicalRecord {
   finalizedBy?: string;
   finalizedAt?: string;
   validationProfile: MedicalRecordValidationProfile;
+  triageStatus?: TriageStatus;
+  triageUpdatedBy?: string;
+  triageUpdatedAt?: string;
+  triageCompletedBy?: string;
+  triageCompletedAt?: string;
   chiefComplaint?: string;
   presentIllness?: string;
   allergyReviewStatus?: AllergyReviewStatus;
@@ -289,4 +295,28 @@ export interface RmePreflightResult {
   serviceProfile: string;
   validationProfile: string;
   issues: RmeValidationIssue[];
+}
+
+export interface SaveTriageDraftDto {
+  encounterId: string;
+  expectedVersion: number;
+  chiefComplaint?: string;
+  presentIllness?: string;
+  allergyReviewStatus?: AllergyReviewStatus;
+  allergyDetails?: string;
+  anamnesis?: string;
+  histories?: ClinicalHistoryEntryDto[];
+  systolic?: number;
+  diastolic?: number;
+  heartRate?: number;
+  temperature?: number;
+  weight?: number;
+  height?: number;
+  observations?: ClinicalObservationDto[];
+}
+
+export interface CompleteTriageDto {
+  encounterId: string;
+  expectedVersion: number;
+  idempotencyKey: string;
 }

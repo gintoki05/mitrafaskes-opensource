@@ -6,7 +6,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -15,7 +14,6 @@ import {
   MasterDataListSort,
   MasterDataSortDirection,
 } from '@mitrafaskes/shared';
-import { SessionPermissionGuard } from '../auth/session-permission.guard';
 import { RequirePermission } from '../auth/access-control.decorator';
 import { MasterDataService } from './master-data.service';
 
@@ -59,7 +57,6 @@ const parseListQuery = (
 };
 
 @Controller('api/master')
-@UseGuards(SessionPermissionGuard)
 @ApiTags('Master Faskes')
 export class MasterDataController {
   constructor(private readonly masterData: MasterDataService) {}
