@@ -86,6 +86,10 @@ Observation.
 
 Konfigurasi OAuth2 SATUSEHAT tersedia di [`docs/satusehat_authentication.md`](docs/satusehat_authentication.md), sedangkan operasi Organization, Location, dan Practitioner ada di [`docs/satusehat_organization.md`](docs/satusehat_organization.md), [`docs/satusehat_location.md`](docs/satusehat_location.md), dan [`docs/satusehat_practitioner.md`](docs/satusehat_practitioner.md).
 
+Arsitektur autentikasi pengguna, database session, permission berbasis
+organisasi/lokasi, dan security middleware NestJS tersedia di
+[`docs/auth_architecture.md`](docs/auth_architecture.md).
+
 Blueprint produk RME Rawat Jalan, konsultasi gigi/odontogram, model domain,
 kamus data klinis, urutan integrasi, kepatuhan akreditasi, dan bahan wireframe
 Penpot tersedia di
