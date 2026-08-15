@@ -10,8 +10,14 @@ export interface SessionMetadata {
   ipAddress?: string;
 }
 
+const sessionUserInclude = {
+  accessRole: {
+    include: { permissions: { include: { permission: true } } },
+  },
+} as const;
+
 export type AuthSessionWithUser = Prisma.AuthSessionGetPayload<{
-  include: { user: true };
+  include: { user: { include: typeof sessionUserInclude } };
 }>;
 
 export interface AuthenticatedRequestSession {
@@ -47,7 +53,7 @@ export class SessionService {
 
     const session = await this.prisma.authSession.findUnique({
       where: { tokenHash: this.hashToken(token) },
-      include: { user: true },
+      include: { user: { include: sessionUserInclude } },
     });
     if (!session) return null;
 
@@ -57,9 +63,27 @@ export class SessionService {
       session.lastSeenAt.getTime() + config.sessionIdleTtlMs <= now;
     const expired = session.expiresAt.getTime() <= now;
 
-    if (session.revokedAt || expired || idleExpired || !session.user.active) {
+    const temporaryPasswordExpired =
+      session.user.mustChangePassword &&
+      session.user.temporaryPasswordExpiresAt !== null &&
+      session.user.temporaryPasswordExpiresAt.getTime() <= now;
+
+    if (
+      session.revokedAt ||
+      expired ||
+      idleExpired ||
+      temporaryPasswordExpired ||
+      !session.user.active
+    ) {
       if (!session.revokedAt) {
-        await this.revokeById(session.id, expired ? 'EXPIRED' : 'INACTIVE');
+        await this.revokeById(
+          session.id,
+          temporaryPasswordExpired
+            ? 'TEMPORARY_PASSWORD_EXPIRED'
+            : expired
+              ? 'EXPIRED'
+              : 'INACTIVE',
+        );
       }
       return null;
     }

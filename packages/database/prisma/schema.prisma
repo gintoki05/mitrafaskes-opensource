@@ -14,6 +14,31 @@ enum Role {
   PETUGAS_PENDAFTARAN
 }
 
+enum WorkProfileType {
+  NON_CLINICAL
+  DOKTER
+  PERAWAT
+}
+
+enum AccessRoleSystemKind {
+  STANDARD
+  SUPER_ADMIN
+}
+
+enum AccountAuditEventType {
+  ACCOUNT_CREATED
+  ACCOUNT_UPDATED
+  ACCOUNT_ACTIVATED
+  ACCOUNT_DEACTIVATED
+  ACCOUNT_ROLE_CHANGED
+  ACCOUNT_PASSWORD_RESET
+  ROLE_CREATED
+  ROLE_UPDATED
+  ROLE_PERMISSIONS_UPDATED
+  ROLE_ARCHIVED
+  ROLE_REACTIVATED
+}
+
 enum Gender {
   MALE
   FEMALE
@@ -282,16 +307,60 @@ model ExternalResourceLink {
   @@index([localResourceType, localResourceId])
 }
 
+model Permission {
+  code        String               @id @db.VarChar(64)
+  label       String               @db.VarChar(150)
+  group       String               @db.VarChar(100)
+  description String               @db.VarChar(500)
+  sensitive   Boolean              @default(false)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  roles       AccessRolePermission[]
+}
+
+model AccessRole {
+  id          String                 @id @default(uuid())
+  code        String                 @unique @db.VarChar(64)
+  name        String                 @db.VarChar(150)
+  description String?                @db.VarChar(500)
+  defaultRoute String                @default("/master-faskes") @db.VarChar(200)
+  active      Boolean                @default(true)
+  systemKind  AccessRoleSystemKind   @default(STANDARD)
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  users       User[]
+  permissions AccessRolePermission[]
+  auditEvents AccountAuditEvent[]
+
+  @@index([active, name])
+  @@index([systemKind, active])
+}
+
+model AccessRolePermission {
+  roleId       String
+  permissionCode String
+  createdAt    DateTime   @default(now())
+  role         AccessRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionCode], references: [code], onDelete: Restrict)
+
+  @@id([roleId, permissionCode])
+  @@index([permissionCode, roleId])
+}
+
 model User {
   id                     String                           @id @default(uuid())
   username               String                           @unique
   passwordHash           String
   fullName               String
   role                   Role
+  accessRoleId            String?
+  workProfileType         WorkProfileType       @default(NON_CLINICAL)
   nik                    String?                          @unique @db.VarChar(16)
   birthDate              DateTime?                        @db.Date
   gender                 Gender?
   active                 Boolean                          @default(true)
+  mustChangePassword     Boolean                          @default(false)
+  temporaryPasswordExpiresAt DateTime?
   sipNumber              String?
   strNumber              String?
   organizationId         String?
@@ -305,10 +374,34 @@ model User {
   encounterStatusHistory EncounterStatusHistory[]         @relation("EncounterStatusActor")
   clinicalObservations   ClinicalObservation[]            @relation("ObservationPerformer")
   authSessions           AuthSession[]                     @relation("UserAuthSessions")
+  accessRole              AccessRole?                       @relation(fields: [accessRoleId], references: [id], onDelete: Restrict)
+  auditEventsAsActor      AccountAuditEvent[]               @relation("AccountAuditActor")
+  auditEventsAsTarget     AccountAuditEvent[]               @relation("AccountAuditTarget")
 
   @@index([role, active, fullName])
+  @@index([accessRoleId, active, fullName])
+  @@index([workProfileType, active, fullName])
   @@index([organizationId, active, fullName])
   @@index([locationId, active, fullName])
+}
+
+model AccountAuditEvent {
+  id          String                 @id @default(uuid())
+  eventType   AccountAuditEventType
+  actorUserId String?
+  targetUserId String?
+  roleId      String?
+  summary     String                 @db.VarChar(500)
+  metadata    Json?
+  createdAt   DateTime               @default(now())
+  actor       User?                  @relation("AccountAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  target      User?                  @relation("AccountAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  role        AccessRole?            @relation(fields: [roleId], references: [id], onDelete: SetNull)
+
+  @@index([targetUserId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([roleId, createdAt])
+  @@index([eventType, createdAt])
 }
 
 model AuthSession {

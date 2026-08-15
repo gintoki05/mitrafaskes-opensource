@@ -8,7 +8,6 @@ import {
   ArrowRight,
   LockKeyhole,
   ShieldCheck,
-  Stethoscope,
   UserCheck,
 } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
@@ -42,13 +41,13 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: 'dr_budi',
-      password: 'dok123',
+      username: 'admin',
+      password: 'admin123',
     },
   });
 
   useEffect(() => {
-    if (session) router.replace(getSessionEntryRoute(session.user));
+    if (session) router.replace(session.user.mustChangePassword ? '/wajib-ganti-password' : getSessionEntryRoute(session.user));
   }, [router, session]);
 
   const handleLogin: SubmitHandler<LoginFormValues> = async ({ username, password }) => {
@@ -68,7 +67,7 @@ export default function LoginPage() {
 
       const data = await res.json();
       setSession(data.user);
-      router.replace(getSessionEntryRoute(data.user));
+      router.replace(data.user.mustChangePassword ? '/wajib-ganti-password' : getSessionEntryRoute(data.user));
     } catch (err: unknown) {
       toast.error('Tidak dapat masuk', {
         description:
@@ -186,17 +185,6 @@ export default function LoginPage() {
                 <div className="mt-1 text-xs text-muted-foreground">Siti Rahma · Operasi</div>
               </button>
 
-              <button
-                type="button"
-                onClick={() => selectQuickUser('dr_budi', 'dok123')}
-                className="group rounded-[var(--radius-control)] border border-border bg-background p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/[0.035]"
-              >
-                <div className="flex items-center gap-2 text-sm font-bold text-primary">
-                  <Stethoscope className="h-4 w-4" aria-hidden="true" />
-                  Dokter
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">dr. Budi Santoso</div>
-              </button>
             </div>
           </div>
         </div>

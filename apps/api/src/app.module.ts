@@ -9,12 +9,14 @@ import { PractitionersModule } from './practitioners/practitioners.module';
 import { EncountersModule } from './encounters/encounters.module';
 import { RmeModule } from './rme/rme.module';
 import { SatusehatIntegrationModule } from './integrations/satusehat/satusehat-integration.module';
+import { AccountsModule } from './accounts/accounts.module';
 
 const satusehatEnabled = process.env.INTEGRATION_SATUSEHAT_ENABLED === 'true';
 
 @Module({
   imports: [
     AuthModule,
+    AccountsModule,
     IntegrationCoreModule.register({
       masterDataProvider: { provider: 'SATUSEHAT', domain: 'WILAYAH' },
       providers: [

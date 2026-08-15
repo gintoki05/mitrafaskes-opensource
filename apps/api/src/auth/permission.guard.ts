@@ -6,12 +6,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AccessPermission, evaluateAccess } from '@mitrafaskes/shared';
+import { AccessPermission } from '@mitrafaskes/shared';
 import {
   ACCESS_PERMISSION_KEY,
   IS_PUBLIC_KEY,
 } from './access-control.decorator';
 import { AuthenticatedRequest } from './session.guard';
+import { hasAuthenticatedPermission } from './access-control.service';
 
 @Injectable()
 export class PermissionGuard implements CanActivate {
@@ -28,8 +29,6 @@ export class PermissionGuard implements CanActivate {
       ACCESS_PERMISSION_KEY,
       [context.getHandler(), context.getClass()],
     );
-    if (!permission) return true;
-
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
     if (!request.user) {
       throw new UnauthorizedException({
@@ -38,16 +37,25 @@ export class PermissionGuard implements CanActivate {
       });
     }
 
-    const decision = evaluateAccess(request.user.role, permission);
-    if (!decision.allowed) {
-      if (decision.statusCode === 401) {
-        throw new UnauthorizedException({
-          code: decision.code,
-          message: 'Sesi tidak valid',
-        });
-      }
+    const requestPath = request.path || request.originalUrl || '';
+    if (
+      request.user.mustChangePassword &&
+      !requestPath.endsWith('/auth/me') &&
+      !requestPath.endsWith('/auth/logout') &&
+      !requestPath.endsWith('/auth/logout-all') &&
+      !requestPath.endsWith('/auth/change-password')
+    ) {
       throw new ForbiddenException({
-        code: decision.code,
+        code: 'PASSWORD_CHANGE_REQUIRED',
+        message: 'Password sementara harus diganti sebelum melanjutkan',
+      });
+    }
+
+    if (!permission) return true;
+
+    if (!hasAuthenticatedPermission(request.user, permission)) {
+      throw new ForbiddenException({
+        code: 'FORBIDDEN',
         message: 'Peran Anda tidak memiliki izin untuk tindakan ini',
       });
     }

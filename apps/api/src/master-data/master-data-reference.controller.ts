@@ -8,9 +8,10 @@ import {
   Req,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { AccessPermission, UserRole } from '@mitrafaskes/shared';
+import { AccessPermission } from '@mitrafaskes/shared';
 import { Request } from 'express';
 import { RequirePermission } from '../auth/access-control.decorator';
+import { hasAuthenticatedPermission } from '../auth/access-control.service';
 import { AuthenticatedUser } from '../auth/session-permission.guard';
 import { MasterWilayahService } from './master-wilayah.service';
 import { MasterMaritalStatusService } from './master-marital-status.service';
@@ -46,7 +47,10 @@ export class MasterDataReferenceController {
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
   listDatasets(@Req() request: MasterDataRequest) {
     return this.masterWilayah.listDatasets(
-      request.user.role === UserRole.ADMIN,
+      hasAuthenticatedPermission(
+        request.user,
+        AccessPermission.MASTER_DATA_WRITE,
+      ),
     );
   }
 

@@ -15,6 +15,8 @@ import {
   TelecomSystem,
   TelecomUse,
   VerificationStatus,
+  AccessRoleSystemKind,
+  WorkProfileType,
 } from "@prisma/client";
 import {
   MASTER_WILAYAH_SNAPSHOT,
@@ -32,6 +34,41 @@ import {
 import argon2 from "argon2";
 
 const prisma = new PrismaClient();
+
+const accessRoleSeeds = [
+  { id: 'access-role-super-admin', code: 'SUPER_ADMIN', name: 'Super Admin', defaultRoute: '/administrasi/akun', systemKind: AccessRoleSystemKind.SUPER_ADMIN, permissions: [] as string[] },
+  { id: 'access-role-admin', code: 'ADMIN', name: 'Admin', defaultRoute: '/master-faskes', systemKind: AccessRoleSystemKind.STANDARD, permissions: ['patient.read','patient.write','queue.read','queue.create','queue.cancel','sync.status-read','sync.retry','sync.payload-read','master-data.read','master-data.write'] },
+  { id: 'access-role-dokter', code: 'DOKTER', name: 'Dokter', defaultRoute: '/rme', systemKind: AccessRoleSystemKind.STANDARD, permissions: ['patient.read','queue.read','queue.start','rme.read','rme.write-draft','rme.finalize','master-data.read'] },
+  { id: 'access-role-perawat', code: 'PERAWAT', name: 'Perawat klinis', defaultRoute: '/triase', systemKind: AccessRoleSystemKind.STANDARD, permissions: ['patient.read','queue.read','rme.triage-read','rme.triage-write','rme.triage-complete','master-data.read'] },
+  { id: 'access-role-pendaftaran', code: 'PETUGAS_PENDAFTARAN', name: 'Petugas pendaftaran', defaultRoute: '/pendaftaran', systemKind: AccessRoleSystemKind.STANDARD, permissions: ['patient.read','patient.write','queue.read','queue.create','queue.cancel','sync.status-read','sync.retry','master-data.read'] },
+] as const;
+
+const permissionSeeds = [
+  ['auth.login','Login','Autentikasi','Masuk ke aplikasi.',false],
+  ['patient.read','Lihat pasien','Pasien','Melihat identitas pasien.',false],
+  ['patient.write','Kelola pasien','Pasien','Membuat dan mengubah identitas pasien.',false],
+  ['queue.read','Lihat antrean','Antrean','Melihat antrean kunjungan.',false],
+  ['queue.create','Tambah antrean','Antrean','Menambahkan pasien ke antrean.',false],
+  ['queue.cancel','Batalkan antrean','Antrean','Membatalkan antrean.',false],
+  ['queue.start','Mulai pemeriksaan','Antrean','Memulai pemeriksaan.',false],
+  ['rme.read','Lihat RME','RME','Melihat isi rekam medis elektronik.',false],
+  ['rme.write-draft','Simpan draft RME','RME','Membuat dan mengubah draft RME.',false],
+  ['rme.finalize','Finalisasi RME','RME','Memfinalisasi RME dan encounter.',false],
+  ['rme.triage-read','Lihat triase','Triase','Melihat alur triase.',false],
+  ['rme.triage-write','Simpan triase','Triase','Mengubah draft triase.',false],
+  ['rme.triage-complete','Selesaikan triase','Triase','Menyelesaikan triase.',false],
+  ['sync.status-read','Lihat sinkronisasi','Integrasi','Melihat status sinkronisasi.',false],
+  ['sync.retry','Retry sinkronisasi','Integrasi','Mengulangi sinkronisasi yang aman.',false],
+  ['sync.payload-read','Lihat payload mentah','Integrasi','Melihat payload sinkronisasi mentah.',true],
+  ['master-data.read','Lihat master data','Master data','Melihat data master lokal.',false],
+  ['master-data.write','Kelola master data','Master data','Membuat dan mengubah data master.',false],
+  ['account.read','Lihat akun','Administrasi akses','Melihat akun pengguna.',true],
+  ['account.write','Kelola akun','Administrasi akses','Membuat dan mengubah akun.',true],
+  ['account.reset-password','Reset password akun','Administrasi akses','Membuat password sementara untuk akun lain.',true],
+  ['role.read','Lihat role','Administrasi akses','Melihat role dan permission.',true],
+  ['role.write','Kelola role','Administrasi akses','Membuat dan mengubah role serta permission.',true],
+  ['access.audit-read','Lihat audit akses','Administrasi akses','Melihat riwayat perubahan akun dan role.',true],
+] as const;
 
 async function seedPatient(
   medicalRecNo: string,
@@ -51,6 +88,30 @@ async function seedPatient(
       return;
     }
     throw error;
+  }
+}
+
+async function seedAccessControl(): Promise<void> {
+  for (const [code, label, group, description, sensitive] of permissionSeeds) {
+    await prisma.permission.upsert({
+      where: { code },
+      update: { label, group, description, sensitive },
+      create: { code, label, group, description, sensitive },
+    });
+  }
+  for (const role of accessRoleSeeds) {
+    await prisma.accessRole.upsert({
+      where: { code: role.code },
+      update: { name: role.name, defaultRoute: role.defaultRoute, systemKind: role.systemKind, active: true },
+      create: { id: role.id, code: role.code, name: role.name, defaultRoute: role.defaultRoute, systemKind: role.systemKind },
+    });
+    await prisma.accessRolePermission.deleteMany({ where: { roleId: role.id } });
+    if (role.permissions.length) {
+      await prisma.accessRolePermission.createMany({
+        data: role.permissions.map((permissionCode) => ({ roleId: role.id, permissionCode })),
+        skipDuplicates: true,
+      });
+    }
   }
 }
 
@@ -279,6 +340,9 @@ async function main() {
     },
   });
 
+  console.log("Seeding dynamic access roles...");
+  await seedAccessControl();
+
   console.log("Seeding Initial Demo Users...");
   const [
     adminPasswordHash,
@@ -297,6 +361,8 @@ async function main() {
       passwordHash: adminPasswordHash,
       organizationId: "org-demo-clinic",
       locationId: "loc-demo-poli-umum",
+      accessRoleId: "access-role-super-admin",
+      workProfileType: WorkProfileType.NON_CLINICAL,
       active: true,
     },
     create: {
@@ -304,6 +370,8 @@ async function main() {
       passwordHash: adminPasswordHash,
       fullName: "Siti Rahma (Admin Pendaftaran)",
       role: Role.ADMIN,
+      accessRoleId: "access-role-super-admin",
+      workProfileType: WorkProfileType.NON_CLINICAL,
       organizationId: "org-demo-clinic",
       locationId: "loc-demo-poli-umum",
     },
@@ -316,17 +384,22 @@ async function main() {
       organizationId: "org-demo-clinic",
       locationId: "loc-demo-poli-umum",
       role: Role.DOKTER,
-      active: true,
+      accessRoleId: "access-role-dokter",
+      workProfileType: WorkProfileType.DOKTER,
+      active: false,
     },
     create: {
       username: "dr_budi",
       passwordHash: doctorPasswordHash,
       fullName: "dr. Budi Santoso, Sp.PD",
       role: Role.DOKTER,
+      accessRoleId: "access-role-dokter",
+      workProfileType: WorkProfileType.DOKTER,
       organizationId: "org-demo-clinic",
       locationId: "loc-demo-poli-umum",
       sipNumber: "SIP-449/123/2023",
       strNumber: "STR-998271102",
+      active: false,
     },
   });
 
@@ -337,6 +410,8 @@ async function main() {
       organizationId: "org-demo-clinic",
       locationId: "loc-demo-poli-umum",
       role: Role.PERAWAT,
+      accessRoleId: "access-role-perawat",
+      workProfileType: WorkProfileType.PERAWAT,
       active: true,
     },
     create: {
@@ -344,6 +419,8 @@ async function main() {
       passwordHash: nursePasswordHash,
       fullName: "Ani Wijaya, S.Kep",
       role: Role.PERAWAT,
+      accessRoleId: "access-role-perawat",
+      workProfileType: WorkProfileType.PERAWAT,
       organizationId: "org-demo-clinic",
       locationId: "loc-demo-poli-umum",
     },
@@ -356,6 +433,8 @@ async function main() {
       organizationId: "org-demo-clinic",
       locationId: "loc-demo-poli-umum",
       role: Role.PETUGAS_PENDAFTARAN,
+      accessRoleId: "access-role-pendaftaran",
+      workProfileType: WorkProfileType.NON_CLINICAL,
       active: true,
     },
     create: {
@@ -363,6 +442,8 @@ async function main() {
       passwordHash: registrationPasswordHash,
       fullName: "Siti Rahma, A.Md.RMIK",
       role: Role.PETUGAS_PENDAFTARAN,
+      accessRoleId: "access-role-pendaftaran",
+      workProfileType: WorkProfileType.NON_CLINICAL,
       organizationId: "org-demo-clinic",
       locationId: "loc-demo-poli-umum",
     },

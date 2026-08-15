@@ -16,6 +16,7 @@ import {
   Search,
   ShieldCheck,
   Stethoscope,
+  Settings2,
   type LucideIcon,
   UserCheck,
 } from 'lucide-react';
@@ -24,6 +25,11 @@ import { apiFetch, can, clearSession, defaultRoute } from '@/lib/auth';
 import { useSession } from '@/hooks/useSession';
 import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 import { SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { SatusehatConnectionBadge } from '@/components/SatusehatConnectionBadge';
 
 type NavigationItem = {
@@ -33,7 +39,11 @@ type NavigationItem = {
   permission: AccessPermission;
   icon: LucideIcon;
   provider?: string;
-  children?: readonly { href: string; label: string }[];
+  children?: readonly {
+    href: string;
+    label: string;
+    exact?: boolean;
+  }[];
 };
 
 const navigationItems: readonly NavigationItem[] = [
@@ -72,7 +82,7 @@ const navigationItems: readonly NavigationItem[] = [
     permission: AccessPermission.MASTER_DATA_READ,
     icon: Database,
     children: [
-      { href: '/master-data', label: 'Ikhtisar dataset' },
+      { href: '/master-data', label: 'Ikhtisar dataset', exact: true },
       { href: '/master-data/wilayah', label: 'Master Wilayah' },
       { href: '/master-data/icd10', label: 'Katalog ICD-10' },
     ],
@@ -84,7 +94,7 @@ const navigationItems: readonly NavigationItem[] = [
     permission: AccessPermission.MASTER_DATA_READ,
     icon: Building2,
     children: [
-      { href: '/master-faskes', label: 'Ikhtisar struktur' },
+      { href: '/master-faskes', label: 'Ikhtisar struktur', exact: true },
       { href: '/master-faskes/organisasi', label: 'Organisasi / Faskes' },
       { href: '/master-faskes/lokasi', label: 'Location / Ruangan' },
       { href: '/master-faskes/practitioner', label: 'Practitioner / Nakes' },
@@ -97,6 +107,17 @@ const navigationItems: readonly NavigationItem[] = [
     permission: AccessPermission.SYNC_STATUS_READ,
     icon: RefreshCw,
     provider: 'SATUSEHAT',
+  },
+  {
+    href: '/administrasi/akun',
+    label: 'Administrasi Akses',
+    shortLabel: 'Akun',
+    permission: AccessPermission.ACCOUNT_READ,
+    icon: Settings2,
+    children: [
+      { href: '/administrasi/akun', label: 'Akun pengguna' },
+      { href: '/administrasi/role', label: 'Role & permission' },
+    ],
   },
 ];
 
@@ -117,7 +138,7 @@ export function Navbar() {
     });
   };
 
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || pathname === '/wajib-ganti-password') return null;
 
   const availableNavigation = navigationItems.filter(
     (item) =>
@@ -181,12 +202,31 @@ export function Navbar() {
           <div className="space-y-1">
             {availableNavigation.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               const hasChildren = Boolean(item.children);
+              const hasActiveChild =
+                item.children?.some(
+                  (child) =>
+                    pathname === child.href ||
+                    (!child.exact && pathname.startsWith(`${child.href}/`)),
+                ) ?? false;
+              const active =
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`) ||
+                hasActiveChild;
               const isOpen = openSections[item.href] ?? active;
 
               return (
-                <div key={item.href}>
+                <Collapsible
+                  key={item.href}
+                  open={hasChildren ? isOpen : undefined}
+                  onOpenChange={(nextOpen: boolean) => {
+                    if (!hasChildren) return;
+                    setOpenSections((current) => ({
+                      ...current,
+                      [item.href]: nextOpen,
+                    }));
+                  }}
+                >
                   <div className="flex items-center gap-1">
                     <Link
                       href={item.href}
@@ -205,29 +245,25 @@ export function Navbar() {
                       <span className={collapsed ? 'sr-only' : 'truncate'}>{item.label}</span>
                     </Link>
                     {hasChildren && !collapsed ? (
-                      <button
+                      <CollapsibleTrigger
                         type="button"
                         aria-label={`${isOpen ? 'Tutup' : 'Buka'} submenu ${item.label}`}
                         aria-expanded={isOpen}
-                        onClick={() =>
-                          setOpenSections((current) => ({
-                            ...current,
-                            [item.href]: !isOpen,
-                          }))
-                        }
                         className="flex h-9 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-sidebar-muted transition-colors hover:bg-white/12 hover:text-white"
                       >
                         <ChevronDown
                           className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`}
                           aria-hidden="true"
                         />
-                      </button>
+                      </CollapsibleTrigger>
                     ) : null}
                   </div>
-                  {hasChildren && !collapsed && isOpen ? (
-                    <div className="ml-7 mt-1 space-y-1 border-l border-white/15 pl-2">
+                  {hasChildren && !collapsed ? (
+                    <CollapsibleContent className="ml-7 mt-1 space-y-1 border-l border-white/15 pl-2">
                       {item.children?.map((child) => {
-                        const childActive = pathname === child.href;
+                        const childActive =
+                          pathname === child.href ||
+                          (!child.exact && pathname.startsWith(`${child.href}/`));
                         return (
                           <Link
                             key={child.href}
@@ -243,9 +279,9 @@ export function Navbar() {
                           </Link>
                         );
                       })}
-                    </div>
+                    </CollapsibleContent>
                   ) : null}
-                </div>
+                </Collapsible>
               );
             })}
           </div>
@@ -308,7 +344,7 @@ export function Navbar() {
                 <div className="truncate text-xs font-bold text-white">{user.fullName}</div>
                 <div className="flex w-full items-center justify-start gap-1 text-[10px] text-white/70">
                   <ShieldCheck className="h-3 w-3" aria-hidden="true" />
-                  <span className="truncate">{ROLE_LABELS[user.role]}</span>
+                  <span className="truncate">{user.accessRole?.name ?? ROLE_LABELS[user.role]}</span>
                 </div>
               </div>
             </div>

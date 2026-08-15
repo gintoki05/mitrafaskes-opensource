@@ -1,7 +1,7 @@
 import {
   AccessPermission,
-  hasPermission,
 } from '@mitrafaskes/shared';
+import { can } from './auth';
 import type { SessionUser } from './auth';
 
 const LAST_ROUTE_STORAGE_KEY = 'mitrafaskes:last-route';
@@ -13,9 +13,11 @@ const ROUTE_PERMISSIONS = [
   { prefix: '/master-data', permission: AccessPermission.MASTER_DATA_READ },
   { prefix: '/master-faskes', permission: AccessPermission.MASTER_DATA_READ },
   { prefix: '/satusehat', permission: AccessPermission.SYNC_STATUS_READ },
+  { prefix: '/administrasi/akun', permission: AccessPermission.ACCOUNT_READ },
+  { prefix: '/administrasi/role', permission: AccessPermission.ROLE_READ },
 ] as const;
 
-type RouteUser = Pick<SessionUser, 'id' | 'role'>;
+type RouteUser = SessionUser;
 
 type StoredRoute = {
   userId: string;
@@ -42,7 +44,7 @@ function permissionForRoute(pathname: string): AccessPermission | null {
 
 function canRestoreRoute(user: RouteUser, pathname: string): boolean {
   const permission = permissionForRoute(pathname);
-  return Boolean(permission && hasPermission(user.role, permission));
+  return Boolean(permission && can(user, permission));
 }
 
 function isStoredRoute(value: unknown): value is StoredRoute {

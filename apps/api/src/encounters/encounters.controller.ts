@@ -13,8 +13,9 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { AccessPermission, evaluateAccess } from '@mitrafaskes/shared';
+import { AccessPermission } from '@mitrafaskes/shared';
 import { RequirePermission } from '../auth/access-control.decorator';
+import { hasAuthenticatedPermission } from '../auth/access-control.service';
 import { AuthenticatedUser } from '../auth/session-permission.guard';
 import {
   EncounterConflictError,
@@ -114,8 +115,7 @@ export class EncountersController {
         message: 'Status antrean tidak dapat diubah melalui endpoint ini',
       });
     }
-    const decision = evaluateAccess(request.user.role, requiredPermission);
-    if (!decision.allowed) {
+    if (!hasAuthenticatedPermission(request.user, requiredPermission)) {
       throw new ForbiddenException({
         code: 'FORBIDDEN',
         message: 'Peran Anda tidak memiliki izin untuk tindakan ini',

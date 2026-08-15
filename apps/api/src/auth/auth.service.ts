@@ -8,6 +8,7 @@ import type {
 } from '@mitrafaskes/shared';
 import { UserRole } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
+import { UserWithAccessRole } from './access-control.service';
 import { PasswordService } from './password.service';
 import { SessionMetadata, SessionService } from './session.service';
 
@@ -37,7 +38,14 @@ export class AuthService {
   ): Promise<{ token: string; response: TokenResponse }> {
     const username = this.normalizeUsername(input.username);
     const password = typeof input.password === 'string' ? input.password : '';
-    const user = await this.prisma.user.findUnique({ where: { username } });
+    const user = await this.prisma.user.findUnique({
+      where: { username },
+      include: {
+        accessRole: {
+          include: { permissions: { include: { permission: true } } },
+        },
+      },
+    });
     const passwordMatches = await this.passwords.verify(
       user?.passwordHash,
       password,
@@ -45,6 +53,18 @@ export class AuthService {
 
     if (!user || !passwordMatches || !user.active) {
       throw invalidCredentials();
+    }
+
+    if (
+      user.mustChangePassword &&
+      user.temporaryPasswordExpiresAt &&
+      user.temporaryPasswordExpiresAt.getTime() <= Date.now()
+    ) {
+      throw new UnauthorizedException({
+        code: 'TEMPORARY_PASSWORD_EXPIRED',
+        message:
+          'Password sementara telah kedaluwarsa. Minta administrator melakukan reset.',
+      });
     }
 
     const token = await this.sessions.create(user.id, metadata);
@@ -101,7 +121,11 @@ export class AuthService {
     const passwordHash = await this.passwords.hash(input.newPassword);
     await this.prisma.user.update({
       where: { id: userId },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        mustChangePassword: false,
+        temporaryPasswordExpiresAt: null,
+      },
     });
     await this.sessions.revokeAllForUser(
       userId,
@@ -109,20 +133,68 @@ export class AuthService {
       currentSessionId,
     );
 
-    return { user: this.toProfile(user) };
+    const refreshed = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        accessRole: {
+          include: { permissions: { include: { permission: true } } },
+        },
+      },
+    });
+    return { user: this.toProfile(refreshed ?? user) };
   }
 
-  toProfile(
-    user: Pick<
-      User,
-      'id' | 'username' | 'fullName' | 'role' | 'sipNumber' | 'strNumber'
-    >,
-  ): UserProfile {
+  toProfile(user: UserWithAccessRole | User): UserProfile {
+    const accessRole = 'accessRole' in user ? user.accessRole : null;
+    const permissions = accessRole
+      ? accessRole.systemKind === 'SUPER_ADMIN'
+        ? undefined
+        : accessRole.permissions.map((item) => item.permissionCode)
+      : undefined;
     return {
       id: user.id,
       username: user.username,
       fullName: user.fullName,
       role: user.role as UserRole,
+      ...(accessRole
+        ? {
+            accessRole: {
+              id: accessRole.id,
+              code: accessRole.code,
+              name: accessRole.name,
+              description: accessRole.description ?? undefined,
+              defaultRoute: accessRole.defaultRoute,
+              active: accessRole.active,
+              system: accessRole.systemKind,
+            },
+            ...(permissions ? { permissions } : {}),
+            defaultRoute: accessRole.defaultRoute,
+          }
+        : {}),
+      ...((user as unknown as { workProfileType?: string }).workProfileType
+        ? {
+            workProfileType: (
+              user as unknown as {
+                workProfileType: UserProfile['workProfileType'];
+              }
+            ).workProfileType,
+          }
+        : {}),
+      ...((user as User & { mustChangePassword?: boolean })
+        .mustChangePassword !== undefined
+        ? {
+            mustChangePassword: (user as User & { mustChangePassword: boolean })
+              .mustChangePassword,
+          }
+        : {}),
+      ...((user as User & { temporaryPasswordExpiresAt?: Date | null })
+        .temporaryPasswordExpiresAt
+        ? {
+            temporaryPasswordExpiresAt: (
+              user as User & { temporaryPasswordExpiresAt: Date }
+            ).temporaryPasswordExpiresAt.toISOString(),
+          }
+        : {}),
       sipNumber: user.sipNumber ?? undefined,
       strNumber: user.strNumber ?? undefined,
     };

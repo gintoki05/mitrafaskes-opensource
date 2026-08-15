@@ -5,6 +5,8 @@ import {
   DEFAULT_ROUTE_BY_ROLE,
   hasPermission,
   UserRole,
+  type AccessRoleSummary,
+  WorkProfileType,
 } from "@mitrafaskes/shared";
 import { resolveApiInput } from "./api";
 
@@ -16,6 +18,12 @@ export interface SessionUser {
   username: string;
   fullName: string;
   role: UserRole;
+  accessRole?: AccessRoleSummary;
+  permissions?: string[];
+  defaultRoute?: string;
+  workProfileType?: WorkProfileType;
+  mustChangePassword?: boolean;
+  temporaryPasswordExpiresAt?: string;
   sipNumber?: string;
   strNumber?: string;
 }
@@ -108,11 +116,13 @@ export function can(
   user: SessionUser | null,
   permission: AccessPermission,
 ): boolean {
+  if (user?.accessRole?.system === 'SUPER_ADMIN') return true;
+  if (user?.permissions) return user.permissions.includes(permission);
   return hasPermission(user?.role, permission);
 }
 
 export function defaultRoute(user: SessionUser): string {
-  return DEFAULT_ROUTE_BY_ROLE[user.role];
+  return user.defaultRoute ?? DEFAULT_ROUTE_BY_ROLE[user.role];
 }
 
 function isAuthTokenEndpoint(input: RequestInfo | URL): boolean {

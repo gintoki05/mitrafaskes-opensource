@@ -10,6 +10,7 @@ import cookieParser from 'cookie-parser';
 import { PrismaService } from '../database/prisma.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { AccessControlService } from './access-control.service';
 import { CsrfMiddleware } from './csrf.middleware';
 import { CsrfService } from './csrf.service';
 import { PermissionGuard } from './permission.guard';
@@ -33,6 +34,7 @@ import { SessionService } from './session.service';
     PasswordService,
     SessionService,
     AuthService,
+    AccessControlService,
     CsrfService,
     SessionGuard,
     PermissionGuard,
@@ -49,7 +51,13 @@ import { SessionService } from './session.service';
       useExisting: PermissionGuard,
     },
   ],
-  exports: [AuthService, PasswordService, SessionService],
+  exports: [
+    AuthService,
+    PasswordService,
+    SessionService,
+    AccessControlService,
+    PrismaService,
+  ],
 })
 export class AuthModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

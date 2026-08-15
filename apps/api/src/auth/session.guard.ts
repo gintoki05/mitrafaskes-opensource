@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import { UserRole } from '@mitrafaskes/shared';
+import { UserRole, WorkProfileType } from '@mitrafaskes/shared';
+import { AccessControlService } from './access-control.service';
 import { IS_PUBLIC_KEY } from './access-control.decorator';
 import { SessionService } from './session.service';
 
@@ -15,6 +16,19 @@ export interface AuthenticatedUser {
   username: string;
   fullName?: string;
   role: UserRole;
+  accessRole?: {
+    id: string;
+    code: string;
+    name: string;
+    defaultRoute: string;
+    active: boolean;
+    system: 'STANDARD' | 'SUPER_ADMIN';
+  };
+  permissions: string[];
+  defaultRoute?: string;
+  workProfileType?: WorkProfileType;
+  mustChangePassword?: boolean;
+  temporaryPasswordExpiresAt?: string;
   sipNumber?: string;
   strNumber?: string;
 }
@@ -30,6 +44,7 @@ export class SessionGuard implements CanActivate {
   constructor(
     private readonly reflector: Reflector,
     private readonly sessions: SessionService,
+    private readonly access: AccessControlService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -55,6 +70,16 @@ export class SessionGuard implements CanActivate {
       username: session.user.username,
       fullName: session.user.fullName,
       role: session.user.role as UserRole,
+      accessRole: this.access.toRoleSummary(session.user.accessRole),
+      permissions: this.access.permissionCodes(session.user.accessRole),
+      defaultRoute: session.user.accessRole?.defaultRoute ?? undefined,
+      workProfileType: (session.user.workProfileType ??
+        this.access.workProfileForLegacyRole(
+          session.user.role as UserRole,
+        )) as unknown as WorkProfileType,
+      mustChangePassword: session.user.mustChangePassword,
+      temporaryPasswordExpiresAt:
+        session.user.temporaryPasswordExpiresAt?.toISOString(),
       sipNumber: session.user.sipNumber ?? undefined,
       strNumber: session.user.strNumber ?? undefined,
     };

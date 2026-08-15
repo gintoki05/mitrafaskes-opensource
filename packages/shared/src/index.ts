@@ -1,4 +1,5 @@
 export * from './types/auth';
+export * from './types/accounts';
 export * from './types/patient';
 export * from './types/encounter';
 export * from './types/rme';

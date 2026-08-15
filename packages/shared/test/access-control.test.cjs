@@ -5,6 +5,7 @@ const {
   AccessPermission,
   DEFAULT_ROUTE_BY_ROLE,
   UserRole,
+  expandPermissionDependencies,
   evaluateAccess,
   hasPermission,
 } = require('../dist');
@@ -104,5 +105,27 @@ test('all operational roles can read local master data while write stays admin-o
   assert.equal(
     hasPermission(UserRole.PERAWAT, AccessPermission.MASTER_DATA_WRITE),
     false,
+  );
+});
+
+test('custom role permissions always include their prerequisites', () => {
+  assert.deepEqual(
+    expandPermissionDependencies([AccessPermission.QUEUE_CREATE]),
+    [
+      AccessPermission.PATIENT_READ,
+      AccessPermission.QUEUE_READ,
+      AccessPermission.QUEUE_CREATE,
+    ],
+  );
+  assert.deepEqual(
+    expandPermissionDependencies([
+      AccessPermission.ACCOUNT_WRITE,
+      AccessPermission.ACCESS_AUDIT_READ,
+    ]),
+    [
+      AccessPermission.ACCOUNT_READ,
+      AccessPermission.ACCOUNT_WRITE,
+      AccessPermission.ACCESS_AUDIT_READ,
+    ],
   );
 });

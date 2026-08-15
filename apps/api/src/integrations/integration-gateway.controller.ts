@@ -9,9 +9,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import { AccessPermission, evaluateAccess } from '@mitrafaskes/shared';
+import { AccessPermission } from '@mitrafaskes/shared';
 import { RequirePermission } from '../auth/access-control.decorator';
 import { AuthenticatedUser } from '../auth/session-permission.guard';
+import { hasAuthenticatedPermission } from '../auth/access-control.service';
 import { IntegrationRegistry } from './integration-registry';
 import type { IntegrationResourceHandler } from './integration.types';
 
@@ -71,10 +72,10 @@ export class IntegrationGatewayController {
     return this.integrations.listLogs(provider, {
       page: positiveInteger(query.page, 1),
       pageSize: Math.min(positiveInteger(query.pageSize, 25), 100),
-      includePayload: evaluateAccess(
-        request.user.role,
+      includePayload: hasAuthenticatedPermission(
+        request.user,
         AccessPermission.SYNC_PAYLOAD_READ,
-      ).allowed,
+      ),
     });
   }
 
@@ -86,10 +87,10 @@ export class IntegrationGatewayController {
     @Req() request: { user: AuthenticatedUser },
   ) {
     return this.integrations.retryLog(provider, logId, {
-      includePayload: evaluateAccess(
-        request.user.role,
+      includePayload: hasAuthenticatedPermission(
+        request.user,
         AccessPermission.SYNC_PAYLOAD_READ,
-      ).allowed,
+      ),
     });
   }
 
@@ -162,8 +163,10 @@ export class IntegrationGatewayController {
     const result = await requireOperation(handler, 'preview')(localResourceId);
     return redactRawIntegrationResponse(
       result,
-      evaluateAccess(request.user.role, AccessPermission.SYNC_PAYLOAD_READ)
-        .allowed,
+      hasAuthenticatedPermission(
+        request.user,
+        AccessPermission.SYNC_PAYLOAD_READ,
+      ),
     );
   }
 
@@ -182,8 +185,10 @@ export class IntegrationGatewayController {
     const result = await requireOperation(handler, 'sync')(localResourceId);
     return redactRawIntegrationResponse(
       result,
-      evaluateAccess(request.user.role, AccessPermission.SYNC_PAYLOAD_READ)
-        .allowed,
+      hasAuthenticatedPermission(
+        request.user,
+        AccessPermission.SYNC_PAYLOAD_READ,
+      ),
     );
   }
 
