@@ -70,7 +70,7 @@ export function RegistrationViewTabs({
   };
 
   return (
-    <div className="data-surface p-1.5" role="tablist" aria-label="Bagian pendaftaran">
+    <div className="data-surface p-1" role="tablist" aria-label="Bagian pendaftaran">
       <div className="grid gap-1 sm:grid-cols-2">
         {viewTabs.map((tab) => {
           const Icon = tab.icon;
@@ -91,16 +91,16 @@ export function RegistrationViewTabs({
               onClick={() => selectView(tab.id)}
               onKeyDown={(event) => handleKeyDown(event, tab.id)}
               className={cn(
-                'flex min-h-14 min-w-0 items-center gap-3 rounded-[var(--radius-control)] px-3 py-2.5 text-left transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 sm:px-4',
+                'flex min-h-[3.25rem] min-w-0 items-center gap-3 rounded-[var(--radius-control)] px-3 py-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 sm:px-4',
                 selected
-                  ? 'bg-primary text-primary-foreground shadow-sm'
+                  ? 'bg-primary/10 text-foreground ring-1 ring-inset ring-primary/20'
                   : 'text-muted-foreground hover:bg-muted hover:text-foreground',
               )}
             >
               <span
                 className={cn(
                   'flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)]',
-                  selected ? 'bg-white/15 text-white' : 'bg-primary/8 text-primary',
+                  selected ? 'bg-primary text-primary-foreground' : 'bg-primary/8 text-primary',
                 )}
               >
                 <Icon className="h-4 w-4" aria-hidden="true" />
@@ -110,14 +110,14 @@ export function RegistrationViewTabs({
                   <span className="truncate text-sm font-bold">{tab.label}</span>
                   <span
                     className={cn(
-                      'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold',
-                      selected ? 'bg-white/15 text-white' : 'bg-muted text-foreground',
+                      'shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold',
+                      selected ? 'bg-primary/10 text-primary' : 'bg-muted text-foreground',
                     )}
                   >
                     {counts[tab.id]} {tab.countNoun}
                   </span>
                 </span>
-                <span className={cn('mt-0.5 block truncate text-xs', selected ? 'text-white/75' : 'text-muted-foreground')}>
+                <span className="mt-0.5 block truncate text-sm text-muted-foreground">
                   {tab.description}
                 </span>
               </span>

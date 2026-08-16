@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 import { EncounterStatus } from '@mitrafaskes/shared';
-import type { Encounter, ListMeta } from '@mitrafaskes/shared';
+import type {
+  Encounter,
+  EncounterStatusCounts,
+  ListMeta,
+} from '@mitrafaskes/shared';
 import {
   Clock3,
   Play,
@@ -18,12 +22,22 @@ import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGrou
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 import type { EncounterApiError } from '@/hooks/useEncounterActions';
+import { EncounterCancellationDialog } from './EncounterCancellationDialog';
+import {
+  getQueueCountLabel,
+  getQueueStatusLabel,
+  QueueStatusFilter,
+  type QueueStatusFilterValue,
+} from './QueueStatusFilter';
 
 type QueuePanelProps = {
   encounters: Encounter[];
   meta: ListMeta;
+  statusCounts: EncounterStatusCounts;
   encountersLoading: boolean;
   encountersError: string;
+  statusFilter: QueueStatusFilterValue;
+  onStatusFilterChange: (filter: QueueStatusFilterValue) => void;
   onPageChange: (page: number) => void;
   onStatusChange: (encounter: Encounter, status: EncounterStatus) => Promise<void>;
   onSyncEncounter: (encounter: Encounter) => void;
@@ -33,23 +47,23 @@ type QueuePanelProps = {
 };
 
 const statusLabels: Record<EncounterStatus, string> = {
-  WAITING: 'MENUNGGU',
-  IN_PROGRESS: 'DIPERIKSA',
-  COMPLETED: 'SELESAI',
-  CANCELLED: 'DIBATALKAN',
+  WAITING: 'Menunggu',
+  IN_PROGRESS: 'Diperiksa',
+  COMPLETED: 'Selesai',
+  CANCELLED: 'Dibatalkan',
 };
 
 function statusClass(status: EncounterStatus): string {
   if (status === 'WAITING') {
-    return 'clinical-status-warning border text-[11px] font-bold';
+    return 'clinical-status-warning border text-xs font-semibold';
   }
   if (status === 'IN_PROGRESS') {
-    return 'border-primary/20 bg-primary/10 text-[11px] font-bold text-primary';
+    return 'border-primary/20 bg-primary/10 text-xs font-semibold text-primary';
   }
   if (status === 'CANCELLED') {
-    return 'clinical-status-error border text-[11px] font-bold';
+    return 'clinical-status-error border text-xs font-semibold';
   }
-  return 'clinical-status-success border text-[11px] font-bold';
+  return 'clinical-status-success border text-xs font-semibold';
 }
 
 function transitionErrorMessage(error: unknown): string {
@@ -65,8 +79,11 @@ function transitionErrorMessage(error: unknown): string {
 export function QueuePanel({
   encounters,
   meta,
+  statusCounts,
   encountersLoading,
   encountersError,
+  statusFilter,
+  onStatusFilterChange,
   onPageChange,
   onStatusChange,
   onSyncEncounter,
@@ -75,7 +92,10 @@ export function QueuePanel({
   canSync,
 }: QueuePanelProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [cancellationTarget, setCancellationTarget] = useState<Encounter | null>(null);
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
+  const firstItem = meta.total === 0 ? 0 : (meta.page - 1) * meta.pageSize + 1;
+  const lastItem = Math.min(meta.total, meta.page * meta.pageSize);
 
   const transition = async (encounter: Encounter, status: EncounterStatus) => {
     setUpdatingId(encounter.id);
@@ -91,21 +111,37 @@ export function QueuePanel({
     }
   };
 
+  const confirmCancellation = async () => {
+    if (!cancellationTarget) return;
+
+    await transition(cancellationTarget, EncounterStatus.CANCELLED);
+    setCancellationTarget(null);
+  };
+
   return (
     <section id="antrean-aktif" className="data-surface scroll-mt-24" aria-labelledby="queue-title">
-      <div className="data-toolbar">
-        <div>
-          <h2 id="queue-title" className="flex items-center gap-2 text-sm font-bold text-foreground">
+      <div className="flex flex-col gap-1 border-b border-border px-4 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+        <div className="min-w-0 flex-1">
+          <h2 id="queue-title" className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <Clock3 className="h-4 w-4 text-primary" aria-hidden="true" />
             Antrean rawat jalan hari ini
           </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Nomor antrean dan Encounter stabil di database lokal; perubahan status mengikuti lifecycle kunjungan.
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Status antrean mengikuti tahapan kunjungan.
           </p>
         </div>
-        <Badge variant="outline" className="border-primary/25 bg-primary/5 font-mono text-primary">
-          {meta.total} antrean
-        </Badge>
+        <span className="shrink-0 text-sm font-medium text-muted-foreground">
+          <strong className="font-mono text-foreground">{meta.total}</strong>{' '}
+          {getQueueCountLabel(statusFilter)}
+        </span>
+      </div>
+      <div className="data-toolbar">
+        <QueueStatusFilter
+          value={statusFilter}
+          statusCounts={statusCounts}
+          disabled={encountersLoading || Boolean(updatingId)}
+          onChange={onStatusFilterChange}
+        />
       </div>
       <div className="divide-y divide-border">
         {encountersLoading ? (
@@ -129,7 +165,19 @@ export function QueuePanel({
           </div>
         ) : encounters.length === 0 ? (
           <div className="p-4">
-            <ScreenState kind="empty" title="Antrean masih kosong" description="Pasien yang didaftarkan ke poli akan muncul di sini." />
+            <ScreenState
+              kind="empty"
+              title={
+                statusFilter === 'ACTIVE'
+                  ? 'Antrean aktif masih kosong'
+                  : 'Tidak ada kunjungan ' + getQueueStatusLabel(statusFilter).toLowerCase()
+              }
+              description={
+                statusFilter === 'ACTIVE'
+                  ? 'Pasien yang didaftarkan ke poli akan muncul di sini.'
+                  : 'Pilih status lain untuk melihat kunjungan yang tersedia.'
+              }
+            />
           </div>
         ) : encounters.map((encounter) => {
           const isUpdating = updatingId === encounter.id;
@@ -161,11 +209,11 @@ export function QueuePanel({
                   </div>
                   <div className="mt-2 grid gap-x-4 gap-y-1 text-[11px] text-muted-foreground sm:grid-cols-2">
                     <span>Dokter: <strong className="text-foreground">{encounter.doctor?.fullName ?? 'Belum tersedia'}</strong></span>
-                    <span>Location: <strong className="text-foreground">{encounter.location?.name ?? 'Belum tersedia'}</strong></span>
+                    <span>Lokasi: <strong className="text-foreground">{encounter.location?.name ?? 'Belum tersedia'}</strong></span>
                   </div>
                 </div>
               </div>
-              <div className="flex min-w-[12rem] flex-1 flex-wrap items-center justify-end gap-2 sm:flex-none">
+              <div className="flex basis-full w-full min-w-0 flex-1 flex-wrap items-center justify-start gap-2 sm:basis-auto sm:w-auto sm:min-w-[12rem] sm:flex-none sm:justify-end">
                 <Badge className={statusClass(encounter.status)}>
                   {statusLabels[encounter.status]}
                 </Badge>
@@ -173,7 +221,7 @@ export function QueuePanel({
                   linkage={satusehatLinkage}
                   resourceName={encounter.encounterNumber}
                 />
-                <div className="flex items-center gap-1" role="group" aria-label={`Aksi lifecycle ${encounter.encounterNumber}`}>
+                <div className="flex items-center gap-1" role="group" aria-label={`Aksi kunjungan ${encounter.encounterNumber}`}>
                   {canStartThis ? (
                     <Button
                       type="button"
@@ -193,9 +241,9 @@ export function QueuePanel({
                       variant="ghost"
                       size="icon-xs"
                       disabled={isUpdating}
-                      onClick={() => void transition(encounter, EncounterStatus.CANCELLED)}
-                      aria-label={`Batalkan Encounter ${encounter.encounterNumber}`}
-                      title={isUpdating ? 'Memperbarui status...' : 'Batalkan Encounter'}
+                      onClick={() => setCancellationTarget(encounter)}
+                      aria-label={`Batalkan antrean ${encounter.encounterNumber}`}
+                      title={isUpdating ? 'Memperbarui status...' : 'Batalkan antrean'}
                       className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                     >
                       <X className="h-3.5 w-3.5" aria-hidden="true" />
@@ -210,11 +258,11 @@ export function QueuePanel({
                 </div>
                 {latestSync?.status === 'FAILED' ? (
                   <p
-                    className="basis-full text-right text-[11px] text-destructive"
+                    className="basis-full text-left text-[11px] text-destructive sm:text-right"
                     role="status"
                     title={latestSync.errorMessage}
                   >
-                    Sync terakhir gagal · buka aksi SATUSEHAT untuk detail
+                    Sinkronisasi terakhir gagal · buka aksi SATUSEHAT untuk melihat detail
                   </p>
                 ) : null}
               </div>
@@ -222,11 +270,13 @@ export function QueuePanel({
           );
         })}
       </div>
-      {totalPages > 1 ? (
-        <div className="flex flex-col gap-2 border-t border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            Halaman {meta.page} dari {totalPages} · {meta.total} antrean
-          </span>
+      <div className="flex flex-col gap-3 border-t border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <span>
+          Menampilkan <strong className="text-foreground">{firstItem}-{lastItem}</strong>{' '}
+          dari <strong className="text-foreground">{meta.total}</strong>{' '}
+          {getQueueCountLabel(statusFilter)}
+        </span>
+        {totalPages > 1 ? (
           <PaginationControl
             page={meta.page}
             totalPages={totalPages}
@@ -236,8 +286,19 @@ export function QueuePanel({
             aria-label="Navigasi halaman antrean pendaftaran"
             className="mx-0 w-auto"
           />
-        </div>
-      ) : null}
+        ) : null}
+      </div>
+      <EncounterCancellationDialog
+        encounter={cancellationTarget}
+        open={Boolean(cancellationTarget)}
+        pending={Boolean(cancellationTarget && updatingId === cancellationTarget.id)}
+        onOpenChange={(open) => {
+          if (!open && !(cancellationTarget && updatingId === cancellationTarget.id)) {
+            setCancellationTarget(null);
+          }
+        }}
+        onConfirm={() => void confirmCancellation()}
+      />
     </section>
   );
 }

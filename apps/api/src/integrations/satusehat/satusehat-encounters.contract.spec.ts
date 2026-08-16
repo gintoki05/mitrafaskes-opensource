@@ -92,6 +92,34 @@ const completedEncounter = (): EncounterWithRelations => {
   };
 };
 
+const cancelledEncounter = (): EncounterWithRelations => {
+  const encounter = completedEncounter();
+  const cancelledAt = new Date('2026-08-12T01:10:00.000Z');
+
+  return {
+    ...encounter,
+    status: EncounterStatus.CANCELLED,
+    startedAt: null,
+    completedAt: null,
+    cancelledAt,
+    version: 2,
+    updatedAt: cancelledAt,
+    statusHistory: [
+      {
+        ...encounter.statusHistory[0],
+        periodEnd: cancelledAt,
+      },
+      {
+        ...encounter.statusHistory[0],
+        id: 'history-cancelled',
+        status: EncounterStatus.CANCELLED,
+        periodStart: cancelledAt,
+        periodEnd: null,
+      },
+    ],
+  };
+};
+
 const dependencies = {
   Organization: '10000004',
   Location: '408ba28c-3115-4df5-85c6-60f15b44e7fa',
@@ -109,6 +137,26 @@ describe('SATUSEHAT Encounter payload contract', () => {
     });
 
     expect(payload).toEqual(fixture('valid'));
+    expect(validateSatusehatEncounterPayload(payload)).toEqual([]);
+  });
+
+  it('maps a cancelled local lifecycle to a valid SATUSEHAT terminal Encounter', () => {
+    const payload = toSatusehatEncounterPayload(cancelledEncounter(), {
+      organizationExternalId: dependencies.Organization,
+      locationExternalId: dependencies.Location,
+      patientExternalId: dependencies.Patient,
+      practitionerExternalId: dependencies.Practitioner,
+    });
+
+    expect(payload.status).toBe('cancelled');
+    expect(payload.period.end).toBe('2026-08-12T01:10:00.000Z');
+    expect(payload.statusHistory.at(-1)).toEqual({
+      status: 'cancelled',
+      period: {
+        start: '2026-08-12T01:10:00.000Z',
+        end: '2026-08-12T01:10:00.000Z',
+      },
+    });
     expect(validateSatusehatEncounterPayload(payload)).toEqual([]);
   });
 

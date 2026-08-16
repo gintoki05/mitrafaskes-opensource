@@ -18,7 +18,7 @@ export function PatientSyncReadinessNotice({
     <div
       className={
         compact
-          ? "flex items-start gap-1.5 text-[11px] leading-relaxed text-warning"
+          ? "flex items-start gap-1.5 text-xs leading-relaxed text-warning"
           : "flex items-start gap-2 rounded-md border border-warning/25 bg-warning/5 p-3 text-xs text-warning-foreground"
       }
       role="alert"
@@ -41,7 +41,7 @@ export function PatientSyncReadinessNotice({
           </ul>
         )}
         {!compact ? (
-          <p className="mt-2 text-[11px] opacity-80">
+          <p className="mt-2 text-xs opacity-80">
             Perbaiki data lokal, lalu buka preview ini lagi untuk mencoba ulang.
           </p>
         ) : null}

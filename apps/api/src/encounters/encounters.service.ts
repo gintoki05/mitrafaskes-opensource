@@ -95,7 +95,7 @@ export class EncountersService {
       actor?.role === UserRole.PERAWAT
         ? await this.resolveActorLocationIds(actor)
         : undefined;
-    const { records, total } = await this.repository.findMany(
+    const { records, total, statusCounts } = await this.repository.findMany(
       {
         queueDate,
         locationId:
@@ -111,7 +111,7 @@ export class EncountersService {
       page,
       pageSize,
     );
-    return this.toListResponse(records, page, pageSize, total);
+    return this.toListResponse(records, page, pageSize, total, statusCounts);
   }
 
   async findHistory(
@@ -266,6 +266,7 @@ export class EncountersService {
     page: number,
     pageSize: number,
     total: number,
+    statusCounts?: Record<EncounterStatus, number>,
   ) {
     const integrations = this.integrations
       ? await this.integrations.findResourceSummaries(
@@ -278,6 +279,7 @@ export class EncountersService {
         toEncounter(record, integrations.get(record.id) ?? []),
       ),
       meta: { page, pageSize, total },
+      ...(statusCounts ? { statusCounts } : {}),
     };
   }
 

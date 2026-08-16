@@ -22,6 +22,10 @@ import { PatientDetailDialog } from './pendaftaran/PatientDetailDialog';
 import { PatientFormDialog } from './pendaftaran/PatientFormDialog';
 import { PatientSyncDialog } from './pendaftaran/PatientSyncDialog';
 import { QueuePanel } from './pendaftaran/QueuePanel';
+import {
+  getQueueStatuses,
+  type QueueStatusFilterValue,
+} from './pendaftaran/QueueStatusFilter';
 import { EncounterRegistrationDialog } from './pendaftaran/EncounterRegistrationDialog';
 import { EncounterSyncDialog } from './encounters/EncounterSyncDialog';
 import { shouldRefreshEncounterListAfterSync } from './encounters/encounter-sync-state';
@@ -35,6 +39,7 @@ export default function PendaftaranPage() {
   const [search, setSearch] = useState('');
   const [patientStatusFilter, setPatientStatusFilter] = useState<boolean | undefined>(true);
   const [activeView, setActiveView] = useState<RegistrationView>('patients');
+  const [queueStatusFilter, setQueueStatusFilter] = useState<QueueStatusFilterValue>('ACTIVE');
   const [showPatientForm, setShowPatientForm] = useState(false);
   const [editingPatient, setEditingPatient] = useState<Patient | null>(null);
   const [detailPatientId, setDetailPatientId] = useState<string | null>(null);
@@ -57,6 +62,7 @@ export default function PendaftaranPage() {
     patientsStatusCounts,
     encounters,
     encountersMeta,
+    encountersStatusCounts,
     patientsLoading,
     encountersLoading,
     patientsError,
@@ -66,6 +72,7 @@ export default function PendaftaranPage() {
   } = useRegistrationData();
   const patientActions = usePatientActions();
   const encounterActions = useEncounterActions();
+  const queueStatuses = getQueueStatuses(queueStatusFilter);
 
   const handleSearchSubmit = (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -120,10 +127,10 @@ export default function PendaftaranPage() {
 
   const handleCreateEncounter = async (input: Parameters<typeof encounterActions.create>[0]) => {
     const encounter = await encounterActions.create(input);
-    toast.success('Encounter lokal berhasil dibuat.', {
-      description: `${encounter.encounterNumber} · Antrean ${encounter.queueNumber} · ${encounter.location?.name ?? 'Location terpilih'}`,
+    toast.success('Kunjungan lokal berhasil dibuat.', {
+      description: `${encounter.encounterNumber} · Antrean ${encounter.queueNumber} · ${encounter.location?.name ?? 'Lokasi terpilih'}`,
     });
-    await refreshEncounters(encountersMeta.page);
+    await refreshEncounters(encountersMeta.page, queueStatuses);
   };
 
   const handleStatusChange = async (encounter: Encounter, status: EncounterStatus) => {
@@ -133,14 +140,14 @@ export default function PendaftaranPage() {
         status,
         encounter.version,
       );
-      toast.success('Status Encounter diperbarui.', {
-        description: `${updated.encounterNumber} sekarang ${updated.status}.`,
+      toast.success('Status kunjungan diperbarui.', {
+        description: `Kunjungan ${updated.encounterNumber} sudah diperbarui.`,
       });
-      await refreshEncounters(encountersMeta.page);
+      await refreshEncounters(encountersMeta.page, queueStatuses);
     } catch (error) {
       const code = (error as { code?: string }).code;
       if (code === 'ENCOUNTER_VERSION_CONFLICT') {
-        await refreshEncounters(encountersMeta.page);
+        await refreshEncounters(encountersMeta.page, queueStatuses);
       }
       throw error;
     }
@@ -150,11 +157,24 @@ export default function PendaftaranPage() {
     outcome: 'SUCCESS' | 'FAILED',
   ) => {
     if (shouldRefreshEncounterListAfterSync(outcome)) {
-      await refreshEncounters(encountersMeta.page);
+      await refreshEncounters(encountersMeta.page, queueStatuses);
     }
   };
 
+  const handleQueueStatusFilterChange = (filter: QueueStatusFilterValue) => {
+    setQueueStatusFilter(filter);
+    void refreshEncounters(1, getQueueStatuses(filter));
+  };
+
   const activeError = activeView === 'patients' ? patientsError : encountersError;
+  const retryActiveView = () => {
+    if (activeView === 'patients') {
+      void refreshPatients(search, patientsMeta.page, patientStatusFilter);
+      return;
+    }
+
+    void refreshEncounters(encountersMeta.page, queueStatuses);
+  };
 
   return (
     <RouteGuard permission={AccessPermission.QUEUE_READ}>
@@ -185,6 +205,11 @@ export default function PendaftaranPage() {
             kind="error"
             title={activeView === 'patients' ? 'Data pasien tidak dapat dimuat' : 'Antrean tidak dapat dimuat'}
             description={activeError}
+            action={
+              <Button type="button" variant="outline" size="sm" onClick={retryActiveView}>
+                Coba lagi
+              </Button>
+            }
             compact
           />
         ) : null}
@@ -209,7 +234,6 @@ export default function PendaftaranPage() {
               onViewPatient={(patient) => setDetailPatientId(patient.id)}
               onEditPatient={handleEditPatient}
               onSyncPatient={handleSyncPatient}
-              maritalStatuses={maritalStatusLookup.statuses}
             />
           </div>
         ) : (
@@ -217,9 +241,12 @@ export default function PendaftaranPage() {
             <QueuePanel
               encounters={encounters}
               meta={encountersMeta}
+              statusCounts={encountersStatusCounts}
               encountersLoading={encountersLoading}
               encountersError={encountersError}
-              onPageChange={(page) => void refreshEncounters(page)}
+              statusFilter={queueStatusFilter}
+              onStatusFilterChange={handleQueueStatusFilterChange}
+              onPageChange={(page) => void refreshEncounters(page, queueStatuses)}
               onStatusChange={handleStatusChange}
               onSyncEncounter={setSyncingEncounter}
               canStart={canStartEncounter}

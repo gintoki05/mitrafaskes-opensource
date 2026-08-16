@@ -17,16 +17,20 @@ import { PermissionGuard } from './permission.guard';
 import { PasswordService } from './password.service';
 import { SessionGuard } from './session.guard';
 import { SessionService } from './session.service';
+import { authThrottleErrorMessage } from './auth.throttle';
 
 @Module({
   imports: [
-    ThrottlerModule.forRoot([
-      {
-        name: 'default',
-        ttl: 60_000,
-        limit: 120,
-      },
-    ]),
+    ThrottlerModule.forRoot({
+      throttlers: [
+        {
+          name: 'default',
+          ttl: 60_000,
+          limit: 120,
+        },
+      ],
+      errorMessage: authThrottleErrorMessage,
+    }),
   ],
   controllers: [AuthController],
   providers: [

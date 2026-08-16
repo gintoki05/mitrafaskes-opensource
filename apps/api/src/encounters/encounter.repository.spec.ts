@@ -2,6 +2,70 @@ import { EncounterRepository } from './encounter.repository';
 import type { PrismaService } from '../database/prisma.service';
 
 describe('EncounterRepository allocators', () => {
+  it('returns queue status counts for the full scoped day, independent of the selected filter', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest
+      .fn()
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(3);
+    const prisma = {
+      encounter: { findMany, count },
+      $transaction: jest.fn((operations: Promise<unknown>[]) =>
+        Promise.all(operations),
+      ),
+    } as unknown as PrismaService;
+    const repository = new EncounterRepository(prisma);
+    const queueDate = new Date('2026-08-16T00:00:00.000Z');
+
+    await expect(
+      repository.findMany(
+        {
+          queueDate,
+          locationIds: ['location-1'],
+          statuses: ['WAITING', 'IN_PROGRESS'],
+        },
+        1,
+        25,
+      ),
+    ).resolves.toEqual({
+      records: [],
+      total: 1,
+      statusCounts: {
+        WAITING: 1,
+        IN_PROGRESS: 0,
+        COMPLETED: 2,
+        CANCELLED: 3,
+      },
+    });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          queueDate,
+          locationId: { in: ['location-1'] },
+          status: { in: ['WAITING', 'IN_PROGRESS'] },
+        }),
+      }),
+    );
+    expect(count).toHaveBeenNthCalledWith(2, {
+      where: expect.objectContaining({
+        queueDate,
+        locationId: { in: ['location-1'] },
+        status: 'WAITING',
+      }),
+    });
+    expect(count).toHaveBeenNthCalledWith(5, {
+      where: expect.objectContaining({
+        queueDate,
+        locationId: { in: ['location-1'] },
+        status: 'CANCELLED',
+      }),
+    });
+  });
+
   it('formats a stable Encounter number with the facility year', async () => {
     const transaction = {
       $queryRaw: jest

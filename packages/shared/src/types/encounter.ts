@@ -95,7 +95,11 @@ export interface EncounterListQuery {
   statuses?: EncounterStatus[];
 }
 
-export type EncounterListResponse = PaginatedListResponse<Encounter>;
+export type EncounterStatusCounts = Record<EncounterStatus, number>;
+
+export interface EncounterListResponse extends PaginatedListResponse<Encounter> {
+  statusCounts?: EncounterStatusCounts;
+}
 
 export interface EncounterHistoryListQuery {
   page?: number;

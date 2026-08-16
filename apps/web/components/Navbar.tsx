@@ -11,6 +11,7 @@ import {
   HelpCircle,
   HeartPulse,
   History,
+  LogIn,
   LogOut,
   RefreshCw,
   Search,
@@ -96,8 +97,8 @@ const navigationItems: readonly NavigationItem[] = [
     children: [
       { href: '/master-faskes', label: 'Ikhtisar struktur', exact: true },
       { href: '/master-faskes/organisasi', label: 'Organisasi / Faskes' },
-      { href: '/master-faskes/lokasi', label: 'Location / Ruangan' },
-      { href: '/master-faskes/practitioner', label: 'Practitioner / Nakes' },
+      { href: '/master-faskes/lokasi', label: 'Ruangan pelayanan' },
+      { href: '/master-faskes/practitioner', label: 'Tenaga kesehatan' },
     ],
   },
   {
@@ -116,7 +117,7 @@ const navigationItems: readonly NavigationItem[] = [
     icon: Settings2,
     children: [
       { href: '/administrasi/akun', label: 'Akun pengguna' },
-      { href: '/administrasi/role', label: 'Role & permission' },
+      { href: '/administrasi/role', label: 'Role & izin' },
     ],
   },
 ];
@@ -130,6 +131,7 @@ export function Navbar() {
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === 'collapsed';
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
+  const [navigationQuery, setNavigationQuery] = useState('');
 
   const handleLogout = () => {
     void apiFetch('/api/auth/logout', { method: 'POST' }).finally(() => {
@@ -145,6 +147,13 @@ export function Navbar() {
       can(user, item.permission) &&
       (!item.provider || satusehat.available),
   );
+  const normalizedNavigationQuery = navigationQuery.trim().toLocaleLowerCase();
+  const visibleNavigation = normalizedNavigationQuery
+    ? availableNavigation.filter((item) =>
+        [item.label, item.shortLabel, ...(item.children?.map((child) => child.label) ?? [])]
+          .some((label) => label.toLocaleLowerCase().includes(normalizedNavigationQuery)),
+      )
+    : availableNavigation;
 
   return (
     <>
@@ -166,7 +175,7 @@ export function Navbar() {
             </span>
             <span className={`min-w-0 ${collapsed ? 'sr-only' : ''}`}>
               <span className="block truncate text-base font-bold tracking-tight text-white">Mitra Faskes</span>
-              <span className="block truncate text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-muted">
+              <span className="block truncate text-xs font-medium text-sidebar-muted">
                 RME
               </span>
             </span>
@@ -191,6 +200,8 @@ export function Navbar() {
               <input
                 aria-label="Cari fitur"
                 placeholder="Cari fitur di sini"
+                value={navigationQuery}
+                onChange={(event) => setNavigationQuery(event.target.value)}
                 className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
               />
             </label>
@@ -198,9 +209,9 @@ export function Navbar() {
         </div>
 
         <nav className="min-h-0 flex-1 overflow-y-auto px-3" aria-label="Navigasi utama">
-          <p className={collapsed ? 'sr-only' : 'px-3 pb-2 text-[10px] font-bold uppercase tracking-[0.16em] text-sidebar-muted'}>Menu utama</p>
+          <p className={collapsed ? 'sr-only' : 'px-3 pb-2 text-xs font-semibold text-sidebar-muted'}>Menu utama</p>
           <div className="space-y-1">
-            {availableNavigation.map((item) => {
+            {visibleNavigation.map((item) => {
               const Icon = item.icon;
               const hasChildren = Boolean(item.children);
               const hasActiveChild =
@@ -269,7 +280,7 @@ export function Navbar() {
                             key={child.href}
                             href={child.href}
                             aria-current={childActive ? 'page' : undefined}
-                            className={`flex min-h-9 items-center rounded-[var(--radius-control)] px-3 text-xs font-semibold transition-colors ${
+                            className={`flex min-h-9 items-center rounded-[var(--radius-control)] px-3 text-sm font-medium transition-colors ${
                               childActive
                                 ? 'bg-sidebar-active text-sidebar-active-foreground'
                                 : 'text-sidebar-foreground/80 hover:bg-white/12 hover:text-white'
@@ -284,6 +295,11 @@ export function Navbar() {
                 </Collapsible>
               );
             })}
+            {normalizedNavigationQuery && visibleNavigation.length === 0 ? (
+              <p className="px-3 py-3 text-xs leading-relaxed text-sidebar-muted">
+                Menu tidak ditemukan.
+              </p>
+            ) : null}
           </div>
         </nav>
 
@@ -299,23 +315,37 @@ export function Navbar() {
               <HelpCircle className="h-4 w-4" aria-hidden="true" />
             </button>
           ) : (
-            <div className="mb-3 flex items-center gap-2 px-2 text-xs text-sidebar-muted">
+            <div className="mb-3 flex items-center gap-2 px-2 text-sm text-sidebar-muted">
               <HelpCircle className="h-4 w-4" aria-hidden="true" />
               Bantuan sistem
             </div>
           )}
-          <button
-            type="button"
-            onClick={handleLogout}
-            className={`flex min-h-10 w-full items-center rounded-[var(--radius-control)] text-sm font-semibold text-white/90 transition-colors hover:bg-white/12 hover:text-white ${
-              collapsed ? 'justify-center px-0' : 'gap-3 px-3'
-            }`}
-            aria-label={user ? `Keluar dari akun ${user.fullName}` : 'Masuk'}
-            title={collapsed ? 'Keluar' : undefined}
-          >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-            <span className={collapsed ? 'sr-only' : ''}>Keluar</span>
-          </button>
+          {user ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className={`flex min-h-10 w-full items-center rounded-[var(--radius-control)] text-sm font-semibold text-white/90 transition-colors hover:bg-white/12 hover:text-white ${
+                collapsed ? 'justify-center px-0' : 'gap-3 px-3'
+              }`}
+              aria-label={`Keluar dari akun ${user.fullName}`}
+              title={collapsed ? 'Keluar' : undefined}
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+              <span className={collapsed ? 'sr-only' : ''}>Keluar</span>
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className={`flex min-h-10 w-full items-center rounded-[var(--radius-control)] text-sm font-semibold text-white/90 transition-colors hover:bg-white/12 hover:text-white ${
+                collapsed ? 'justify-center px-0' : 'gap-3 px-3'
+              }`}
+              aria-label="Masuk ke sistem"
+              title={collapsed ? 'Masuk' : undefined}
+            >
+              <LogIn className="h-4 w-4" aria-hidden="true" />
+              <span className={collapsed ? 'sr-only' : ''}>Masuk</span>
+            </Link>
+          )}
         </div>
       </aside>
 
@@ -327,7 +357,7 @@ export function Navbar() {
           <SidebarTrigger className="hidden lg:inline-flex" />
           <div className="min-w-0">
             <p className="truncate text-sm font-bold text-white">Klinik Mitra Sehat</p>
-            <p className="truncate text-[11px] text-white/70">Ruang kerja operasional klinik</p>
+            <p className="truncate text-xs text-white/70">Ruang kerja operasional klinik</p>
           </div>
         </div>
 
@@ -342,22 +372,33 @@ export function Navbar() {
               </span>
               <div className="w-32 min-w-0 text-left">
                 <div className="truncate text-xs font-bold text-white">{user.fullName}</div>
-                <div className="flex w-full items-center justify-start gap-1 text-[10px] text-white/70">
+                <div className="flex w-full items-center justify-start gap-1 text-xs text-white/70">
                   <ShieldCheck className="h-3 w-3" aria-hidden="true" />
                   <span className="truncate">{user.accessRole?.name ?? ROLE_LABELS[user.role]}</span>
                 </div>
               </div>
             </div>
           ) : null}
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-white transition-colors hover:bg-white/12"
-            aria-label={user ? `Keluar dari akun ${user.fullName}` : 'Masuk'}
-            title="Keluar"
-          >
-            <LogOut className="h-4 w-4" aria-hidden="true" />
-          </button>
+          {user ? (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-white transition-colors hover:bg-white/12"
+              aria-label={`Keluar dari akun ${user.fullName}`}
+              title="Keluar"
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-white transition-colors hover:bg-white/12"
+              aria-label="Masuk ke sistem"
+              title="Masuk"
+            >
+              <LogIn className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          )}
         </div>
       </header>
 
@@ -370,7 +411,7 @@ export function Navbar() {
               key={item.href}
               href={item.href}
               aria-current={active ? 'page' : undefined}
-              className={`flex min-h-9 shrink-0 items-center gap-1.5 rounded-[var(--radius-control)] px-3 text-xs font-semibold ${
+              className={`flex min-h-10 shrink-0 items-center gap-1.5 rounded-[var(--radius-control)] px-3 text-sm font-medium ${
                 active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:bg-muted'
               }`}
             >

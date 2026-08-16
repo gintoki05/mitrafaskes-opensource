@@ -165,7 +165,7 @@ export function PatientDetailDialog({
                 >
                   <span className="mt-0.5 h-2 w-2 shrink-0 rounded-full bg-destructive" aria-hidden="true" />
                   <p className="leading-relaxed">
-                    Sync terakhir gagal, tetapi linkage sebelumnya tetap ada.
+                    Sinkronisasi terakhir gagal, tetapi koneksi sebelumnya tetap ada.
                     {getLatestIntegrationSync(patient.integrations, 'SATUSEHAT')?.errorMessage
                       ? ` ${getLatestIntegrationSync(patient.integrations, 'SATUSEHAT')?.errorMessage}`
                       : ''}

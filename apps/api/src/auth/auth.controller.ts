@@ -18,6 +18,7 @@ import { AuthService, ChangePasswordRequest } from './auth.service';
 import { CsrfService } from './csrf.service';
 import type { AuthenticatedRequest } from './session.guard';
 import { SessionService } from './session.service';
+import { AUTH_LOGIN_THROTTLE } from './auth.throttle';
 
 function loginRequest(body: unknown): LoginRequest {
   if (
@@ -87,7 +88,7 @@ export class AuthController {
   @Post('login')
   @Public()
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 15 * 60_000 } })
+  @Throttle({ default: AUTH_LOGIN_THROTTLE })
   async login(
     @Body() body: unknown,
     @Req() request: Request,
@@ -104,7 +105,7 @@ export class AuthController {
   @Post('token')
   @Public()
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 15 * 60_000 } })
+  @Throttle({ default: AUTH_LOGIN_THROTTLE })
   async token(@Body() body: unknown, @Req() request: Request) {
     return (await this.auth.login(loginRequest(body), sessionMetadata(request)))
       .response;

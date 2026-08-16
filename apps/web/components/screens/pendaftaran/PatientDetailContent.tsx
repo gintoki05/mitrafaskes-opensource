@@ -162,7 +162,7 @@ export function PatientDetailContent({
         {satusehat.available ? (
           <PatientDetailDisclosure
             title="SATUSEHAT"
-            meta={linkage ? 'Terhubung' : 'Belum tersinkron'}
+            meta={linkage ? 'Terhubung' : 'Belum terhubung'}
             icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
           >
             <div className="flex flex-wrap items-center justify-between gap-3">

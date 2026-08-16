@@ -1,8 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useReducer } from "react";
+import { EncounterStatus } from "@mitrafaskes/shared";
 import type {
   EncounterListResponse,
+  EncounterStatusCounts,
   ListMeta,
   PaginatedListResponse,
   Patient,
@@ -13,6 +15,10 @@ import { apiFetch } from "@/lib/auth";
 import type { Encounter } from "@/lib/clinical-types";
 
 const DEFAULT_PAGE_SIZE = 25;
+const DEFAULT_ENCOUNTER_STATUSES: readonly EncounterStatus[] = [
+  EncounterStatus.WAITING,
+  EncounterStatus.IN_PROGRESS,
+];
 
 type RegistrationDataState = {
   patients: Patient[];
@@ -20,6 +26,7 @@ type RegistrationDataState = {
   patientsStatusCounts: PatientStatusCounts;
   encounters: Encounter[];
   encountersMeta: ListMeta;
+  encountersStatusCounts: EncounterStatusCounts;
   patientsLoading: boolean;
   encountersLoading: boolean;
   patientsError: string;
@@ -54,6 +61,18 @@ const emptyPatientStatusCounts = (): PatientStatusCounts => ({
 const emptyPatientResponse = (page = 1): PatientListResponse => ({
   ...emptyResponse<Patient>(page),
   statusCounts: emptyPatientStatusCounts(),
+});
+
+const emptyEncounterStatusCounts = (): EncounterStatusCounts => ({
+  WAITING: 0,
+  IN_PROGRESS: 0,
+  COMPLETED: 0,
+  CANCELLED: 0,
+});
+
+const emptyEncounterResponse = (page = 1): EncounterListResponse => ({
+  ...emptyResponse<Encounter>(page),
+  statusCounts: emptyEncounterStatusCounts(),
 });
 
 type ListPayload<T> = PaginatedListResponse<T> | T[];
@@ -113,12 +132,42 @@ function normalizePatientListPayload(
   return emptyPatientResponse(page);
 }
 
+function countEncounterStatuses(
+  encounters: readonly Encounter[],
+): EncounterStatusCounts {
+  return encounters.reduce<EncounterStatusCounts>((counts, encounter) => {
+    counts[encounter.status] += 1;
+    return counts;
+  }, emptyEncounterStatusCounts());
+}
+
+function normalizeEncounterListPayload(
+  payload: EncounterListResponse | Encounter[],
+  page: number,
+): EncounterListResponse {
+  if (Array.isArray(payload)) {
+    const response = normalizeListPayload(payload, page);
+    return { ...response, statusCounts: countEncounterStatuses(response.items) };
+  }
+
+  if (payload && Array.isArray(payload.items) && payload.meta) {
+    return {
+      ...payload,
+      statusCounts:
+        payload.statusCounts ?? countEncounterStatuses(payload.items),
+    };
+  }
+
+  return emptyEncounterResponse(page);
+}
+
 const initialState: RegistrationDataState = {
   patients: [],
   patientsMeta: emptyPatientResponse().meta,
   patientsStatusCounts: emptyPatientStatusCounts(),
   encounters: [],
   encountersMeta: emptyResponse<Encounter>().meta,
+  encountersStatusCounts: emptyEncounterStatusCounts(),
   patientsLoading: true,
   encountersLoading: true,
   patientsError: "",
@@ -151,6 +200,9 @@ function registrationDataReducer(
         ...state,
         encounters: action.response.items,
         encountersMeta: action.response.meta,
+        encountersStatusCounts:
+          action.response.statusCounts ??
+          countEncounterStatuses(action.response.items),
         encountersLoading: false,
         encountersError: "",
       };
@@ -168,6 +220,9 @@ function registrationDataReducer(
           action.patients.statusCounts ?? countPatientStatuses(action.patients.items),
         encounters: action.encounters.items,
         encountersMeta: action.encounters.meta,
+        encountersStatusCounts:
+          action.encounters.statusCounts ??
+          countEncounterStatuses(action.encounters.items),
         patientsLoading: false,
         encountersLoading: false,
         patientsError: action.patientsError,
@@ -197,12 +252,16 @@ async function requestPatients(
   return normalizePatientListPayload(payload, page);
 }
 
-async function requestEncounters(page = 1): Promise<EncounterListResponse> {
+async function requestEncounters(
+  page = 1,
+  statuses: readonly EncounterStatus[] = DEFAULT_ENCOUNTER_STATUSES,
+): Promise<EncounterListResponse> {
   const params = listParams(page);
+  params.set("statuses", statuses.join(","));
   const response = await apiFetch(`/api/encounters?${params.toString()}`);
   if (!response.ok) throw new Error("Antrean rawat jalan tidak dapat dimuat.");
-  const payload = (await response.json()) as ListPayload<Encounter>;
-  return normalizeListPayload(payload, page) as EncounterListResponse;
+  const payload = (await response.json()) as EncounterListResponse | Encounter[];
+  return normalizeEncounterListPayload(payload, page);
 }
 
 function messageFrom(error: unknown, fallback: string): string {
@@ -231,7 +290,7 @@ export function useRegistrationData() {
         encounters:
           encountersResult.status === "fulfilled"
             ? encountersResult.value
-            : emptyResponse<Encounter>(),
+            : emptyEncounterResponse(),
         patientsError:
           patientsResult.status === "rejected"
             ? messageFrom(
@@ -273,20 +332,26 @@ export function useRegistrationData() {
     [],
   );
 
-  const refreshEncounters = useCallback(async (page = 1) => {
-    dispatch({ type: "encounters-loading" });
-    try {
-      dispatch({
-        type: "encounters-loaded",
-        response: await requestEncounters(page),
-      });
-    } catch (error) {
-      dispatch({
-        type: "encounters-failed",
-        error: messageFrom(error, "Antrean rawat jalan tidak dapat dimuat."),
-      });
-    }
-  }, []);
+  const refreshEncounters = useCallback(
+    async (
+      page = 1,
+      statuses: readonly EncounterStatus[] = DEFAULT_ENCOUNTER_STATUSES,
+    ) => {
+      dispatch({ type: "encounters-loading" });
+      try {
+        dispatch({
+          type: "encounters-loaded",
+          response: await requestEncounters(page, statuses),
+        });
+      } catch (error) {
+        dispatch({
+          type: "encounters-failed",
+          error: messageFrom(error, "Antrean rawat jalan tidak dapat dimuat."),
+        });
+      }
+    },
+    [],
+  );
 
   return { ...state, refreshPatients, refreshEncounters };
 }

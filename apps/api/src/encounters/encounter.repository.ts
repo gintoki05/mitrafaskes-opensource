@@ -3,6 +3,7 @@ import {
   EncounterStatus as PrismaEncounterStatus,
 } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
+import type { EncounterStatusCounts } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
 
 export const encounterInclude = {
@@ -81,28 +82,57 @@ export class EncounterRepository {
     where: EncounterListWhere,
     page: number,
     pageSize: number,
-  ): Promise<{ records: EncounterWithRelations[]; total: number }> {
-    const prismaWhere: Prisma.EncounterWhereInput = {
+  ): Promise<{
+    records: EncounterWithRelations[];
+    total: number;
+    statusCounts: EncounterStatusCounts;
+  }> {
+    const scopeWhere: Prisma.EncounterWhereInput = {
       queueDate: where.queueDate,
       ...(where.locationIds
         ? { locationId: { in: where.locationIds } }
         : { locationId: where.locationId }),
       doctorId: where.doctorId,
+    };
+    const prismaWhere: Prisma.EncounterWhereInput = {
+      ...scopeWhere,
       ...(where.statuses
         ? { status: { in: where.statuses } }
         : { status: where.status }),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.encounter.findMany({
-        where: prismaWhere,
-        include: encounterInclude,
-        orderBy: [{ queueNumber: 'asc' }, { createdAt: 'asc' }],
-        skip: (page - 1) * pageSize,
-        take: pageSize,
-      }),
-      this.prisma.encounter.count({ where: prismaWhere }),
-    ]);
-    return { records, total };
+    const [records, total, waiting, inProgress, completed, cancelled] =
+      await this.prisma.$transaction([
+        this.prisma.encounter.findMany({
+          where: prismaWhere,
+          include: encounterInclude,
+          orderBy: [{ queueNumber: 'asc' }, { createdAt: 'asc' }],
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        this.prisma.encounter.count({ where: prismaWhere }),
+        this.prisma.encounter.count({
+          where: { ...scopeWhere, status: PrismaEncounterStatus.WAITING },
+        }),
+        this.prisma.encounter.count({
+          where: { ...scopeWhere, status: PrismaEncounterStatus.IN_PROGRESS },
+        }),
+        this.prisma.encounter.count({
+          where: { ...scopeWhere, status: PrismaEncounterStatus.COMPLETED },
+        }),
+        this.prisma.encounter.count({
+          where: { ...scopeWhere, status: PrismaEncounterStatus.CANCELLED },
+        }),
+      ]);
+    return {
+      records,
+      total,
+      statusCounts: {
+        WAITING: waiting,
+        IN_PROGRESS: inProgress,
+        COMPLETED: completed,
+        CANCELLED: cancelled,
+      },
+    };
   }
 
   async findHistory(

@@ -6,7 +6,7 @@ import type {
   SatusehatEncounterPreview,
   SatusehatEncounterSyncResult,
 } from '@mitrafaskes/shared';
-import { CheckCircle2, Code, RefreshCw } from 'lucide-react';
+import { CheckCircle2, RefreshCw, Stethoscope } from 'lucide-react';
 import { toast } from 'sonner';
 import { ScreenState } from '@/components/ScreenState';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
@@ -15,24 +15,25 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { getIntegrationLinkage, getIntegrationSummary } from '@/lib/integrations';
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
-import {
-  formatSatusehatOperation,
-  SatusehatPreviewSummary,
-} from '../master-faskes/SatusehatPreviewSummary';
 import { resolveEncounterSyncUiState } from './encounter-sync-state';
+import { EncounterSatusehatPreview } from './EncounterSatusehatPreview';
+
+type EncounterPreviewResponse = Omit<SatusehatEncounterPreview, 'payload'> & {
+  payload?: SatusehatEncounterPreview['payload'];
+};
 
 type EncounterSyncDialogProps = {
   open: boolean;
   encounter: Encounter | null;
   canSync: boolean;
-  previewSatusehat: (id: string) => Promise<SatusehatEncounterPreview>;
+  previewSatusehat: (id: string) => Promise<EncounterPreviewResponse>;
   syncSatusehat: (id: string) => Promise<SatusehatEncounterSyncResult>;
   onClose: () => void;
   onSettled: (outcome: 'SUCCESS' | 'FAILED') => void | Promise<void>;
 };
 
 type PreviewState = {
-  preview: SatusehatEncounterPreview | null;
+  preview: EncounterPreviewResponse | null;
   loading: boolean;
   error: string;
 };
@@ -40,7 +41,7 @@ type PreviewState = {
 function requestErrorMessage(error: unknown): string {
   return error instanceof Error
     ? error.message
-    : 'Encounter tidak dapat disinkronkan ke SATUSEHAT.';
+    : 'Data kunjungan tidak dapat dikirim ke SATUSEHAT.';
 }
 
 export function EncounterSyncDialog({
@@ -85,6 +86,8 @@ export function EncounterSyncDialog({
   if (!open || !encounter) return null;
 
   const integration = getIntegrationSummary(encounter.integrations, 'SATUSEHAT');
+  const linkage = getIntegrationLinkage(encounter.integrations, 'SATUSEHAT');
+  const latestSyncFailed = integration?.latestSync?.status === 'FAILED';
   const uiState = resolveEncounterSyncUiState({
     canSync,
     previewLoading: state.loading,
@@ -100,15 +103,18 @@ export function EncounterSyncDialog({
     try {
       const result = await syncSatusehat(encounter.id);
       await onSettled('SUCCESS');
-      toast.success('Encounter berhasil disinkronkan ke SATUSEHAT.', {
-        description: `${result.operation === 'UPDATE' ? 'Remote Encounter diperbarui' : 'Remote Encounter dibuat'} dengan ID yang tersimpan pada linkage.`,
+      toast.success('Kunjungan berhasil dikirim ke SATUSEHAT.', {
+        description:
+          result.operation === 'UPDATE'
+            ? 'Data kunjungan yang sudah terhubung berhasil diperbarui.'
+            : 'Data kunjungan baru berhasil dibuat di SATUSEHAT.',
       });
       onClose();
     } catch (error) {
       const message = requestErrorMessage(error);
       setState((current) => ({ ...current, error: message }));
       await onSettled('FAILED');
-      toast.error('Sinkronisasi Encounter gagal', {
+      toast.error('Data kunjungan gagal dikirim', {
         description: message,
         duration: 8000,
       });
@@ -127,8 +133,8 @@ export function EncounterSyncDialog({
       <Card>
         <CardHeader className="border-b border-border">
           <CardTitle className="flex items-center gap-2 text-sm font-bold">
-            <Code className="h-4 w-4 text-primary" aria-hidden="true" />
-            Preview Encounter SATUSEHAT
+            <Stethoscope className="h-4 w-4 text-primary" aria-hidden="true" />
+            Tinjau data kunjungan untuk SATUSEHAT
           </CardTitle>
           <p className="text-xs text-muted-foreground">
             {encounter.encounterNumber} · {encounter.patient?.fullName ?? 'Pasien'}
@@ -137,13 +143,15 @@ export function EncounterSyncDialog({
         <CardContent className="space-y-4 pt-4">
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-muted/30 p-3">
             <div>
-              <p className="text-xs font-semibold text-foreground">Status linkage tersimpan</p>
+              <p className="text-xs font-semibold text-foreground">Status koneksi SATUSEHAT</p>
               <p className="mt-1 text-xs text-muted-foreground">
-                Kegagalan update tidak menghapus koneksi terakhir yang berhasil.
+                {linkage
+                  ? 'Kunjungan ini sudah terhubung. ID SATUSEHAT yang tersimpan akan digunakan untuk memperbarui datanya.'
+                  : 'Kunjungan ini belum terhubung. Sinkronisasi pertama akan membuat data kunjungan baru di SATUSEHAT.'}
               </p>
             </div>
             <SatusehatLinkageBadge
-              linkage={getIntegrationLinkage(encounter.integrations, 'SATUSEHAT')}
+              linkage={linkage}
               resourceName={encounter.encounterNumber}
             />
           </div>
@@ -151,8 +159,18 @@ export function EncounterSyncDialog({
           {uiState.error && !state.loading ? (
             <ScreenState
               kind="error"
-              title={uiState.connected ? 'Sync terakhir perlu perhatian' : 'Encounter belum siap disinkronkan'}
-              description={uiState.error}
+              title={
+                state.error
+                  ? 'Data kunjungan belum siap dikirim'
+                  : uiState.connected
+                    ? 'Pembaruan data kunjungan terakhir gagal'
+                    : 'Pengiriman data kunjungan terakhir gagal'
+              }
+              description={
+                latestSyncFailed && uiState.connected
+                  ? `${uiState.error} Koneksi yang sudah berhasil tetap tersimpan. Periksa data lalu coba kirim kembali.`
+                  : `${uiState.error} Periksa data lalu coba lagi.`
+              }
               compact
             />
           ) : null}
@@ -160,24 +178,28 @@ export function EncounterSyncDialog({
           {state.loading ? (
             <ScreenState
               kind="loading"
-              title="Memuat preview Encounter"
-              description="Dependency dan payload FHIR sedang diperiksa."
+              title="Memeriksa data kunjungan"
+              description="Pasien, dokter, lokasi layanan, dan kesiapan pengiriman sedang diperiksa."
               compact
             />
           ) : state.preview ? (
             <>
               <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="font-mono text-[10px]">
-                  Operasi: {formatSatusehatOperation(state.preview.operation)}
+                <Badge variant="outline" className="text-[10px]">
+                  Tindakan:{' '}
+                  {state.preview.operation === 'UPDATE'
+                    ? 'Perbarui kunjungan terhubung'
+                    : 'Buat kunjungan baru'}
                 </Badge>
                 {uiState.repeatSync ? (
                   <Badge className="clinical-status-success border text-[10px]">
-                    Repeat sync · remote ID tetap
+                    ID SATUSEHAT tetap digunakan
                   </Badge>
                 ) : null}
               </div>
-              <SatusehatPreviewSummary
-                payload={state.preview.payload}
+              <EncounterSatusehatPreview
+                encounter={encounter}
+                operation={state.preview.operation}
                 externalResourceId={state.preview.externalResourceId}
               />
             </>
@@ -202,7 +224,7 @@ export function EncounterSyncDialog({
               {syncing
                 ? 'Menyinkronkan...'
                 : uiState.repeatSync
-                  ? 'Sinkronkan ulang SATUSEHAT'
+                  ? 'Perbarui di SATUSEHAT'
                   : 'Sinkronkan ke SATUSEHAT'}
             </Button>
           </div>

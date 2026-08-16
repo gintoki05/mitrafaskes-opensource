@@ -320,7 +320,16 @@ describe('EncountersService', () => {
   it('limits the doctor queue to Encounters assigned to the logged-in doctor', async () => {
     const findMany = jest
       .spyOn(EncounterRepository.prototype, 'findMany')
-      .mockResolvedValue({ records: [], total: 0 });
+      .mockResolvedValue({
+        records: [],
+        total: 0,
+        statusCounts: {
+          WAITING: 0,
+          IN_PROGRESS: 0,
+          COMPLETED: 0,
+          CANCELLED: 0,
+        },
+      });
     const prisma = {
       user: { findUnique: jest.fn().mockResolvedValue({ id: 'doctor-1' }) },
     } as unknown as PrismaService;

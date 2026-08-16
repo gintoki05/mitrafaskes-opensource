@@ -25,8 +25,8 @@ export function SatusehatLinkageBadge({
   if (!linkage) {
     return (
       <span
-        className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] font-semibold text-muted-foreground"
-        title={`${resourceName} belum memiliki linkage SATUSEHAT.`}
+        className="inline-flex items-center gap-1.5 whitespace-nowrap text-xs font-semibold text-muted-foreground"
+        title={`${resourceName} belum terhubung ke SATUSEHAT.`}
       >
         <span className="flex h-6 w-6 shrink-0 overflow-hidden rounded border border-border bg-white">
           <Image
@@ -37,7 +37,7 @@ export function SatusehatLinkageBadge({
             className="h-full w-full object-cover grayscale"
           />
         </span>
-        <span>Belum tersinkron</span>
+        <span>Belum terhubung</span>
       </span>
     );
   }

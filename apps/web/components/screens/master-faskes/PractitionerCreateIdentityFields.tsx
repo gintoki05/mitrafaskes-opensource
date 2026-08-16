@@ -1,4 +1,5 @@
 import { Input } from '@/components/ui/input';
+import { PasswordInput } from '@/components/ui/password-input';
 import type {
   PractitionerFormFieldUpdater,
   PractitionerFormState,
@@ -71,9 +72,8 @@ export function PractitionerCreateIdentityFields({
           <FieldLabel htmlFor="practitioner-create-password" required>
             Password awal
           </FieldLabel>
-          <Input
+          <PasswordInput
             id="practitioner-create-password"
-            type="password"
             value={form.password}
             onChange={(event) => updateField('password', event.target.value)}
             placeholder="Minimal 8 karakter"

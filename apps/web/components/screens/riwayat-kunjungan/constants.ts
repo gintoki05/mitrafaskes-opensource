@@ -16,10 +16,10 @@ export const visitHistoryStatusLabels: Record<VisitHistoryStatusFilter, string> 
 };
 
 export const encounterStatusLabels: Record<EncounterStatus, string> = {
-  WAITING: 'MENUNGGU',
-  IN_PROGRESS: 'DIPERIKSA',
-  COMPLETED: 'SELESAI',
-  CANCELLED: 'DIBATALKAN',
+  WAITING: 'Menunggu',
+  IN_PROGRESS: 'Diperiksa',
+  COMPLETED: 'Selesai',
+  CANCELLED: 'Dibatalkan',
 };
 
 export function dateInputValue(date: Date): string {
@@ -64,13 +64,13 @@ export function formatVisitDateTime(value: string | undefined): string {
 
 export function statusClass(status: EncounterStatus): string {
   if (status === 'WAITING') {
-    return 'clinical-status-warning border text-[11px] font-bold';
+    return 'clinical-status-warning border text-xs font-semibold';
   }
   if (status === 'IN_PROGRESS') {
-    return 'border-primary/20 bg-primary/10 text-[11px] font-bold text-primary';
+    return 'border-primary/20 bg-primary/10 text-xs font-semibold text-primary';
   }
   if (status === 'CANCELLED') {
-    return 'clinical-status-error border text-[11px] font-bold';
+    return 'clinical-status-error border text-xs font-semibold';
   }
-  return 'clinical-status-success border text-[11px] font-bold';
+  return 'clinical-status-success border text-xs font-semibold';
 }
