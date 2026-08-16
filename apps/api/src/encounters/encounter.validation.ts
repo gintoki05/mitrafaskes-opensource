@@ -1,4 +1,5 @@
 import { EncounterStatus } from '@mitrafaskes/shared';
+import type { TriageStatus } from '@mitrafaskes/shared';
 import { EncounterValidationError } from './encounter.errors';
 import { parseFacilityDate } from './encounter.constants';
 
@@ -109,6 +110,30 @@ export const parseEncounterStatuses = (
     ]);
   }
   return [...new Set(statuses)] as EncounterStatus[];
+};
+
+export const parseTriageStatuses = (
+  value: string | undefined,
+): TriageStatus[] | undefined => {
+  if (!value) return undefined;
+  const allowedStatuses: readonly TriageStatus[] = [
+    'NOT_STARTED',
+    'DRAFT',
+    'COMPLETED',
+  ];
+  const statuses = value
+    .split(',')
+    .map((status) => status.trim())
+    .filter(Boolean);
+  if (
+    statuses.length === 0 ||
+    statuses.some((status) => !allowedStatuses.includes(status as TriageStatus))
+  ) {
+    throw new EncounterValidationError('Filter status triase tidak valid', [
+      { field: 'triageStatuses', message: 'Status triase tidak valid' },
+    ]);
+  }
+  return [...new Set(statuses)] as TriageStatus[];
 };
 
 export interface ValidatedEncounterHistoryDateRange {

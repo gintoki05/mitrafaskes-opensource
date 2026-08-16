@@ -16,6 +16,7 @@ function preview(
     payload: {
       resourceType: 'Encounter',
       ...(operation === 'UPDATE' ? { id: remoteResourceId } : {}),
+      status: operation === 'UPDATE' ? 'cancelled' : 'arrived',
     } as SatusehatEncounterPreview['payload'],
   };
 }
@@ -131,6 +132,10 @@ describe('SatusehatEncounterService sync', () => {
         }),
       }),
     );
+    const successUpdate = context.syncLogUpdate.mock.calls.at(-1)?.[0] as {
+      data: { payload: { metadata: Record<string, unknown> } };
+    };
+    expect(successUpdate.data.payload.metadata.remoteStatus).toBe('cancelled');
   });
 
   it('logs a dependency failure and never calls the FHIR client', async () => {

@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resolveEncounterSyncUiState, shouldRefreshEncounterListAfterSync } from '../encounters/encounter-sync-state.ts';
+import { formatSatusehatRemoteStatus } from '../../satusehat/satusehat-status.ts';
+
+test('SATUSEHAT remote Encounter statuses are shown in Indonesian', () => {
+  assert.equal(formatSatusehatRemoteStatus('arrived'), 'Menunggu');
+  assert.equal(formatSatusehatRemoteStatus('in-progress'), 'Sedang diperiksa');
+  assert.equal(formatSatusehatRemoteStatus('cancelled'), 'Dibatalkan');
+  assert.equal(formatSatusehatRemoteStatus('future-status'), 'future-status');
+});
 
 test('Encounter sync UI exposes loading and permission-disabled states', () => {
   assert.deepEqual(

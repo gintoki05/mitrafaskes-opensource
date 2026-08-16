@@ -14,10 +14,30 @@ export type AccessRoleWithPermissions = Prisma.AccessRoleGetPayload<{
   include: { permissions: { include: { permission: true } } };
 }>;
 
+export const authUserInclude = {
+  accessRole: {
+    include: { permissions: { include: { permission: true } } },
+  },
+  organization: {
+    select: { id: true, code: true, name: true, active: true },
+  },
+  locationAssignments: {
+    include: {
+      location: {
+        select: {
+          id: true,
+          organizationId: true,
+          code: true,
+          name: true,
+          active: true,
+        },
+      },
+    },
+  },
+} as const;
+
 export type UserWithAccessRole = Prisma.UserGetPayload<{
-  include: {
-    accessRole: { include: { permissions: { include: { permission: true } } } };
-  };
+  include: typeof authUserInclude;
 }>;
 
 export function hasAuthenticatedPermission(
@@ -57,11 +77,7 @@ export class AccessControlService {
   async findUserWithAccessRole(id: string): Promise<UserWithAccessRole | null> {
     return this.prisma.user.findUnique({
       where: { id },
-      include: {
-        accessRole: {
-          include: { permissions: { include: { permission: true } } },
-        },
-      },
+      include: authUserInclude,
     });
   }
 

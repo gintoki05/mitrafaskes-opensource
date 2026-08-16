@@ -1,6 +1,7 @@
 import {
   Prisma,
   EncounterStatus as PrismaEncounterStatus,
+  TriageStatus as PrismaTriageStatus,
 } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import type { EncounterStatusCounts } from '@mitrafaskes/shared';
@@ -65,6 +66,7 @@ export interface EncounterListWhere {
   doctorId?: string;
   status?: Prisma.EncounterWhereInput['status'];
   statuses?: PrismaEncounterStatus[];
+  triageStatuses?: PrismaTriageStatus[];
 }
 
 export interface EncounterHistoryListWhere {
@@ -94,11 +96,13 @@ export class EncounterRepository {
         : { locationId: where.locationId }),
       doctorId: where.doctorId,
     };
+    const triageWhere = buildTriageWhere(where.triageStatuses);
     const prismaWhere: Prisma.EncounterWhereInput = {
       ...scopeWhere,
       ...(where.statuses
         ? { status: { in: where.statuses } }
         : { status: where.status }),
+      ...triageWhere,
     };
     const [records, total, waiting, inProgress, completed, cancelled] =
       await this.prisma.$transaction([
@@ -260,4 +264,28 @@ export class EncounterRepository {
     }
     return value;
   }
+}
+
+function buildTriageWhere(
+  statuses: PrismaTriageStatus[] | undefined,
+): Prisma.EncounterWhereInput {
+  if (!statuses || statuses.length === 0) return {};
+
+  const conditions: Prisma.EncounterWhereInput[] = [];
+  if (statuses.includes(PrismaTriageStatus.NOT_STARTED)) {
+    conditions.push({ medicalRecord: null });
+  }
+
+  const persistedStatuses = statuses.filter(
+    (status) => status !== PrismaTriageStatus.NOT_STARTED,
+  );
+  if (persistedStatuses.length > 0) {
+    conditions.push({
+      medicalRecord: {
+        is: { triageStatus: { in: persistedStatuses } },
+      },
+    });
+  }
+
+  return conditions.length === 1 ? conditions[0] : { OR: conditions };
 }

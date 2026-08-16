@@ -83,7 +83,10 @@ describe('SatusehatIntegrationPlugin Encounter handler', () => {
             status: 'SUCCESS',
             errorMessage: null,
             updatedAt: new Date('2026-08-13T10:00:00.000Z'),
-            payload: { metadata: { environment: 'sandbox' } },
+            payload: {
+              metadata: { environment: 'sandbox' },
+              resource: { status: 'arrived' },
+            },
           },
         ]),
       },
@@ -99,8 +102,62 @@ describe('SatusehatIntegrationPlugin Encounter handler', () => {
         environment: 'sandbox',
         linkage: expect.objectContaining({
           externalResourceId: 'enc-remote-1',
+          remoteStatus: 'arrived',
         }),
         latestSync: expect.objectContaining({ status: 'SUCCESS' }),
+      }),
+    ]);
+  });
+
+  it('keeps the last successful remote status visible after a failed update', async () => {
+    const prisma = {
+      externalResourceLink: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            localResourceId: 'enc-local-1',
+            externalResourceId: 'enc-remote-1',
+            lastSyncedAt: new Date('2026-08-13T10:00:00.000Z'),
+          },
+        ]),
+      },
+      satusehatSyncLog: {
+        findMany: jest.fn().mockResolvedValue([
+          {
+            resourceId: 'enc-local-1',
+            status: 'FAILED',
+            errorMessage: 'Remote menolak pembatalan.',
+            updatedAt: new Date('2026-08-13T11:00:00.000Z'),
+            payload: {
+              metadata: { environment: 'sandbox' },
+              resource: { status: 'cancelled' },
+            },
+          },
+          {
+            resourceId: 'enc-local-1',
+            status: 'SUCCESS',
+            errorMessage: null,
+            updatedAt: new Date('2026-08-13T10:00:00.000Z'),
+            payload: {
+              metadata: { environment: 'sandbox' },
+              resource: { status: 'in-progress' },
+            },
+          },
+        ]),
+      },
+    };
+    const plugin = buildPlugin({ prisma });
+
+    const summaries = await plugin.getResourceSummaries('Encounter', [
+      'enc-local-1',
+    ]);
+
+    expect(summaries.get('enc-local-1')).toEqual([
+      expect.objectContaining({
+        linkage: expect.objectContaining({ remoteStatus: 'in-progress' }),
+        latestSync: expect.objectContaining({
+          status: 'FAILED',
+          errorMessage: 'Remote menolak pembatalan.',
+        }),
       }),
     ]);
   });

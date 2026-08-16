@@ -4,17 +4,14 @@ import type { Response } from 'express';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../database/prisma.service';
 import { getAuthConfig } from './auth.config';
+import { authUserInclude } from './access-control.service';
 
 export interface SessionMetadata {
   userAgent?: string;
   ipAddress?: string;
 }
 
-const sessionUserInclude = {
-  accessRole: {
-    include: { permissions: { include: { permission: true } } },
-  },
-} as const;
+const sessionUserInclude = authUserInclude;
 
 export type AuthSessionWithUser = Prisma.AuthSessionGetPayload<{
   include: { user: { include: typeof sessionUserInclude } };

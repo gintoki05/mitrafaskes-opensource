@@ -35,6 +35,26 @@ export interface PermissionSummary {
   sensitive?: boolean;
 }
 
+/**
+ * Operational faskes context attached to a signed-in user. The context is
+ * used by the UI to keep day-to-day workflows inside one organization while
+ * the API remains the source of truth for authorization.
+ */
+export interface UserOrganizationReference {
+  id: string;
+  code: string;
+  name: string;
+  active?: boolean;
+}
+
+export interface UserLocationReference {
+  id: string;
+  organizationId: string;
+  code: string;
+  name: string;
+  active?: boolean;
+}
+
 export interface UserProfile {
   id: string;
   username: string;
@@ -48,6 +68,8 @@ export interface UserProfile {
   temporaryPasswordExpiresAt?: string;
   sipNumber?: string;
   strNumber?: string;
+  organization?: UserOrganizationReference;
+  locations?: UserLocationReference[];
 }
 
 export interface LoginRequest {

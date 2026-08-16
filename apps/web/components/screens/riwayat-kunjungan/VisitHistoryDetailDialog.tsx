@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
-import { getIntegrationLinkage } from '@/lib/integrations';
+import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
 import {
   encounterStatusLabels,
@@ -74,6 +74,7 @@ export function VisitHistoryDetailDialog({
                 <div className="mt-1">
                   <SatusehatLinkageBadge
                     linkage={getIntegrationLinkage(encounter.integrations, 'SATUSEHAT')}
+                    latestSync={getLatestIntegrationSync(encounter.integrations, 'SATUSEHAT')}
                     resourceName={encounter.encounterNumber}
                   />
                 </div>

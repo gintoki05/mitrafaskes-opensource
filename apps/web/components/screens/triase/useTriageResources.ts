@@ -31,7 +31,12 @@ export function useTriageResources() {
   const refresh = useCallback(async (page = 1) => {
     dispatch({ type: 'loading' });
     try {
-      const params = new URLSearchParams({ page: String(page), pageSize: '25', status: 'WAITING' });
+      const params = new URLSearchParams({
+        page: String(page),
+        pageSize: '25',
+        statuses: 'WAITING,IN_PROGRESS',
+        triageStatuses: 'NOT_STARTED,DRAFT',
+      });
       const response = await apiFetch(`/api/encounters?${params.toString()}`);
       if (!response.ok) throw new Error('Antrean triase tidak dapat dimuat.');
       dispatch({ type: 'loaded', response: await response.json() as EncounterListResponse });

@@ -66,6 +66,45 @@ describe('EncounterRepository allocators', () => {
     });
   });
 
+  it('keeps uncompleted triage records in the nurse queue after consultation starts', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const prisma = {
+      encounter: { findMany, count },
+      $transaction: jest.fn((operations: Promise<unknown>[]) =>
+        Promise.all(operations),
+      ),
+    } as unknown as PrismaService;
+    const repository = new EncounterRepository(prisma);
+
+    await repository.findMany(
+      {
+        queueDate: new Date('2026-08-16T00:00:00.000Z'),
+        locationIds: ['location-1'],
+        statuses: ['WAITING', 'IN_PROGRESS'],
+        triageStatuses: ['NOT_STARTED', 'DRAFT'],
+      },
+      1,
+      25,
+    );
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: ['WAITING', 'IN_PROGRESS'] },
+          OR: [
+            { medicalRecord: null },
+            {
+              medicalRecord: {
+                is: { triageStatus: { in: ['DRAFT'] } },
+              },
+            },
+          ],
+        }),
+      }),
+    );
+  });
+
   it('formats a stable Encounter number with the facility year', async () => {
     const transaction = {
       $queryRaw: jest

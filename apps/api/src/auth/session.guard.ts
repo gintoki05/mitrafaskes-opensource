@@ -6,7 +6,12 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
-import { UserRole, WorkProfileType } from '@mitrafaskes/shared';
+import {
+  UserRole,
+  WorkProfileType,
+  type UserLocationReference,
+  type UserOrganizationReference,
+} from '@mitrafaskes/shared';
 import { AccessControlService } from './access-control.service';
 import { IS_PUBLIC_KEY } from './access-control.decorator';
 import { SessionService } from './session.service';
@@ -31,6 +36,8 @@ export interface AuthenticatedUser {
   temporaryPasswordExpiresAt?: string;
   sipNumber?: string;
   strNumber?: string;
+  organization?: UserOrganizationReference;
+  locations?: UserLocationReference[];
 }
 
 export type AuthenticatedRequest = Request & {
@@ -82,6 +89,21 @@ export class SessionGuard implements CanActivate {
         session.user.temporaryPasswordExpiresAt?.toISOString(),
       sipNumber: session.user.sipNumber ?? undefined,
       strNumber: session.user.strNumber ?? undefined,
+      organization: session.user.organization
+        ? {
+            id: session.user.organization.id,
+            code: session.user.organization.code,
+            name: session.user.organization.name,
+            active: session.user.organization.active,
+          }
+        : undefined,
+      locations: session.user.locationAssignments?.map(({ location }) => ({
+        id: location.id,
+        organizationId: location.organizationId,
+        code: location.code,
+        name: location.name,
+        active: location.active,
+      })),
     };
     request.authSessionId = session.id;
     request.authToken = token;

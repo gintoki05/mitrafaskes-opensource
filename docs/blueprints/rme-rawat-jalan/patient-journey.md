@@ -31,7 +31,7 @@ flowchart LR
 | Aktor | Tanggung jawab utama | Tidak boleh dilakukan |
 | --- | --- | --- |
 | Petugas pendaftaran | Identifikasi pasien, data demografi, membuat kunjungan dan antrean | Mengubah isi klinis final |
-| Perawat klinis | Mengisi, menyimpan, dan menyelesaikan triase awal saat Encounter `WAITING` | Memulai konsultasi atau memfinalisasi RME |
+| Perawat klinis | Mengisi, menyimpan, dan menyelesaikan triase awal saat Encounter `WAITING`; dapat melanjutkan triase yang tertinggal saat Encounter sudah `IN_PROGRESS` | Memulai konsultasi atau memfinalisasi RME |
 | Dokter/dokter gigi | Memulai konsultasi, mengisi, memvalidasi, dan memfinalisasi RME sesuai kewenangan | Menghapus jejak perubahan final |
 | Admin faskes | Master data, pengguna, konfigurasi, pemantauan integrasi | Membaca/menulis isi klinis tanpa izin eksplisit |
 | Sistem | Validasi, versioning, audit, transaksi atomik, antrean integrasi | Menganggap sync berhasil tanpa linkage remote |
@@ -46,10 +46,10 @@ akun pendaftaran baru harus memakai role khusus tersebut.
 | Tahap | Tindakan pengguna | Data lokal yang dihasilkan | Status | Acuan interoperabilitas |
 | --- | --- | --- | --- | --- |
 | 1. Identifikasi | Cari NIK/MRN, pilih atau buat pasien | `Patient` | — | FHIR Patient |
-| 2. Registrasi kunjungan | Pilih Location dan dokter aktif untuk pasien terpilih | `Encounter`, status history | `WAITING` | Encounter `arrived`, class `AMB` |
+| 2. Registrasi kunjungan | Organization mengikuti penugasan akun; pilih Location dan dokter aktif pada faskes tersebut | `Encounter`, status history | `WAITING` | Encounter `arrived`, class `AMB` |
 | 3. Triase awal | Perawat mengisi keluhan, riwayat penyakit sekarang, review alergi, dan empat vital inti; draft dapat disimpan berulang | `MedicalRecord`, typed `ClinicalObservation`/history | `WAITING` + triage `DRAFT` | Tidak mengirim resource remote |
-| 4. Selesaikan triase | Perawat menandai triase selesai setelah data minimum terpenuhi; koreksi saat `WAITING` mengembalikan status ke `DRAFT` | triage metadata + audit | `WAITING` + triage `COMPLETED` | Tidak mengirim resource remote |
-| 5. Panggil pasien | Dokter memulai pemeriksaan; triase belum lengkap boleh dilanjutkan dengan peringatan | waktu mulai, actor | `IN_PROGRESS` | Encounter `in-progress` |
+| 4. Selesaikan triase | Perawat menandai triase selesai setelah data minimum terpenuhi; draft yang tertinggal saat `IN_PROGRESS` dapat dilanjutkan, sedangkan triase `COMPLETED` tidak diubah oleh perawat | triage metadata + audit | Encounter tetap pada status lifecycle saat ini + triage `COMPLETED` | Tidak mengirim resource remote |
+| 5. Panggil pasien | Dokter memulai pemeriksaan; triase belum lengkap boleh dilanjutkan dengan peringatan dan tetap muncul di antrean triase perawat | waktu mulai, actor | `IN_PROGRESS` | Encounter `in-progress` |
 | 6. Pilih profil | Konfirmasi `OUTPATIENT_GENERAL` dan `OUTPATIENT_GENERAL_V1` | `serviceProfile` | `DRAFT` | Tidak mengirim resource |
 | 7. Asesmen | Dokter meninjau/mengoreksi triase, lalu melengkapi pemeriksaan fisik dan data klinis lain | draft `MedicalRecord` dan child records | `DRAFT` | Condition/Observation/ClinicalImpression sesuai makna |
 | 8. Rencana | Wajib: satu diagnosis utama berkode, edukasi, rencana, dan disposisi. Resep serta diagnosis tambahan opsional; Procedure belum masuk MVP | diagnosis, prescription, plan | `DRAFT` | Condition; Medication/Procedure/CarePlan mengikuti fase lanjutan |
@@ -156,7 +156,7 @@ RME final.
 
 1. Login sebagai petugas pendaftaran.
 2. Cari pasien; buat pasien baru bila tidak ditemukan.
-3. Buat satu Encounter untuk organisasi, lokasi, dokter, dan tanggal aktif.
+3. Buat satu Encounter untuk Organization akun, Location, dokter, dan tanggal aktif.
 4. Pastikan pasien tampil di antrean `WAITING`.
 5. Login sebagai perawat klinis; pilih pasien `WAITING`, isi keluhan, riwayat
    penyakit sekarang, review alergi, dan empat vital inti.
@@ -165,6 +165,8 @@ RME final.
 7. Login sebagai dokter, mulai konsultasi; status menjadi `IN_PROGRESS`.
    Pastikan dokter dapat meninjau/mengoreksi data triase dan koreksi tercatat
    atas nama dokter.
+   Jika dokter memulai sebelum triase selesai, logout dan login sebagai perawat;
+   pasien tetap harus muncul di antrean triase untuk dilanjutkan.
 8. Lengkapi pemeriksaan fisik, satu diagnosis utama ICD-10, edukasi, rencana,
    dan disposisi. Tambahkan resep hanya bila diperlukan; bila ada, lengkapi
    nama, dosis, frekuensi, dan jumlahnya.

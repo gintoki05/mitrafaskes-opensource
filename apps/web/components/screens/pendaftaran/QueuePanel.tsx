@@ -219,6 +219,7 @@ export function QueuePanel({
                 </Badge>
                 <SatusehatLinkageBadge
                   linkage={satusehatLinkage}
+                  latestSync={latestSync}
                   resourceName={encounter.encounterNumber}
                 />
                 <div className="flex items-center gap-1" role="group" aria-label={`Aksi kunjungan ${encounter.encounterNumber}`}>

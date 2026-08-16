@@ -4,11 +4,13 @@ import type {
   LoginRequest,
   LoginResponse,
   TokenResponse,
+  UserLocationReference,
+  UserOrganizationReference,
   UserProfile,
 } from '@mitrafaskes/shared';
 import { UserRole } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
-import { UserWithAccessRole } from './access-control.service';
+import { authUserInclude, UserWithAccessRole } from './access-control.service';
 import { PasswordService } from './password.service';
 import { SessionMetadata, SessionService } from './session.service';
 
@@ -40,11 +42,7 @@ export class AuthService {
     const password = typeof input.password === 'string' ? input.password : '';
     const user = await this.prisma.user.findUnique({
       where: { username },
-      include: {
-        accessRole: {
-          include: { permissions: { include: { permission: true } } },
-        },
-      },
+      include: authUserInclude,
     });
     const passwordMatches = await this.passwords.verify(
       user?.passwordHash,
@@ -135,11 +133,7 @@ export class AuthService {
 
     const refreshed = await this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        accessRole: {
-          include: { permissions: { include: { permission: true } } },
-        },
-      },
+      include: authUserInclude,
     });
     return { user: this.toProfile(refreshed ?? user) };
   }
@@ -151,6 +145,26 @@ export class AuthService {
         ? undefined
         : accessRole.permissions.map((item) => item.permissionCode)
       : undefined;
+    const scopedUser = user as UserWithAccessRole;
+    const organization = scopedUser.organization
+      ? ({
+          id: scopedUser.organization.id,
+          code: scopedUser.organization.code,
+          name: scopedUser.organization.name,
+          active: scopedUser.organization.active,
+        } satisfies UserOrganizationReference)
+      : undefined;
+    const locations = scopedUser.locationAssignments?.map(
+      ({ location }) =>
+        ({
+          id: location.id,
+          organizationId: location.organizationId,
+          code: location.code,
+          name: location.name,
+          active: location.active,
+        }) satisfies UserLocationReference,
+    );
+
     return {
       id: user.id,
       username: user.username,
@@ -197,6 +211,8 @@ export class AuthService {
         : {}),
       sipNumber: user.sipNumber ?? undefined,
       strNumber: user.strNumber ?? undefined,
+      ...(organization ? { organization } : {}),
+      ...(locations?.length ? { locations } : {}),
     };
   }
 

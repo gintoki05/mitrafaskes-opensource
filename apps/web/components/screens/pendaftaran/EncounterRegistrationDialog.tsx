@@ -6,7 +6,7 @@ import type {
   Patient,
   PractitionerSummary,
 } from '@mitrafaskes/shared';
-import { AlertTriangle, ClipboardPlus, X } from 'lucide-react';
+import { AlertTriangle, Building2, ClipboardPlus, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,8 @@ import { FieldLabel, SelectField } from '../master-faskes/FormField';
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
 import { useMasterFaskesData } from '@/hooks/useMasterFaskesData';
 import { usePractitioners } from '@/hooks/usePractitioners';
+import { useSession } from '@/hooks/useSession';
+import { resolveSingleOrganizationScope } from './organization-scope';
 
 type EncounterRegistrationDialogProps = {
   open: boolean;
@@ -33,7 +35,17 @@ export function EncounterRegistrationDialog({
   const [doctorId, setDoctorId] = useState('');
   const [formError, setFormError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const session = useSession();
   const master = useMasterFaskesData();
+  const organizationScope = useMemo(
+    () =>
+      resolveSingleOrganizationScope(
+        master.organizations,
+        session?.user.organization,
+      ),
+    [master.organizations, session?.user.organization],
+  );
+  const organizationId = organizationScope.organization?.id ?? '';
   const practitionerQuery = useMemo(
     () =>
       locationId
@@ -51,19 +63,14 @@ export function EncounterRegistrationDialog({
 
   const locations = useMemo(
     () => {
-      const activeOrganizationIds = new Set(
-        master.organizations
-          .filter((organization) => organization.active)
-          .map((organization) => organization.id),
-      );
       return master.locations.filter(
         (location) =>
           location.active &&
           location.status === 'ACTIVE' &&
-          activeOrganizationIds.has(location.organizationId),
+          location.organizationId === organizationId,
       );
     },
-    [master.locations, master.organizations],
+    [master.locations, organizationId],
   );
   const doctors = useMemo(
     () =>
@@ -86,6 +93,14 @@ export function EncounterRegistrationDialog({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!patient) return;
+    if (!organizationId) {
+      setFormError(
+        organizationScope.reason === 'AMBIGUOUS'
+          ? 'Akun ini memiliki lebih dari satu Organization aktif. Tetapkan satu faskes pada akun sebelum mendaftar.'
+          : 'Akun ini belum terhubung ke Organization aktif. Tetapkan faskes pada akun sebelum mendaftar.',
+      );
+      return;
+    }
     if (!locationId || !doctorId) {
       setFormError('Location dan dokter wajib dipilih sebelum mendaftar.');
       return;
@@ -156,6 +171,32 @@ export function EncounterRegistrationDialog({
                 </div>
               </div>
             ) : null}
+            <div
+              className="flex items-start gap-3 rounded-md border border-primary/20 bg-primary/5 p-3"
+              role={session === undefined || organizationId ? 'status' : 'alert'}
+            >
+              <Building2
+                className="mt-0.5 h-4 w-4 shrink-0 text-primary"
+                aria-hidden="true"
+              />
+              <div className="min-w-0 text-xs leading-relaxed">
+                <p className="font-semibold text-foreground">Faskes pendaftaran</p>
+                <p className="mt-0.5 font-medium text-primary">
+                  {session === undefined
+                    ? 'Memuat Organization...'
+                    : organizationScope.organization
+                      ? `${organizationScope.organization.code} · ${organizationScope.organization.name}`
+                      : 'Organization belum ditetapkan'}
+                </p>
+                <p className="mt-1 text-muted-foreground">
+                  {organizationId
+                    ? 'Pendaftaran memakai satu Organization. Pilihan di bawah hanya Location aktif milik faskes ini.'
+                    : organizationScope.reason === 'AMBIGUOUS'
+                      ? 'Ada lebih dari satu faskes aktif. Gunakan akun yang sudah ditugaskan ke satu faskes.'
+                      : 'Minta admin menetapkan Organization pada akun ini sebelum membuat antrean.'}
+                </p>
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <FieldLabel htmlFor="encounter-location" required>
@@ -165,10 +206,12 @@ export function EncounterRegistrationDialog({
                   id="encounter-location"
                   value={locationId}
                   onChange={handleLocationChange}
-                  disabled={master.loading || submitting}
+                  disabled={master.loading || submitting || !organizationId}
                   aria-label="Pilih Location pelayanan"
                 >
-                  <option value="">Pilih Location</option>
+                  <option value="">
+                    {organizationId ? 'Pilih Location' : 'Organization belum tersedia'}
+                  </option>
                   {locations.map((location) => (
                     <option key={location.id} value={location.id}>
                       {location.name} · {location.code}
@@ -176,8 +219,13 @@ export function EncounterRegistrationDialog({
                   ))}
                 </SelectField>
                 <FieldDescription className="mt-1">
-                  Antrean mengikuti poli ini.
+                  Location aktif pada Organization terpilih. Akses triase mengikuti penugasan faskes dan poli.
                 </FieldDescription>
+                {organizationId && !master.loading && locations.length === 0 ? (
+                  <FieldError className="mt-1">
+                    Belum ada Location aktif pada Organization ini.
+                  </FieldError>
+                ) : null}
               </div>
               <div>
                 <FieldLabel htmlFor="encounter-doctor" required>
@@ -227,7 +275,16 @@ export function EncounterRegistrationDialog({
               <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
                 Batal
               </Button>
-              <Button type="submit" disabled={submitting || master.loading || !locationId || !doctorId}>
+              <Button
+                type="submit"
+                disabled={
+                  submitting ||
+                  master.loading ||
+                  !organizationId ||
+                  !locationId ||
+                  !doctorId
+                }
+              >
                 {submitting ? 'Mendaftarkan...' : 'Daftarkan ke antrean'}
               </Button>
             </div>

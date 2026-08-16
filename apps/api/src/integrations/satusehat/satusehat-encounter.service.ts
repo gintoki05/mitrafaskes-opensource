@@ -108,6 +108,9 @@ export class SatusehatEncounterService {
       }
 
       const syncedAt = new Date();
+      const remoteStatus =
+        this.extractResourceStatus(response) ??
+        this.extractResourceStatus(preview.payload);
       await this.prisma.$transaction([
         this.prisma.externalResourceLink.upsert({
           where: {
@@ -139,6 +142,18 @@ export class SatusehatEncounterService {
             status: 'SUCCESS',
             satusehatId: externalResourceId,
             errorMessage: null,
+            payload: this.buildLogPayload(
+              localResourceId,
+              environment,
+              preview,
+              {
+                retryAttempt,
+                ...(context?.retryOfLogId
+                  ? { retryOfLogId: context.retryOfLogId }
+                  : {}),
+                ...(remoteStatus ? { remoteStatus } : {}),
+              },
+            ),
           },
         }),
       ]);
@@ -216,6 +231,13 @@ export class SatusehatEncounterService {
     if (!this.isRecord(response)) return undefined;
     return typeof response.id === 'string' && response.id.trim()
       ? response.id
+      : undefined;
+  }
+
+  private extractResourceStatus(value: unknown): string | undefined {
+    if (!this.isRecord(value)) return undefined;
+    return typeof value.status === 'string' && value.status.trim()
+      ? value.status.trim()
       : undefined;
   }
 

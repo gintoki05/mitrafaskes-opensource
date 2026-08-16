@@ -87,6 +87,7 @@ export function EncounterSyncDialog({
 
   const integration = getIntegrationSummary(encounter.integrations, 'SATUSEHAT');
   const linkage = getIntegrationLinkage(encounter.integrations, 'SATUSEHAT');
+  const latestSync = integration?.latestSync;
   const latestSyncFailed = integration?.latestSync?.status === 'FAILED';
   const uiState = resolveEncounterSyncUiState({
     canSync,
@@ -152,6 +153,7 @@ export function EncounterSyncDialog({
             </div>
             <SatusehatLinkageBadge
               linkage={linkage}
+              latestSync={latestSync}
               resourceName={encounter.encounterNumber}
             />
           </div>

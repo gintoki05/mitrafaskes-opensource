@@ -297,6 +297,9 @@ multi-instance memakai shared throttler storage atau rate limiting pada edge.
 - `fetch` ke API menggunakan `credentials: 'include'`.
 - Frontend mengambil profil melalui `GET /api/auth/me`; data user di browser
   bukan sumber kebenaran authorization.
+- Profil sesi boleh membawa Organization dan Location operasional akun untuk
+  menjaga alur UI tetap berada pada satu faskes; API tetap memverifikasi scope
+  tersebut pada setiap operasi.
 - Frontend tidak membaca cookie session dan tidak menyimpan bearer token.
 - `401 UNAUTHENTICATED` membersihkan state UI dan mengarahkan ke login tanpa
   loop.

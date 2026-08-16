@@ -3,18 +3,24 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { Check, Copy } from 'lucide-react';
-import type { ResourceIntegrationLinkage } from '@mitrafaskes/shared';
+import type {
+  ResourceIntegrationLinkage,
+  ResourceIntegrationSync,
+} from '@mitrafaskes/shared';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
+import { formatSatusehatRemoteStatus } from './satusehat-status';
 
 type SatusehatLinkageBadgeProps = {
   linkage?: ResourceIntegrationLinkage;
+  latestSync?: ResourceIntegrationSync;
   resourceName: string;
 };
 
 export function SatusehatLinkageBadge({
   linkage,
+  latestSync,
   resourceName,
 }: SatusehatLinkageBadgeProps) {
   const { available } = useIntegrationCapability('SATUSEHAT');
@@ -37,7 +43,8 @@ export function SatusehatLinkageBadge({
             className="h-full w-full object-cover grayscale"
           />
         </span>
-        <span>Belum terhubung</span>
+        <span className="text-foreground">SATUSEHAT</span>
+        <span>· Belum terhubung</span>
       </span>
     );
   }
@@ -48,6 +55,9 @@ export function SatusehatLinkageBadge({
         timeStyle: 'short',
       }).format(new Date(linkage.lastSyncedAt))}.`
     : '';
+  const remoteStatusLabel = formatSatusehatRemoteStatus(linkage.remoteStatus);
+  const latestSyncFailed = latestSync?.status === 'FAILED';
+  const statusClassName = latestSyncFailed ? 'text-warning' : 'text-success';
 
   const copyExternalId = async () => {
     try {
@@ -62,10 +72,10 @@ export function SatusehatLinkageBadge({
 
   return (
     <span
-      className="inline-flex whitespace-nowrap items-center gap-1.5 text-xs font-semibold text-success"
-      title={`Terhubung ke SATUSEHAT. ${resourceName}.${lastSyncedLabel}`}
+      className={`inline-flex whitespace-nowrap items-center gap-1.5 text-xs font-semibold ${statusClassName}`}
+      title={`Terhubung ke SATUSEHAT. ${resourceName}.${remoteStatusLabel ? ` Status SATUSEHAT: ${remoteStatusLabel}.` : ''}${lastSyncedLabel}${latestSyncFailed ? ` Sinkronisasi terakhir gagal${latestSync.errorMessage ? `: ${latestSync.errorMessage}` : '.'}` : ''}`}
     >
-      <span className="flex h-6 w-6 shrink-0 overflow-hidden rounded border border-success/25 bg-white">
+      <span className={`flex h-6 w-6 shrink-0 overflow-hidden rounded border bg-white ${latestSyncFailed ? 'border-warning/25' : 'border-success/25'}`}>
         <Image
           src="/satusehat.png"
           alt=""
@@ -74,7 +84,14 @@ export function SatusehatLinkageBadge({
           className="h-full w-full object-cover"
         />
       </span>
+      <span className="text-foreground">SATUSEHAT</span>
+      <span aria-hidden="true">·</span>
       <span>Terhubung</span>
+      {remoteStatusLabel ? (
+        <span className="font-medium text-foreground">
+          · Status: {remoteStatusLabel}
+        </span>
+      ) : null}
       <Button
         type="button"
         variant="ghost"
@@ -82,7 +99,11 @@ export function SatusehatLinkageBadge({
         onClick={() => void copyExternalId()}
         aria-label={`Salin ID SATUSEHAT untuk ${resourceName}`}
         title="Salin ID SATUSEHAT"
-        className="text-success hover:bg-success/10 hover:text-success"
+        className={
+          latestSyncFailed
+            ? 'text-warning hover:bg-warning/10 hover:text-warning'
+            : 'text-success hover:bg-success/10 hover:text-success'
+        }
       >
         {copied ? (
           <Check className="h-3.5 w-3.5" aria-hidden="true" />
@@ -91,7 +112,8 @@ export function SatusehatLinkageBadge({
         )}
       </Button>
       <span className="sr-only">
-        {resourceName} sudah tersinkron ke SATUSEHAT; gunakan tombol salin untuk menyalin ID.
+        {resourceName} terhubung ke SATUSEHAT
+        {remoteStatusLabel ? ` dengan status ${remoteStatusLabel}` : ''}; gunakan tombol salin untuk menyalin ID.
         {copied ? ' ID berhasil disalin.' : ''}
       </span>
     </span>

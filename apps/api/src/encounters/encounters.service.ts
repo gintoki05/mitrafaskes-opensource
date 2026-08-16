@@ -107,6 +107,7 @@ export class EncountersService {
             : undefined,
         status: query.status ? mapStatusToPrisma(query.status) : undefined,
         statuses: query.statuses?.map(mapStatusToPrisma),
+        triageStatuses: query.triageStatuses,
       },
       page,
       pageSize,

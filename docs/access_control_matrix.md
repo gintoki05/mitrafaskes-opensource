@@ -10,7 +10,7 @@ perilaku yang harus diterapkan oleh PRI-10.
 | Peran produk | Nilai role saat ini | Halaman awal | Tanggung jawab |
 | --- | --- | --- | --- |
 | Petugas pendaftaran | `PETUGAS_PENDAFTARAN` | `/pendaftaran` | Identitas pasien, pendaftaran, dan antrean masuk |
-| Perawat klinis | `PERAWAT` | `/triase` | Triase awal, vital, dan penyelesaian triase saat Encounter `WAITING` |
+| Perawat klinis | `PERAWAT` | `/triase` | Triase awal, vital, dan penyelesaian triase saat Encounter `WAITING`; dapat melanjutkan triase yang tertinggal saat `IN_PROGRESS` |
 | Dokter | `DOKTER` | `/rme` | Memulai pemeriksaan, mengisi draft, dan finalisasi RME |
 | Admin | `ADMIN` | `/master-faskes` | Operasi master faskes dan pengawasan integrasi bila diaktifkan |
 

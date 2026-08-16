@@ -142,6 +142,7 @@ export function VisitHistoryTable({
                       <>
                         <SatusehatLinkageBadge
                           linkage={getIntegrationLinkage(encounter.integrations, 'SATUSEHAT')}
+                          latestSync={latestSync}
                           resourceName={encounter.encounterNumber}
                         />
                         {latestSync?.status === 'FAILED' ? (

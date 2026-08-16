@@ -2,6 +2,7 @@ import { EncounterStatus } from '@mitrafaskes/shared';
 import { EncounterValidationError } from './encounter.errors';
 import {
   parseEncounterStatus,
+  parseTriageStatuses,
   parsePositiveInteger,
   validateCreateEncounter,
   validateEncounterHistoryDateRange,
@@ -59,6 +60,16 @@ describe('Encounter validation', () => {
     expect(parsePositiveInteger('3', 1)).toBe(3);
     expect(parsePositiveInteger('999', 1, 100)).toBe(100);
     expect(parsePositiveInteger('nope', 1)).toBe(1);
+  });
+
+  it('validates triage status filters for the nurse recovery queue', () => {
+    expect(parseTriageStatuses('NOT_STARTED,DRAFT,DRAFT')).toEqual([
+      'NOT_STARTED',
+      'DRAFT',
+    ]);
+    expect(() => parseTriageStatuses('COMPLETED,UNKNOWN')).toThrow(
+      EncounterValidationError,
+    );
   });
 
   it('validates an inclusive history date range', () => {

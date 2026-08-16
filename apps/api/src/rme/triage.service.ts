@@ -35,6 +35,16 @@ export type TriageRequestMetadata = {
   correlationId: string;
 };
 
+export function isTriageEditable(
+  encounterStatus: string,
+  triageStatus?: string,
+): boolean {
+  return (
+    encounterStatus === 'WAITING' ||
+    (encounterStatus === 'IN_PROGRESS' && triageStatus !== 'COMPLETED')
+  );
+}
+
 @Injectable()
 export class TriageService {
   constructor(private readonly prisma: PrismaService) {}
@@ -77,8 +87,8 @@ export class TriageService {
         encounter.organizationId,
         encounter.locationId,
       );
-      this.assertWaiting(encounter.status);
       const locked = await lockMedicalRecord(transaction, draft.encounterId);
+      this.assertTriageEditable(encounter.status, locked?.triageStatus);
       if (locked?.status === 'FINAL') {
         throw new ConflictException({
           code: 'RME_FINAL_IMMUTABLE',
@@ -185,8 +195,8 @@ export class TriageService {
         encounter.organizationId,
         encounter.locationId,
       );
-      this.assertWaiting(encounter.status);
       const locked = await lockMedicalRecord(transaction, command.encounterId);
+      this.assertTriageEditable(encounter.status, locked?.triageStatus);
       if (!locked) {
         throw new ConflictException({
           code: 'RME_TRIAGE_DRAFT_REQUIRED',
@@ -260,11 +270,15 @@ export class TriageService {
     return toTriageRecord(record);
   }
 
-  private assertWaiting(status: string): void {
-    if (status !== 'WAITING') {
+  private assertTriageEditable(
+    encounterStatus: string,
+    triageStatus?: string,
+  ): void {
+    if (!isTriageEditable(encounterStatus, triageStatus)) {
       throw new ConflictException({
-        code: 'RME_TRIAGE_ENCOUNTER_NOT_WAITING',
-        message: 'Triase hanya dapat diisi saat Encounter masih menunggu.',
+        code: 'RME_TRIAGE_NOT_EDITABLE',
+        message:
+          'Triase hanya dapat diisi saat antrean menunggu atau dilanjutkan bila pemeriksaan sudah dimulai tetapi triase belum selesai.',
       });
     }
   }

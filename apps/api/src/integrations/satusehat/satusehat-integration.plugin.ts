@@ -358,14 +358,22 @@ export class SatusehatIntegrationPlugin
     ]);
     const linkById = new Map(links.map((link) => [link.localResourceId, link]));
     const logById = new Map<string, (typeof logs)[number]>();
+    const successfulLogById = new Map<string, (typeof logs)[number]>();
     for (const log of logs) {
       if (!this.logMatchesEnvironment(log.payload, environment)) continue;
       if (!logById.has(log.resourceId)) logById.set(log.resourceId, log);
+      if (log.status === 'SUCCESS' && !successfulLogById.has(log.resourceId)) {
+        successfulLogById.set(log.resourceId, log);
+      }
     }
 
     for (const localResourceId of localResourceIds) {
       const link = linkById.get(localResourceId);
       const log = logById.get(localResourceId);
+      const successfulLog = successfulLogById.get(localResourceId);
+      const remoteStatus = successfulLog
+        ? this.readRemoteStatus(successfulLog.payload)
+        : undefined;
       if (!link && !log) continue;
       result.set(localResourceId, [
         {
@@ -375,6 +383,7 @@ export class SatusehatIntegrationPlugin
             ? {
                 externalResourceId: link.externalResourceId,
                 lastSyncedAt: link.lastSyncedAt?.toISOString(),
+                ...(remoteStatus ? { remoteStatus } : {}),
               }
             : undefined,
           latestSync: log
@@ -389,6 +398,24 @@ export class SatusehatIntegrationPlugin
       ]);
     }
     return result;
+  }
+
+  private readRemoteStatus(payload: unknown): string | undefined {
+    const record = this.isRecord(payload) ? payload : undefined;
+    const metadata =
+      record && this.isRecord(record.metadata) ? record.metadata : undefined;
+    if (
+      typeof metadata?.remoteStatus === 'string' &&
+      metadata.remoteStatus.trim()
+    ) {
+      return metadata.remoteStatus.trim();
+    }
+
+    const resource =
+      record && this.isRecord(record.resource) ? record.resource : undefined;
+    return typeof resource?.status === 'string' && resource.status.trim()
+      ? resource.status.trim()
+      : undefined;
   }
 
   reconcile() {

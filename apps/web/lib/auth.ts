@@ -6,6 +6,8 @@ import {
   hasPermission,
   UserRole,
   type AccessRoleSummary,
+  type UserLocationReference,
+  type UserOrganizationReference,
   WorkProfileType,
 } from "@mitrafaskes/shared";
 import { resolveApiInput } from "./api";
@@ -26,6 +28,8 @@ export interface SessionUser {
   temporaryPasswordExpiresAt?: string;
   sipNumber?: string;
   strNumber?: string;
+  organization?: UserOrganizationReference;
+  locations?: UserLocationReference[];
 }
 
 export interface Session {

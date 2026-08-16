@@ -28,6 +28,7 @@ import { EncountersService } from './encounters.service';
 import {
   parseEncounterStatus,
   parseEncounterStatuses,
+  parseTriageStatuses,
   parsePositiveInteger,
 } from './encounter.validation';
 
@@ -76,6 +77,7 @@ export class EncountersController {
           locationId: query.locationId,
           status: parseEncounterStatus(query.status),
           statuses: parseEncounterStatuses(query.statuses),
+          triageStatuses: parseTriageStatuses(query.triageStatuses),
         },
         request.user,
       );

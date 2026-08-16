@@ -93,6 +93,7 @@ export interface EncounterListQuery {
   locationId?: string;
   status?: EncounterStatus;
   statuses?: EncounterStatus[];
+  triageStatuses?: TriageStatus[];
 }
 
 export type EncounterStatusCounts = Record<EncounterStatus, number>;

@@ -188,7 +188,7 @@ export default function RmePage() {
       await refreshEncounters(encountersMeta.page, { retainMissingSelection: true });
       if (encounter.triage?.status !== 'COMPLETED') {
         toast.warning('Pemeriksaan dimulai dengan triase belum selesai', {
-          description: 'Lengkapi dan verifikasi data awal sebelum finalisasi RME.',
+          description: 'Pasien tetap akan muncul di antrean triase perawat agar data awal dapat dilengkapi.',
         });
       } else {
         toast.success('Pemeriksaan dimulai');
@@ -208,7 +208,11 @@ export default function RmePage() {
         <PageHeader
           icon={<Stethoscope className="h-6 w-6" />}
           title="Form Rekam Medis Elektronik (RME) Dokter"
-          description="Simpan asesmen bertahap sebagai draft, lalu finalisasi untuk menyelesaikan Encounter."
+          description={
+            session?.user.organization
+              ? `Faskes aktif: ${session.user.organization.code} · ${session.user.organization.name}. Simpan asesmen bertahap sebagai draft, lalu finalisasi untuk menyelesaikan Encounter.`
+              : 'Simpan asesmen bertahap sebagai draft, lalu finalisasi untuk menyelesaikan Encounter. Akun dokter perlu ditugaskan ke satu Organization.'
+          }
           action={
             <div className="flex items-center gap-2 rounded-[var(--radius-card)] border border-primary/20 bg-primary/10 px-3 py-2 font-mono text-xs text-primary">
               <Zap className="h-4 w-4 text-warning" />
@@ -258,7 +262,7 @@ export default function RmePage() {
               <ScreenState
                 kind="empty"
                 title="Pasien menunggu pemeriksaan"
-                description="Mulai pemeriksaan untuk membuka dan mengisi RME dokter. Triase yang belum selesai tetap dapat dilengkapi saat konsultasi."
+                description="Mulai pemeriksaan untuk membuka dan mengisi RME dokter. Jika triase belum selesai, perawat tetap dapat melanjutkannya dari antrean triase."
                 action={canStartEncounter ? <Button type="button" onClick={() => void handleStartEncounter(selectedEncounter)} disabled={Boolean(startingEncounterId)}>Mulai pemeriksaan</Button> : undefined}
               />
             ) : workspaceState === 'ready' && selectedEncounter ? (

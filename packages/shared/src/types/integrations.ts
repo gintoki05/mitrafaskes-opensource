@@ -30,6 +30,8 @@ export type IntegrationOperatorAction =
 export interface ResourceIntegrationLinkage {
   externalResourceId: string;
   lastSyncedAt?: string;
+  /** Last status accepted by the provider on a successful sync, if available. */
+  remoteStatus?: string;
 }
 
 export interface ResourceIntegrationSync {

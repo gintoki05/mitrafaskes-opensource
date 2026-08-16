@@ -32,6 +32,7 @@ import { shouldRefreshEncounterListAfterSync } from './encounters/encounter-sync
 import { RegistrationViewTabs, type RegistrationView } from './pendaftaran/RegistrationViewTabs';
 import { usePatientActions } from './pendaftaran/usePatientActions';
 import { useMaritalStatuses } from './pendaftaran/useMaritalStatuses';
+import { changeEncounterStatus } from './pendaftaran/encounter-status-change';
 import { useEncounterActions } from '@/hooks/useEncounterActions';
 import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 
@@ -135,15 +136,15 @@ export default function PendaftaranPage() {
 
   const handleStatusChange = async (encounter: Encounter, status: EncounterStatus) => {
     try {
-      const updated = await encounterActions.updateStatus(
-        encounter.id,
-        status,
-        encounter.version,
-      );
-      toast.success('Status kunjungan diperbarui.', {
-        description: `Kunjungan ${updated.encounterNumber} sudah diperbarui.`,
+      await changeEncounterStatus(encounter, status, {
+        updateStatus: encounterActions.updateStatus,
+        syncSatusehat: encounterActions.syncSatusehat,
+        refreshEncounters,
+        page: encountersMeta.page,
+        queueStatuses,
+        satusehatConfigured: satusehat.configured,
+        canSync: canSyncEncounter,
       });
-      await refreshEncounters(encountersMeta.page, queueStatuses);
     } catch (error) {
       const code = (error as { code?: string }).code;
       if (code === 'ENCOUNTER_VERSION_CONFLICT') {
@@ -182,7 +183,11 @@ export default function PendaftaranPage() {
         <PageHeader
           icon={<UserCheck className="h-6 w-6" />}
           title="Pendaftaran"
-          description="Kelola pasien dan antrean kunjungan."
+          description={
+            currentUser?.organization
+              ? `Kelola pasien dan antrean kunjungan di ${currentUser.organization.code} · ${currentUser.organization.name}.`
+              : 'Kelola pasien dan antrean kunjungan. Akun operasional perlu ditugaskan ke satu Organization.'
+          }
           action={
             canWritePatient ? (
               <Button type="button" onClick={openNewPatient}>

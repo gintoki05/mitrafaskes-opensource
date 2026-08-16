@@ -128,6 +128,9 @@ export function Navbar() {
   const session = useSession();
   const satusehat = useIntegrationCapability('SATUSEHAT');
   const user = session?.user ?? null;
+  const organizationLabel = user?.organization
+    ? `${user.organization.code} · ${user.organization.name}`
+    : 'Organization belum ditetapkan';
   const { state, toggleSidebar } = useSidebar();
   const collapsed = state === 'collapsed';
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
@@ -370,11 +373,19 @@ export function Navbar() {
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-bold text-primary">
                 {user.fullName.slice(0, 2).toUpperCase()}
               </span>
-              <div className="w-32 min-w-0 text-left">
+              <div className="w-48 min-w-0 text-left">
                 <div className="truncate text-xs font-bold text-white">{user.fullName}</div>
                 <div className="flex w-full items-center justify-start gap-1 text-xs text-white/70">
                   <ShieldCheck className="h-3 w-3" aria-hidden="true" />
                   <span className="truncate">{user.accessRole?.name ?? ROLE_LABELS[user.role]}</span>
+                </div>
+                <div
+                  className="flex w-full items-center justify-start gap-1 text-[11px] text-white/70"
+                  title={`Organization pengguna: ${organizationLabel}`}
+                >
+                  <Building2 className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  <span className="sr-only">Organization pengguna: </span>
+                  <span className="truncate">{organizationLabel}</span>
                 </div>
               </div>
             </div>

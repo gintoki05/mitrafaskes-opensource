@@ -11,7 +11,7 @@ bagi issue terkait.
 | 0. Blueprint | Journey, model domain, kamus data, mapping, wireframe | PRI-5, PRI-25 | Review produk + klinis awal |
 | 1. RME lifecycle foundation | `DRAFT`/`FINAL`, versioning, ownership, migration | PRI-17 | Draft tersimpan tanpa menutup Encounter; final immutable |
 | 2. Workspace konsultasi | Persistent patient context, section UX, state lengkap | PRI-18, PRI-19 | Empty/loading/error/conflict dan data kosong aman |
-| 2a. Triase klinis | Role `PERAWAT` klinis, `PETUGAS_PENDAFTARAN`, triage draft/complete, audit koreksi, dan gate `WAITING` | Scope saat ini | Perawat dapat mengisi triase; Encounter tetap `WAITING`; dokter dapat mulai dengan warning |
+| 2a. Triase klinis | Role `PERAWAT` klinis, `PETUGAS_PENDAFTARAN`, triage draft/complete, audit koreksi, dan gate antrean | Scope saat ini | Perawat dapat mengisi triase pada `WAITING` atau melanjutkan triase tertinggal pada `IN_PROGRESS`; dokter dapat mulai dengan warning |
 | 3. Finalisasi aman | Preflight, transaction, audit, idempotency | PRI-20, PRI-21 | RME final + Encounter complete atomik |
 | 4. Encounter remote | Create/update, linkage/log, UI, repeat sync | PRI-23, PRI-24 | **API/plugin dan UI tersedia; sandbox create + update ID sama masih perlu diverifikasi** |
 | 5. Condition | Model diagnosis/complaint + terminology + adapter | PRI-19, PRI-23, PRI-29 | **Adapter, dependency preflight, linkage/log, dan UI sync tersedia; sandbox perlu diverifikasi** |

@@ -75,7 +75,11 @@ export default function TriaseScreen() {
         <PageHeader
           icon={<HeartPulse className="h-6 w-6" />}
           title="Triase Perawat"
-          description="Catat data awal pasien sebelum pemeriksaan dokter dimulai."
+          description={
+            session?.user.organization
+              ? `Faskes aktif: ${session.user.organization.code} · ${session.user.organization.name}. Pasien yang pemeriksaannya sudah dimulai tetapi triase belum selesai tetap muncul di antrean ini.`
+              : 'Akun perawat perlu ditugaskan ke satu Organization agar antrean triase sesuai faskes.'
+          }
         />
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
           <Card className="min-w-0">
@@ -130,9 +134,16 @@ export default function TriaseScreen() {
                         {encounter.patient?.medicalRecNo}
                       </span>
                     </span>
-                    <Badge variant="outline" className="shrink-0 text-[10px]">
-                      {triageLabels[encounter.triage?.status ?? "NOT_STARTED"]}
-                    </Badge>
+                    <span className="flex shrink-0 flex-col items-end gap-1">
+                      <Badge variant="outline" className="text-[10px]">
+                        {encounter.status === "IN_PROGRESS"
+                          ? "Sedang diperiksa"
+                          : "Menunggu"}
+                      </Badge>
+                      <Badge variant="outline" className="text-[10px]">
+                        {triageLabels[encounter.triage?.status ?? "NOT_STARTED"]}
+                      </Badge>
+                    </span>
                   </button>
                 ))
               )}
