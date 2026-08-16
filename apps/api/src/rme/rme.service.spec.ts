@@ -206,6 +206,105 @@ describe('RmeService lifecycle', () => {
     expect(completion).not.toHaveBeenCalled();
   });
 
+  it('records a normal draft save in the RME audit history', async () => {
+    const audit = { create: jest.fn().mockResolvedValue({ id: 'audit-1' }) };
+    const transaction = {
+      $queryRaw: jest
+        .fn()
+        .mockResolvedValueOnce([
+          {
+            id: 'encounter-1',
+            status: 'IN_PROGRESS',
+            version: 2,
+            doctorId: 'doctor-1',
+            organizationId: 'organization-1',
+            locationId: 'location-1',
+          },
+        ])
+        .mockResolvedValueOnce([]),
+      medicalRecord: {
+        create: jest.fn().mockResolvedValue(medicalRecord()),
+      },
+      medicalRecordAuditEvent: audit,
+    };
+    const { service } = createHarness(transaction);
+
+    await service.saveDraft(
+      {
+        encounterId: 'encounter-1',
+        expectedVersion: 0,
+        diagnoses: [],
+        prescriptions: [],
+      },
+      actor,
+      request,
+    );
+
+    expect(audit.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        action: 'RME_DRAFT_SAVED',
+        actorUsername: 'dr_budi',
+        actorRole: 'DOKTER',
+        entityVersion: 1,
+        expectedVersion: 0,
+        requestId: 'request-123',
+        correlationId: 'correlation-123',
+        idempotencyKey: 'RME_DRAFT_SAVED:rme-1:1',
+      }),
+    });
+  });
+
+  it('lists audit events for an assigned Encounter', async () => {
+    const occurredAt = new Date('2026-08-13T03:10:00.000Z');
+    const findMany = jest.fn().mockResolvedValue([
+      {
+        id: 'audit-2',
+        action: 'RME_FINALIZED',
+        actorUsername: 'dr_budi',
+        actorRole: 'DOKTER',
+        entityVersion: 2,
+        occurredAt,
+      },
+    ]);
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'doctor-1' }) },
+      encounter: {
+        findUnique: jest.fn().mockResolvedValue({ doctorId: 'doctor-1' }),
+      },
+      medicalRecord: {
+        findUnique: jest.fn().mockResolvedValue({ id: 'rme-1' }),
+      },
+      medicalRecordAuditEvent: { findMany },
+    } as unknown as PrismaService;
+    const service = new RmeService(prisma, {} as EncountersService);
+
+    await expect(
+      service.auditByEncounterId('encounter-1', actor),
+    ).resolves.toEqual([
+      {
+        id: 'audit-2',
+        action: 'RME_FINALIZED',
+        actorUsername: 'dr_budi',
+        actorRole: 'DOKTER',
+        revision: 2,
+        occurredAt: occurredAt.toISOString(),
+      },
+    ]);
+    expect(findMany).toHaveBeenCalledWith({
+      where: { medicalRecordId: 'rme-1' },
+      orderBy: [{ occurredAt: 'desc' }, { entityVersion: 'desc' }],
+      take: 50,
+      select: {
+        id: true,
+        action: true,
+        actorUsername: true,
+        actorRole: true,
+        entityVersion: true,
+        occurredAt: true,
+      },
+    });
+  });
+
   it('attributes a doctor correction of completed triage in the audit event', async () => {
     const saved = {
       ...medicalRecord(),

@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { ScreenState } from '@/components/ScreenState';
 import type { RmeMutationState } from '@/hooks/useRmeLifecycle';
+import { RmeAuditDialog } from './RmeAuditDialog';
 
 type LifecycleProps = {
   record: MedicalRecord | null;
@@ -39,9 +40,12 @@ export function RmeLifecycleSummary({
           <Badge variant={readOnly ? 'default' : 'outline'}>
             {readOnly ? 'FINAL' : 'DRAFT'}
           </Badge>
-          <span className="font-mono text-xs text-muted-foreground">
-            Versi {record?.version ?? 0}
-          </span>
+          {record ? (
+            <RmeAuditDialog
+              encounterId={record.encounterId}
+              currentRevision={record.version}
+            />
+          ) : null}
           <span className="text-xs text-muted-foreground">
             {record
               ? `Disimpan ${new Date(record.updatedAt).toLocaleString('id-ID')}`

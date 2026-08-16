@@ -253,6 +253,15 @@ export interface MedicalRecord {
   updatedAt: string;
 }
 
+export interface RmeAuditItem {
+  id: string;
+  action: string;
+  actorUsername: string;
+  actorRole: string;
+  revision: number;
+  occurredAt: string;
+}
+
 export interface SaveMedicalRecordDraftDto {
   encounterId: string;
   expectedVersion: number;

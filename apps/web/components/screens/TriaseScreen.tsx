@@ -75,11 +75,7 @@ export default function TriaseScreen() {
         <PageHeader
           icon={<HeartPulse className="h-6 w-6" />}
           title="Triase Perawat"
-          description={
-            session?.user.organization
-              ? `Faskes aktif: ${session.user.organization.code} · ${session.user.organization.name}. Pasien yang pemeriksaannya sudah dimulai tetapi triase belum selesai tetap muncul di antrean ini.`
-              : 'Akun perawat perlu ditugaskan ke satu Organization agar antrean triase sesuai faskes.'
-          }
+          description="Pasien yang sudah mulai diperiksa tetapi triase belum selesai tetap muncul di antrean ini."
         />
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
           <Card className="min-w-0">
@@ -126,7 +122,7 @@ export default function TriaseScreen() {
                     aria-pressed={resources.selected?.id === encounter.id}
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-xs font-bold text-foreground">
+                      <span className="block truncate text-sm font-semibold text-foreground">
                         {encounter.patient?.fullName}
                       </span>
                       <span className="font-mono text-[11px] text-muted-foreground">

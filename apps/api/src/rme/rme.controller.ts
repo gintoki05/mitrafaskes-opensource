@@ -24,6 +24,15 @@ export class RmeController {
     return this.triage.findByEncounterId(encounterId, request.user);
   }
 
+  @Get('encounter/:encounterId/audit')
+  @RequirePermission(AccessPermission.RME_READ)
+  audit(
+    @Param('encounterId') encounterId: string,
+    @Req() request: { user: AuthenticatedUser },
+  ) {
+    return this.rme.auditByEncounterId(encounterId, request.user);
+  }
+
   @Post('triage/draft')
   @RequirePermission(AccessPermission.RME_TRIAGE_WRITE)
   saveTriageDraft(
@@ -71,9 +80,17 @@ export class RmeController {
   @RequirePermission(AccessPermission.RME_WRITE_DRAFT)
   saveDraft(
     @Body() body: unknown,
-    @Req() request: { user: AuthenticatedUser },
+    @Req()
+    request: {
+      user: AuthenticatedUser;
+      headers: Record<string, string | string[] | undefined>;
+    },
   ) {
-    return this.rme.saveDraft(body, request.user);
+    return this.rme.saveDraft(
+      body,
+      request.user,
+      this.requestMetadata(request.headers),
+    );
   }
 
   @Post('finalize')

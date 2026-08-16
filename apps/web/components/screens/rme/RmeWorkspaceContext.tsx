@@ -16,35 +16,42 @@ export function RmeWorkspaceContext({
 
   return (
     <section aria-labelledby="rme-patient-context" className="data-surface">
-      <div className="flex min-w-0 flex-col gap-4 border-b border-border bg-primary/[0.04] p-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex min-w-0 flex-col gap-4 border-b border-border bg-primary/[0.04] p-4 sm:flex-row sm:items-start sm:justify-between sm:p-5">
         <div className="flex min-w-0 items-start gap-3">
           <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-primary/10 text-primary">
             <UserRound className="h-5 w-5" aria-hidden="true" />
           </span>
           <div className="min-w-0">
-            <h2 id="rme-patient-context" className="break-words text-base font-bold text-foreground">
+            <h2 id="rme-patient-context" className="break-words text-lg font-semibold leading-tight tracking-[-0.015em] text-foreground">
               {context.patientName}
             </h2>
-            <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 font-mono text-xs text-muted-foreground">
-              <span>No. RM {context.medicalRecordNumber}</span>
-              <span>NIK {context.nik}</span>
-            </p>
+            <dl className="mt-2 flex min-w-0 flex-wrap gap-x-4 gap-y-1.5 text-xs">
+              <div className="flex min-w-0 items-baseline gap-1.5">
+                <dt className="text-muted-foreground">No. RM</dt>
+                <dd className="break-words font-mono font-medium text-foreground">
+                  {context.medicalRecordNumber}
+                </dd>
+              </div>
+              <div className="flex min-w-0 items-baseline gap-1.5">
+                <dt className="text-muted-foreground">NIK</dt>
+                <dd className="break-words font-mono font-medium text-foreground">
+                  {context.nik}
+                </dd>
+              </div>
+            </dl>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 sm:justify-end">
-          <Badge className="border-primary/25 bg-primary/10 text-primary">
+          <Badge variant="secondary" className="border-transparent bg-secondary/70">
             {context.serviceProfileLabel}
-          </Badge>
-          <Badge variant="outline" className="font-mono text-[11px]">
-            {context.validationProfile}
           </Badge>
         </div>
       </div>
 
       <div className="grid min-w-0 gap-5 p-4 xl:grid-cols-2">
         <ContextGroup icon={<UserRound className="h-4 w-4" />} title="Identitas pasien">
-          <ContextField label="Lahir / usia" value={context.birthDateAndAge} />
-          <ContextField label="Jenis kelamin" value={context.gender} />
+          <ContextField label="Lahir / usia" value={context.birthDateAndAge} emphasized />
+          <ContextField label="Jenis kelamin" value={context.gender} emphasized />
           <ContextField label="Alamat" value={context.address} wide />
         </ContextGroup>
         <ContextGroup icon={<ClipboardList className="h-4 w-4" />} title="Kunjungan">
@@ -85,12 +92,14 @@ function ContextField({
   value,
   mono = false,
   wide = false,
+  emphasized = false,
   icon,
 }: {
   label: string;
   value: string;
   mono?: boolean;
   wide?: boolean;
+  emphasized?: boolean;
   icon?: ReactNode;
 }) {
   const empty = value === 'Belum tersedia';
@@ -100,6 +109,7 @@ function ContextField({
       <dd className={cn(
         'mt-0.5 flex min-w-0 items-start gap-1.5 break-words text-sm text-foreground',
         mono && 'font-mono text-xs',
+        emphasized && 'font-medium',
         empty && 'italic text-muted-foreground',
       )}>
         {icon ? <span className="mt-0.5 shrink-0 text-muted-foreground" aria-hidden="true">{icon}</span> : null}

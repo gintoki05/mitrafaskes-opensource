@@ -10,6 +10,7 @@ import { MedicalRecordStatus as PrismaMedicalRecordStatus } from '@prisma/client
 import {
   UserRole,
   type MedicalRecord,
+  type RmeAuditItem,
   type ResourceIntegrationSummary,
   type RmePreflightResult,
 } from '@mitrafaskes/shared';
@@ -78,9 +79,57 @@ export class RmeService {
     return record ? this.toResponse(record) : null;
   }
 
+  async auditByEncounterId(
+    encounterId: string,
+    actor: AuthenticatedUser,
+  ): Promise<RmeAuditItem[]> {
+    const actorUserId = await resolveActorUserId(this.prisma, actor);
+    const encounter = await this.prisma.encounter.findUnique({
+      where: { id: encounterId },
+      select: { doctorId: true },
+    });
+    if (!encounter) {
+      throw new NotFoundException('Kunjungan / Encounter tidak ditemukan');
+    }
+    assertDoctorAssignment(encounter.doctorId, actor, actorUserId);
+
+    const record = await this.prisma.medicalRecord.findUnique({
+      where: { encounterId },
+      select: { id: true },
+    });
+    if (!record) return [];
+
+    const events = await this.prisma.medicalRecordAuditEvent.findMany({
+      where: { medicalRecordId: record.id },
+      orderBy: [{ occurredAt: 'desc' }, { entityVersion: 'desc' }],
+      take: 50,
+      select: {
+        id: true,
+        action: true,
+        actorUsername: true,
+        actorRole: true,
+        entityVersion: true,
+        occurredAt: true,
+      },
+    });
+
+    return events.map((event) => ({
+      id: event.id,
+      action: event.action,
+      actorUsername: event.actorUsername,
+      actorRole: String(event.actorRole),
+      revision: event.entityVersion,
+      occurredAt: event.occurredAt.toISOString(),
+    }));
+  }
+
   async saveDraft(
     input: unknown,
     actor: AuthenticatedUser,
+    request: RmeRequestMetadata = {
+      requestId: randomUUID(),
+      correlationId: randomUUID(),
+    },
   ): Promise<MedicalRecord> {
     const draft = parseDraftInput(input);
     const actorUserId = await resolveActorUserId(this.prisma, actor);
@@ -187,22 +236,23 @@ export class RmeService {
         );
       }
 
-      if (correctingCompletedTriage && transaction.medicalRecordAuditEvent) {
-        const requestId = randomUUID();
+      if (transaction.medicalRecordAuditEvent) {
         await transaction.medicalRecordAuditEvent.create({
           data: {
             medicalRecordId: saved.id,
             actorUserId,
             actorUsername: actor.username,
             actorRole: actor.role,
-            action: 'RME_TRIAGE_CORRECTED_BY_DOCTOR',
+            action: correctingCompletedTriage
+              ? 'RME_TRIAGE_CORRECTED_BY_DOCTOR'
+              : 'RME_DRAFT_SAVED',
             entityType: 'MedicalRecord',
             entityId: saved.id,
             entityVersion: saved.version,
             expectedVersion: draft.expectedVersion,
-            requestId,
-            correlationId: requestId,
-            idempotencyKey: `RME_TRIAGE_CORRECTED_BY_DOCTOR:${saved.id}:${saved.version}`,
+            requestId: request.requestId,
+            correlationId: request.correlationId,
+            idempotencyKey: `${correctingCompletedTriage ? 'RME_TRIAGE_CORRECTED_BY_DOCTOR' : 'RME_DRAFT_SAVED'}:${saved.id}:${saved.version}`,
           },
         });
       }
