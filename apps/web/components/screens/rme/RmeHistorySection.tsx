@@ -41,7 +41,12 @@ export function RmeHistorySection({
   onRemove,
 }: RmeHistorySectionProps) {
   return (
-    <Card data-rme-section="anamnesis" tabIndex={-1}>
+    <Card
+      id="rme-section-clinical-history"
+      data-rme-section="anamnesis"
+      className="scroll-mt-24"
+      tabIndex={-1}
+    >
       <CardHeader className="flex flex-row items-start justify-between gap-3 pb-2">
         <div>
           <CardTitle className="text-sm font-bold text-foreground">

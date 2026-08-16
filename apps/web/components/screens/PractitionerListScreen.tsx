@@ -28,6 +28,7 @@ const initialQuery: MasterDataListQuery = {
   pageSize: 25,
   sort: 'name',
   direction: 'asc',
+  active: true,
 };
 
 export default function PractitionerListScreen() {
@@ -39,9 +40,7 @@ export default function PractitionerListScreen() {
   );
   const [query, setQuery] = useState(initialQuery);
   const [searchDraft, setSearchDraft] = useState('');
-  const [statusFilter, setStatusFilter] = useState<boolean | undefined>(
-    undefined,
-  );
+  const [statusFilter, setStatusFilter] = useState<boolean | undefined>(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [linkPractitioner, setLinkPractitioner] =
     useState<PractitionerSummary | null>(null);
@@ -74,7 +73,7 @@ export default function PractitionerListScreen() {
 
   const clearFilters = () => {
     setSearchDraft('');
-    setStatusFilter(undefined);
+    setStatusFilter(true);
     setQuery(initialQuery);
   };
 
@@ -140,7 +139,7 @@ export default function PractitionerListScreen() {
               disabled={loading}
             />
           }
-          hasActiveFilters={Boolean(query.search || query.active !== undefined)}
+          hasActiveFilters={Boolean(query.search || query.active !== true)}
           onClearFilters={clearFilters}
           onRefresh={() => void refresh()}
           sort={query.sort}

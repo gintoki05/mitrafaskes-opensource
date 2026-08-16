@@ -41,6 +41,7 @@ const initialQuery: MasterDataListQuery = {
   pageSize: 25,
   sort: "name",
   direction: "asc",
+  active: true,
 };
 
 type TypeFilter = "ALL" | OrganizationSummary["type"];
@@ -54,9 +55,7 @@ export default function OrganizationListScreen() {
   );
   const [query, setQuery] = useState(initialQuery);
   const [searchDraft, setSearchDraft] = useState("");
-  const [statusFilter, setStatusFilter] = useState<boolean | undefined>(
-    undefined,
-  );
+  const [statusFilter, setStatusFilter] = useState<boolean | undefined>(true);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<OrganizationSummary | null>(null);
@@ -116,7 +115,7 @@ export default function OrganizationListScreen() {
 
   const clearFilters = () => {
     setSearchDraft("");
-    setStatusFilter(undefined);
+    setStatusFilter(true);
     setTypeFilter("ALL");
     setQuery(initialQuery);
   };
@@ -312,7 +311,7 @@ export default function OrganizationListScreen() {
             </>
           }
           hasActiveFilters={Boolean(
-            query.search || query.active !== undefined || query.type,
+            query.search || query.active !== true || query.type,
           )}
           onClearFilters={clearFilters}
           onRefresh={() => void refreshList()}

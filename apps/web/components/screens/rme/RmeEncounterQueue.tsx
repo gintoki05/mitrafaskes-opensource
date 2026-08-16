@@ -1,11 +1,17 @@
 'use client';
 
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { ListChecks, PanelLeftClose, PanelLeftOpen, RefreshCw } from 'lucide-react';
 import type { ListMeta } from '@mitrafaskes/shared';
 import type { Encounter } from '@/lib/clinical-types';
 
@@ -13,9 +19,11 @@ type RmeEncounterQueueProps = {
   encounters: Encounter[];
   meta: ListMeta;
   selectedEncounter: Encounter | null;
+  isOpen: boolean;
   encountersLoading: boolean;
   loadError: string;
   onSelectEncounter: (encounter: Encounter) => void;
+  onOpenChange: (open: boolean) => void;
   onPageChange: (page: number) => void;
   onRetry: () => void;
   canStart: boolean;
@@ -27,9 +35,11 @@ export function RmeEncounterQueue({
   encounters,
   meta,
   selectedEncounter,
+  isOpen,
   encountersLoading,
   loadError,
   onSelectEncounter,
+  onOpenChange,
   onPageChange,
   onRetry,
   canStart,
@@ -37,14 +47,68 @@ export function RmeEncounterQueue({
   onStartEncounter,
 }: RmeEncounterQueueProps) {
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
+  const selectedPatientName = selectedEncounter?.patient?.fullName ?? 'Belum ada pasien dipilih';
+  const selectedPatientMeta = selectedEncounter
+    ? `${selectedEncounter.patient?.medicalRecNo ?? 'No. RM belum tersedia'} · #${selectedEncounter.queueNumber}`
+    : 'Buka antrean untuk memilih pasien';
+  const queueCountLabel = meta.total === 0 ? 'Tidak ada antrean aktif' : `${meta.total} antrean aktif`;
+
+  if (!isOpen) {
+    return (
+      <Card className="border-primary/20 bg-primary/5">
+        <CardContent className="flex flex-wrap items-center justify-between gap-3 p-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] bg-primary/10 text-primary">
+              <ListChecks className="size-4" aria-hidden="true" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Antrean pasien
+              </p>
+              <p className="truncate text-sm font-semibold text-foreground">{selectedPatientName}</p>
+              <p className="truncate text-xs text-muted-foreground">
+                {selectedPatientMeta} · {queueCountLabel}
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => onOpenChange(true)}
+            aria-expanded={false}
+            aria-controls="rme-encounter-queue-panel"
+          >
+            <PanelLeftOpen className="size-4" aria-hidden="true" />
+            Buka antrean
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="min-w-0 space-y-4">
-      <Card>
+      <Card id="rme-encounter-queue-panel">
         <CardHeader className="pb-3">
           <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
             Pilih Antrean Pasien
           </CardTitle>
+          <CardAction>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange(false)}
+              aria-label="Sembunyikan antrean pasien"
+              title="Sembunyikan antrean pasien"
+              aria-expanded={true}
+              aria-controls="rme-encounter-queue-panel"
+            >
+              <PanelLeftClose className="size-4" aria-hidden="true" />
+            </Button>
+          </CardAction>
+          <p className="text-xs text-muted-foreground">{queueCountLabel}</p>
         </CardHeader>
         <CardContent className="space-y-2">
           {encountersLoading ? (

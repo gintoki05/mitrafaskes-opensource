@@ -47,6 +47,7 @@ const initialQuery: MasterDataListQuery = {
   pageSize: 25,
   sort: "name",
   direction: "asc",
+  active: true,
 };
 
 type TypeFilter = "ALL" | LocationSummary["type"];
@@ -61,9 +62,7 @@ export default function LocationListScreen() {
   );
   const [query, setQuery] = useState(initialQuery);
   const [searchDraft, setSearchDraft] = useState("");
-  const [activeFilter, setActiveFilter] = useState<boolean | undefined>(
-    undefined,
-  );
+  const [activeFilter, setActiveFilter] = useState<boolean | undefined>(true);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
   const [locationStatusFilter, setLocationStatusFilter] =
     useState<LocationStatusFilter>("ALL");
@@ -135,7 +134,7 @@ export default function LocationListScreen() {
 
   const clearFilters = () => {
     setSearchDraft("");
-    setActiveFilter(undefined);
+    setActiveFilter(true);
     setTypeFilter("ALL");
     setLocationStatusFilter("ALL");
     setOrganizationFilter("ALL");
@@ -376,7 +375,7 @@ export default function LocationListScreen() {
           }
           hasActiveFilters={Boolean(
             query.search ||
-              query.active !== undefined ||
+              query.active !== true ||
               query.type ||
               query.status ||
               query.organizationId,

@@ -15,6 +15,7 @@ import { useSession } from '@/hooks/useSession';
 import { can } from '@/lib/auth';
 import { toast } from 'sonner';
 import { RmeEncounterQueue } from './rme/RmeEncounterQueue';
+import { RmeBackToTop } from './rme/RmeBackToTop';
 import { RmeForm, RmeFormPlaceholder } from './rme/RmeForm';
 import { RmeWorkspaceContext } from './rme/RmeWorkspaceContext';
 import { resolveRmeWorkspaceViewState } from './rme/rme-workspace-model';
@@ -55,6 +56,7 @@ export default function RmePage() {
   const observationActions = useObservationActions();
   const encounterActions = useEncounterActions();
   const [startingEncounterId, setStartingEncounterId] = useState<string | null>(null);
+  const [queueOpen, setQueueOpen] = useState(false);
   const canSyncDiagnosis = can(
     session?.user ?? null,
     AccessPermission.SYNC_RETRY,
@@ -221,14 +223,22 @@ export default function RmePage() {
           }
         />
 
-        <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
+        <div
+          className={
+            queueOpen
+              ? 'grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[14rem_minmax(0,1fr)] xl:gap-8'
+              : 'grid min-w-0 grid-cols-1 gap-6'
+          }
+        >
           <RmeEncounterQueue
             encounters={encounters}
             meta={encountersMeta}
             selectedEncounter={selectedEncounter}
+            isOpen={queueOpen}
             encountersLoading={encountersLoading}
             loadError={loadError}
             onSelectEncounter={selectEncounter}
+            onOpenChange={setQueueOpen}
             onPageChange={(page) => void refreshEncounters(page)}
             onRetry={() => void refreshEncounters(encountersMeta.page)}
             canStart={canStartEncounter}
@@ -236,7 +246,7 @@ export default function RmePage() {
             onStartEncounter={(encounter) => void handleStartEncounter(encounter)}
           />
 
-          <div className="min-w-0 space-y-6 lg:col-span-3">
+          <div className="min-w-0 space-y-6">
             {selectedEncounter ? (
               <RmeWorkspaceContext
                 encounter={selectedEncounter}
@@ -311,6 +321,7 @@ export default function RmePage() {
           </div>
         </div>
       </div>
+      <RmeBackToTop />
     </RouteGuard>
   );
 }

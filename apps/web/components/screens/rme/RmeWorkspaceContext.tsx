@@ -1,8 +1,10 @@
 import { ClipboardList, Clock3, MapPin, Stethoscope, UserRound } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { Encounter, MedicalRecord } from '@mitrafaskes/shared';
+import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 import { buildRmeWorkspaceContext } from './rme-workspace-model';
 
 export function RmeWorkspaceContext({
@@ -45,6 +47,11 @@ export function RmeWorkspaceContext({
           <Badge variant="secondary" className="border-transparent bg-secondary/70">
             {context.serviceProfileLabel}
           </Badge>
+          <SatusehatLinkageBadge
+            linkage={getIntegrationLinkage(encounter.integrations, 'SATUSEHAT')}
+            latestSync={getLatestIntegrationSync(encounter.integrations, 'SATUSEHAT')}
+            resourceName={encounter.encounterNumber}
+          />
         </div>
       </div>
 

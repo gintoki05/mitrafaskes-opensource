@@ -44,7 +44,11 @@ export function RmeDiagnosisSection({
   onSyncDiagnosis,
 }: RmeDiagnosisSectionProps) {
   return (
-    <Card>
+    <Card
+      id="rme-section-diagnosis"
+      className="scroll-mt-24"
+      tabIndex={-1}
+    >
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
           <Heart className="h-4 w-4 text-destructive" />

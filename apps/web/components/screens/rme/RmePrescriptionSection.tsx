@@ -28,7 +28,11 @@ export function RmePrescriptionSection({
   onApplyPresetBundle,
 }: RmePrescriptionSectionProps) {
   return (
-    <Card>
+    <Card
+      id="rme-section-prescriptions"
+      className="scroll-mt-24"
+      tabIndex={-1}
+    >
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
           <Thermometer className="h-4 w-4 text-warning" />

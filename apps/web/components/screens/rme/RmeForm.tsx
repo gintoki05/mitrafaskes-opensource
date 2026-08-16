@@ -42,6 +42,7 @@ import {
   RmeGlobalFinalizationIssues,
   RmeSectionIssues,
 } from "./RmeFinalizationIssues";
+import { RmeFormSectionNav } from "./RmeFormSectionNav";
 
 type RmeFormProps = {
   record: MedicalRecord | null;
@@ -209,7 +210,13 @@ export function RmeForm({
   };
 
   return (
-    <form onSubmit={saveDraft} className="space-y-6" noValidate>
+    <form
+      onSubmit={saveDraft}
+      className="grid gap-6 lg:grid-cols-[12rem_minmax(0,1fr)] lg:items-start"
+      noValidate
+    >
+      <RmeFormSectionNav />
+      <div className="min-w-0 space-y-6">
       <RmeLifecycleSummary
         record={record}
         readOnly={readOnly}
@@ -266,7 +273,12 @@ export function RmeForm({
           onRemove={removeHistory}
         />
 
-        <div data-rme-section="vitalSigns" tabIndex={-1}>
+        <div
+          id="rme-section-vital-signs"
+          data-rme-section="vitalSigns"
+          className="scroll-mt-24"
+          tabIndex={-1}
+        >
           <RmeVitalSigns
             systolic={systolic}
             diastolic={diastolic}
@@ -285,18 +297,24 @@ export function RmeForm({
           issues={finalizationIssues}
         />
       </fieldset>
-      <RmeObservationSection
-        observations={record?.observations ?? []}
-        syncDisabled={isDirty || busy}
-        syncDisabledReason={
-          busy
-            ? "Tunggu proses RME selesai."
-            : "Simpan perubahan lokal sebelum sinkronisasi."
-        }
-        canSyncObservation={canSyncObservation}
-        syncingObservationId={syncingObservationId}
-        onSyncObservation={onSyncObservation}
-      />
+      <div
+        id="rme-section-observations"
+        className="scroll-mt-24"
+        tabIndex={-1}
+      >
+        <RmeObservationSection
+          observations={record?.observations ?? []}
+          syncDisabled={isDirty || busy}
+          syncDisabledReason={
+            busy
+              ? "Tunggu proses RME selesai."
+              : "Simpan perubahan lokal sebelum sinkronisasi."
+          }
+          canSyncObservation={canSyncObservation}
+          syncingObservationId={syncingObservationId}
+          onSyncObservation={onSyncObservation}
+        />
+      </div>
       <div data-rme-section="diagnoses" tabIndex={-1}>
         <RmeDiagnosisSection
           icdSearch={icdSearch}
@@ -363,6 +381,7 @@ export function RmeForm({
         onPreflight={onPreflight}
         onFinalize={onFinalize}
       />
+      </div>
     </form>
   );
 }

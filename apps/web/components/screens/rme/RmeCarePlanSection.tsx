@@ -19,7 +19,12 @@ export function RmeCarePlanSection({
   issues: RmeValidationIssue[];
 }) {
   return (
-    <Card data-rme-section="plan" tabIndex={-1}>
+    <Card
+      id="rme-section-plan"
+      data-rme-section="plan"
+      className="scroll-mt-24"
+      tabIndex={-1}
+    >
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
           <ListChecks className="h-4 w-4 text-primary" />

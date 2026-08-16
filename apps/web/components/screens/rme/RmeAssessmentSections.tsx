@@ -22,7 +22,12 @@ export function RmeAssessmentSections({
 }: Props) {
   return (
     <>
-      <Card data-rme-section="anamnesis" tabIndex={-1}>
+      <Card
+        id="rme-section-anamnesis"
+        data-rme-section="anamnesis"
+        className="scroll-mt-24"
+        tabIndex={-1}
+      >
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
             <FileText className="h-4 w-4 text-primary" />
@@ -54,7 +59,12 @@ export function RmeAssessmentSections({
         </CardContent>
       </Card>
 
-      <Card data-rme-section="allergies" tabIndex={-1}>
+      <Card
+        id="rme-section-allergies"
+        data-rme-section="allergies"
+        className="scroll-mt-24"
+        tabIndex={-1}
+      >
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
             <ShieldCheck className="h-4 w-4 text-primary" />
@@ -99,7 +109,12 @@ export function RmePhysicalExamSection({
   issues,
 }: Pick<Props, 'register' | 'issues'>) {
   return (
-    <Card data-rme-section="physicalExam" tabIndex={-1}>
+    <Card
+      id="rme-section-physical-exam"
+      data-rme-section="physicalExam"
+      className="scroll-mt-24"
+      tabIndex={-1}
+    >
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
           <ClipboardCheck className="h-4 w-4 text-primary" />
