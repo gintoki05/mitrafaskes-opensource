@@ -1,16 +1,21 @@
 'use client';
 
 import { useMemo, useState, type FormEvent } from 'react';
-import type {
-  CreateEncounterDto,
-  Patient,
-  PractitionerSummary,
+import {
+  EncounterStatus,
+  type CreateEncounterDto,
+  type Patient,
+  type PractitionerSummary,
 } from '@mitrafaskes/shared';
 import { AlertTriangle, Building2, ClipboardPlus, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FieldDescription, FieldError } from '@/components/ui/field';
+import {
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+} from '@/components/satusehat/satusehat-status';
 import { FieldLabel, SelectField } from '../master-faskes/FormField';
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
 import { useMasterFaskesData } from '@/hooks/useMasterFaskesData';
@@ -145,7 +150,12 @@ export function EncounterRegistrationDialog({
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                 <span className="font-semibold text-foreground">{patient.fullName}</span>
                 <span className="font-mono text-muted-foreground">RM {patient.medicalRecNo}</span>
-                <Badge className="clinical-status-warning border text-[10px] font-bold">MENUNGGU</Badge>
+                <Badge
+                  className="clinical-status-warning border text-[10px] font-bold"
+                  title={getSatusehatEncounterStatusTooltip(EncounterStatus.WAITING)}
+                >
+                  {getSatusehatEncounterStatus(EncounterStatus.WAITING)}
+                </Badge>
               </div>
             </div>
             <Button

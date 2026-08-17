@@ -86,7 +86,7 @@ export function TriageForm({
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               {completed
-                ? `Ditetapkan oleh ${record?.triageCompletedBy ?? "perawat"}; dokter tetap meninjau saat pemeriksaan.`
+                ? `Triase telah diselesaikan oleh ${record?.triageCompletedByName ?? "perawat"}; dokter tetap meninjau saat pemeriksaan.`
                 : "Isi data awal pasien, simpan, lalu tandai siap diperiksa."}
             </p>
           </div>

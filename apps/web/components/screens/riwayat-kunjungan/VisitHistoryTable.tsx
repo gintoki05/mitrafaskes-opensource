@@ -20,6 +20,7 @@ import {
 import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 import {
   encounterStatusLabels,
+  encounterStatusTooltips,
   formatVisitDate,
   statusClass,
 } from './constants';
@@ -133,7 +134,10 @@ export function VisitHistoryTable({
                     {encounter.location?.name ?? 'Belum tersedia'}
                   </TableCell>
                   <TableCell className="px-4 py-4 align-top">
-                    <Badge className={statusClass(encounter.status as EncounterStatus)}>
+                    <Badge
+                      className={statusClass(encounter.status as EncounterStatus)}
+                      title={encounterStatusTooltips[encounter.status as EncounterStatus]}
+                    >
                       {encounterStatusLabels[encounter.status as EncounterStatus]}
                     </Badge>
                   </TableCell>

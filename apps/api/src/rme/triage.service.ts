@@ -69,7 +69,7 @@ export class TriageService {
       where: { encounterId },
       include: medicalRecordInclude,
     });
-    return record ? toTriageRecord(record) : null;
+    return record ? this.mapTriageRecord(record) : null;
   }
 
   async saveDraft(
@@ -177,7 +177,7 @@ export class TriageService {
       });
       return saved;
     });
-    return toTriageRecord(record);
+    return this.mapTriageRecord(record);
   }
 
   async complete(
@@ -267,7 +267,20 @@ export class TriageService {
       });
       return updated;
     });
-    return toTriageRecord(record);
+    return this.mapTriageRecord(record);
+  }
+
+  private async mapTriageRecord(
+    record: MedicalRecordWithRelations,
+  ): Promise<MedicalRecord> {
+    const mapped = toMedicalRecord(record);
+    const completedBy = mapped.triageCompletedBy
+      ? await this.prisma.user.findUnique({
+          where: { username: mapped.triageCompletedBy },
+          select: { fullName: true },
+        })
+      : null;
+    return toTriageRecord(mapped, completedBy?.fullName);
   }
 
   private assertTriageEditable(
@@ -360,8 +373,10 @@ export class TriageService {
 }
 
 /** Keep the nurse surface limited to triage data; doctor-only RME sections stay server-side. */
-function toTriageRecord(record: MedicalRecordWithRelations): MedicalRecord {
-  const mapped = toMedicalRecord(record);
+function toTriageRecord(
+  mapped: MedicalRecord,
+  triageCompletedByName?: string,
+): MedicalRecord {
   return {
     id: mapped.id,
     encounterId: mapped.encounterId,
@@ -373,6 +388,7 @@ function toTriageRecord(record: MedicalRecordWithRelations): MedicalRecord {
     triageUpdatedBy: mapped.triageUpdatedBy,
     triageUpdatedAt: mapped.triageUpdatedAt,
     triageCompletedBy: mapped.triageCompletedBy,
+    triageCompletedByName,
     triageCompletedAt: mapped.triageCompletedAt,
     chiefComplaint: mapped.chiefComplaint,
     presentIllness: mapped.presentIllness,

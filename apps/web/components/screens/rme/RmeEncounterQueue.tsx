@@ -11,6 +11,10 @@ import {
 import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
 import { Button } from '@/components/ui/button';
+import {
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+} from '@/components/satusehat/satusehat-status';
 import { ListChecks, PanelLeftClose, PanelLeftOpen, RefreshCw } from 'lucide-react';
 import type { ListMeta } from '@mitrafaskes/shared';
 import type { Encounter } from '@/lib/clinical-types';
@@ -151,7 +155,13 @@ export function RmeEncounterQueue({
                 <div className="font-mono text-[11px] text-muted-foreground">{encounter.patient?.medicalRecNo}</div>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   <Badge className="bg-muted font-mono text-[10px] font-bold text-primary">#{encounter.queueNumber}</Badge>
-                  <Badge variant="outline" className="text-[10px]">{encounter.status === 'WAITING' ? 'Menunggu' : 'Sedang diperiksa'}</Badge>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px]"
+                    title={getSatusehatEncounterStatusTooltip(encounter.status)}
+                  >
+                    {getSatusehatEncounterStatus(encounter.status)}
+                  </Badge>
                   <Badge variant="outline" className="text-[10px]">{encounter.triage?.status === 'COMPLETED' ? 'Triase selesai' : encounter.triage?.status === 'DRAFT' ? 'Triase draft' : 'Triase belum selesai'}</Badge>
                 </div>
               </button>

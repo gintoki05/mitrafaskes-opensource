@@ -7,7 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FieldLabel, SelectField } from '../master-faskes/FormField';
 import type { VisitHistoryFilters as VisitHistoryFiltersValue } from './types';
-import { visitHistoryStatusLabels } from './constants';
+import {
+  visitHistoryStatusLabels,
+  visitHistoryStatusTooltips,
+} from './constants';
 
 type VisitHistoryFiltersProps = {
   value: VisitHistoryFiltersValue;
@@ -95,11 +98,18 @@ export function VisitHistoryFilters({
             value={value.status}
             onChange={(status) => onChange({ status: status as VisitHistoryFiltersValue['status'] })}
             aria-label="Filter status kunjungan"
+            title={visitHistoryStatusTooltips[value.status]}
             className="h-9"
           >
-            <option value="ALL">{visitHistoryStatusLabels.ALL}</option>
+            <option value="ALL" title={visitHistoryStatusTooltips.ALL}>
+              {visitHistoryStatusLabels.ALL}
+            </option>
             {Object.values(EncounterStatus).map((status) => (
-              <option key={status} value={status}>
+              <option
+                key={status}
+                value={status}
+                title={visitHistoryStatusTooltips[status]}
+              >
                 {visitHistoryStatusLabels[status]}
               </option>
             ))}

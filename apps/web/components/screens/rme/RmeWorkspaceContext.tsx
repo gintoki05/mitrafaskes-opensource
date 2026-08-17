@@ -43,7 +43,7 @@ export function RmeWorkspaceContext({
             </dl>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2 sm:justify-end">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
           <Badge variant="secondary" className="border-transparent bg-secondary/70">
             {context.serviceProfileLabel}
           </Badge>

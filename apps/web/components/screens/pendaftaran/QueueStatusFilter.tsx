@@ -5,6 +5,10 @@ import type { EncounterStatusCounts } from '@mitrafaskes/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+} from '@/components/satusehat/satusehat-status';
 
 export type QueueStatusFilterValue = 'ACTIVE' | EncounterStatus;
 
@@ -18,10 +22,18 @@ export const queueStatusFilterValues: readonly QueueStatusFilterValue[] = [
 
 const queueStatusLabels: Record<QueueStatusFilterValue, string> = {
   ACTIVE: 'Aktif',
-  [EncounterStatus.WAITING]: 'Menunggu',
-  [EncounterStatus.IN_PROGRESS]: 'Diperiksa',
-  [EncounterStatus.COMPLETED]: 'Selesai',
-  [EncounterStatus.CANCELLED]: 'Dibatalkan',
+  [EncounterStatus.WAITING]: getSatusehatEncounterStatus(EncounterStatus.WAITING),
+  [EncounterStatus.IN_PROGRESS]: getSatusehatEncounterStatus(EncounterStatus.IN_PROGRESS),
+  [EncounterStatus.COMPLETED]: getSatusehatEncounterStatus(EncounterStatus.COMPLETED),
+  [EncounterStatus.CANCELLED]: getSatusehatEncounterStatus(EncounterStatus.CANCELLED),
+};
+
+const queueStatusTooltips: Record<QueueStatusFilterValue, string> = {
+  ACTIVE: 'Filter lokal untuk gabungan status arrived dan in-progress.',
+  [EncounterStatus.WAITING]: getSatusehatEncounterStatusTooltip(EncounterStatus.WAITING),
+  [EncounterStatus.IN_PROGRESS]: getSatusehatEncounterStatusTooltip(EncounterStatus.IN_PROGRESS),
+  [EncounterStatus.COMPLETED]: getSatusehatEncounterStatusTooltip(EncounterStatus.COMPLETED),
+  [EncounterStatus.CANCELLED]: getSatusehatEncounterStatusTooltip(EncounterStatus.CANCELLED),
 };
 
 const activeQueueStatuses: readonly EncounterStatus[] = [
@@ -76,6 +88,7 @@ export function QueueStatusFilter({
             aria-pressed={selected}
             disabled={disabled}
             onClick={() => onChange(filter)}
+            title={queueStatusTooltips[filter]}
             className={cn(
               'h-9 gap-2 rounded-full border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50',
               selected

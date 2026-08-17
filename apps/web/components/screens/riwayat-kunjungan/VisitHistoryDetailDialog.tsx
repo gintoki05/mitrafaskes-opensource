@@ -10,6 +10,7 @@ import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrati
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
 import {
   encounterStatusLabels,
+  encounterStatusTooltips,
   formatVisitDate,
   formatVisitDateTime,
   statusClass,
@@ -49,7 +50,12 @@ export function VisitHistoryDetailDialog({
               <p className="text-xs font-semibold text-foreground">Status kunjungan</p>
               <p className="mt-1 text-xs text-muted-foreground">Data ini bersifat read-only dari histori Encounter.</p>
             </div>
-            <Badge className={statusClass(encounter.status)}>{encounterStatusLabels[encounter.status]}</Badge>
+            <Badge
+              className={statusClass(encounter.status)}
+              title={encounterStatusTooltips[encounter.status]}
+            >
+              {encounterStatusLabels[encounter.status]}
+            </Badge>
           </div>
 
           <section aria-labelledby="visit-detail-identity">
@@ -98,7 +104,13 @@ export function VisitHistoryDetailDialog({
               {encounter.statusHistory.length > 0 ? encounter.statusHistory.map((history) => (
                 <div key={history.id} className="flex flex-col gap-1 p-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <Badge variant="outline" className="text-[11px]">{encounterStatusLabels[history.status]}</Badge>
+                    <Badge
+                      variant="outline"
+                      className="text-[11px]"
+                      title={encounterStatusTooltips[history.status]}
+                    >
+                      {encounterStatusLabels[history.status]}
+                    </Badge>
                     <p className="mt-1 text-xs text-muted-foreground">{history.actorUsername} · {history.actorRole}</p>
                   </div>
                   <p className="text-xs text-muted-foreground">

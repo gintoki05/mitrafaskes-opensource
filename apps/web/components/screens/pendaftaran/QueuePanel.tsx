@@ -20,6 +20,10 @@ import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
 import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
+import {
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+} from '@/components/satusehat/satusehat-status';
 import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 import type { EncounterApiError } from '@/hooks/useEncounterActions';
 import { EncounterCancellationDialog } from './EncounterCancellationDialog';
@@ -44,13 +48,6 @@ type QueuePanelProps = {
   canStart: boolean;
   canCancel: boolean;
   canSync: boolean;
-};
-
-const statusLabels: Record<EncounterStatus, string> = {
-  WAITING: 'Menunggu',
-  IN_PROGRESS: 'Diperiksa',
-  COMPLETED: 'Selesai',
-  CANCELLED: 'Dibatalkan',
 };
 
 function statusClass(status: EncounterStatus): string {
@@ -214,8 +211,11 @@ export function QueuePanel({
                 </div>
               </div>
               <div className="flex basis-full w-full min-w-0 flex-1 flex-wrap items-center justify-start gap-2 sm:basis-auto sm:w-auto sm:min-w-[12rem] sm:flex-none sm:justify-end">
-                <Badge className={statusClass(encounter.status)}>
-                  {statusLabels[encounter.status]}
+                <Badge
+                  className={statusClass(encounter.status)}
+                  title={getSatusehatEncounterStatusTooltip(encounter.status)}
+                >
+                  {getSatusehatEncounterStatus(encounter.status)}
                 </Badge>
                 <SatusehatLinkageBadge
                   linkage={satusehatLinkage}

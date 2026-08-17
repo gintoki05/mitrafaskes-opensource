@@ -1,13 +1,46 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { resolveEncounterSyncUiState, shouldRefreshEncounterListAfterSync } from '../encounters/encounter-sync-state.ts';
-import { formatSatusehatRemoteStatus } from '../../satusehat/satusehat-status.ts';
+import {
+  formatSatusehatRemoteStatus,
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+  getSatusehatStatusTooltip,
+} from '../../satusehat/satusehat-status.ts';
+import { EncounterStatus } from '@mitrafaskes/shared';
 
-test('SATUSEHAT remote Encounter statuses are shown in Indonesian', () => {
-  assert.equal(formatSatusehatRemoteStatus('arrived'), 'Menunggu');
-  assert.equal(formatSatusehatRemoteStatus('in-progress'), 'Sedang diperiksa');
-  assert.equal(formatSatusehatRemoteStatus('cancelled'), 'Dibatalkan');
+test('SATUSEHAT remote Encounter statuses are shown as provider codes', () => {
+  assert.equal(formatSatusehatRemoteStatus('arrived'), 'arrived');
+  assert.equal(formatSatusehatRemoteStatus('in-progress'), 'in-progress');
+  assert.equal(formatSatusehatRemoteStatus('cancelled'), 'cancelled');
   assert.equal(formatSatusehatRemoteStatus('future-status'), 'future-status');
+});
+
+test('local Encounter statuses expose their SATUSEHAT code and tooltip', () => {
+  assert.equal(getSatusehatEncounterStatus(EncounterStatus.WAITING), 'arrived');
+  assert.equal(getSatusehatEncounterStatus(EncounterStatus.IN_PROGRESS), 'in-progress');
+  assert.equal(getSatusehatEncounterStatus(EncounterStatus.COMPLETED), 'finished');
+  assert.equal(getSatusehatEncounterStatus(EncounterStatus.CANCELLED), 'cancelled');
+  assert.match(
+    getSatusehatEncounterStatusTooltip(EncounterStatus.WAITING),
+    /^arrived: /,
+  );
+});
+
+test('all FHIR R4 Encounter status codes have tooltip text', () => {
+  for (const status of [
+    'planned',
+    'arrived',
+    'triaged',
+    'in-progress',
+    'onleave',
+    'finished',
+    'cancelled',
+    'entered-in-error',
+    'unknown',
+  ]) {
+    assert.match(getSatusehatStatusTooltip(status) ?? '', new RegExp(`^${status}: `));
+  }
 });
 
 test('Encounter sync UI exposes loading and permission-disabled states', () => {

@@ -1,4 +1,8 @@
-import type { EncounterStatus } from '@mitrafaskes/shared';
+import { EncounterStatus } from '@mitrafaskes/shared';
+import {
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+} from '../../satusehat/satusehat-status.ts';
 import type {
   VisitHistoryFilters,
   VisitHistoryStatusFilter,
@@ -9,17 +13,32 @@ export const VISIT_HISTORY_RANGE_DAYS = 30;
 
 export const visitHistoryStatusLabels: Record<VisitHistoryStatusFilter, string> = {
   ALL: 'Semua status',
-  WAITING: 'Menunggu',
-  IN_PROGRESS: 'Diperiksa',
-  COMPLETED: 'Selesai',
-  CANCELLED: 'Dibatalkan',
+  WAITING: getSatusehatEncounterStatus(EncounterStatus.WAITING),
+  IN_PROGRESS: getSatusehatEncounterStatus(EncounterStatus.IN_PROGRESS),
+  COMPLETED: getSatusehatEncounterStatus(EncounterStatus.COMPLETED),
+  CANCELLED: getSatusehatEncounterStatus(EncounterStatus.CANCELLED),
 };
 
 export const encounterStatusLabels: Record<EncounterStatus, string> = {
-  WAITING: 'Menunggu',
-  IN_PROGRESS: 'Diperiksa',
-  COMPLETED: 'Selesai',
-  CANCELLED: 'Dibatalkan',
+  WAITING: getSatusehatEncounterStatus(EncounterStatus.WAITING),
+  IN_PROGRESS: getSatusehatEncounterStatus(EncounterStatus.IN_PROGRESS),
+  COMPLETED: getSatusehatEncounterStatus(EncounterStatus.COMPLETED),
+  CANCELLED: getSatusehatEncounterStatus(EncounterStatus.CANCELLED),
+};
+
+export const encounterStatusTooltips: Record<EncounterStatus, string> = {
+  WAITING: getSatusehatEncounterStatusTooltip(EncounterStatus.WAITING),
+  IN_PROGRESS: getSatusehatEncounterStatusTooltip(EncounterStatus.IN_PROGRESS),
+  COMPLETED: getSatusehatEncounterStatusTooltip(EncounterStatus.COMPLETED),
+  CANCELLED: getSatusehatEncounterStatusTooltip(EncounterStatus.CANCELLED),
+};
+
+export const visitHistoryStatusTooltips: Record<VisitHistoryStatusFilter, string> = {
+  ALL: 'Menampilkan semua status Encounter.',
+  WAITING: encounterStatusTooltips.WAITING,
+  IN_PROGRESS: encounterStatusTooltips.IN_PROGRESS,
+  COMPLETED: encounterStatusTooltips.COMPLETED,
+  CANCELLED: encounterStatusTooltips.CANCELLED,
 };
 
 export function dateInputValue(date: Date): string {

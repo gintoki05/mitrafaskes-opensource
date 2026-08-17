@@ -20,11 +20,15 @@ import { useTriageResources } from "./triase/useTriageResources";
 import { useSession } from "@/hooks/useSession";
 import { can } from "@/lib/auth";
 import { toast } from "sonner";
+import {
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+} from "@/components/satusehat/satusehat-status";
 
 const triageLabels: Record<TriageStatus, string> = {
   NOT_STARTED: "Belum triase",
   DRAFT: "Draft triase",
-  COMPLETED: "Siap diperiksa",
+  COMPLETED: "Triase selesai",
 };
 
 export default function TriaseScreen() {
@@ -75,13 +79,13 @@ export default function TriaseScreen() {
         <PageHeader
           icon={<HeartPulse className="h-6 w-6" />}
           title="Triase Perawat"
-          description="Pasien yang sudah mulai diperiksa tetapi triase belum selesai tetap muncul di antrean ini."
+          description="Antrean triase dan hasil triase yang sudah tersimpan untuk kunjungan hari ini tersedia di sini."
         />
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
           <Card className="min-w-0">
             <CardHeader className="pb-3">
               <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Antrean menunggu
+                Antrean & hasil triase
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -109,8 +113,8 @@ export default function TriaseScreen() {
               ) : resources.encounters.length === 0 ? (
                 <ScreenState
                   kind="empty"
-                  title="Belum ada pasien"
-                  description="Pasien WAITING akan tampil di sini."
+                  title="Belum ada antrean atau hasil triase"
+                  description="Pasien yang menunggu triase dan hasil triase yang sudah selesai akan tampil di sini."
                 />
               ) : (
                 resources.encounters.map((encounter) => (
@@ -131,10 +135,12 @@ export default function TriaseScreen() {
                       </span>
                     </span>
                     <span className="flex shrink-0 flex-col items-end gap-1">
-                      <Badge variant="outline" className="text-[10px]">
-                        {encounter.status === "IN_PROGRESS"
-                          ? "Sedang diperiksa"
-                          : "Menunggu"}
+                      <Badge
+                        variant="outline"
+                        className="text-[10px]"
+                        title={getSatusehatEncounterStatusTooltip(encounter.status)}
+                      >
+                        {getSatusehatEncounterStatus(encounter.status)}
                       </Badge>
                       <Badge variant="outline" className="text-[10px]">
                         {triageLabels[encounter.triage?.status ?? "NOT_STARTED"]}
