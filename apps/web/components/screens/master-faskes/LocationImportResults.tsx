@@ -1,10 +1,9 @@
 'use client';
 
 import type { SatusehatLocationRemoteSummary } from '@mitrafaskes/shared';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { PaginationControl } from '@/components/ui/pagination';
 import { SatusehatLocationResult } from './SatusehatLocationResult';
 
 type LocationImportResultsProps = {
@@ -101,28 +100,14 @@ export function LocationImportResults({
               Halaman {page}/{totalPages}
             </Badge>
           </div>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={() => onPageChange(page - 1)}
-              disabled={page <= 1}
-              aria-label="Halaman sebelumnya"
-            >
-              <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon-sm"
-              onClick={() => onPageChange(page + 1)}
-              disabled={page >= totalPages}
-              aria-label="Halaman berikutnya"
-            >
-              <ChevronRight className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </div>
+          <PaginationControl
+            page={page}
+            totalPages={totalPages}
+            onPageChange={onPageChange}
+            showLabels={false}
+            aria-label="Navigasi halaman hasil import Location"
+            className="mx-0 w-auto"
+          />
         </div>
       ) : null}
     </section>

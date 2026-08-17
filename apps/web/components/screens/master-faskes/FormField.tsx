@@ -96,7 +96,7 @@ export function SelectField({
         aria-describedby={ariaDescribedBy}
         aria-invalid={ariaInvalid}
         className={cn(
-          "min-w-0 w-full px-2.5 py-1 text-sm",
+          "min-w-0 w-full max-w-full px-2.5 py-1 text-sm",
           className,
         )}
       >

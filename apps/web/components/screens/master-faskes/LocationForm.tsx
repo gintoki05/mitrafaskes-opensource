@@ -7,13 +7,16 @@ import { MapPin } from "lucide-react";
 import type {
   LocationSummary,
   OrganizationSummary,
-  ServiceUnitSummary,
 } from "@mitrafaskes/shared";
 import {
   FormActions,
   type FormStep,
   MasterFaskesFormShell,
 } from "./FormLayout";
+import {
+  useMasterFaskesDialogClose,
+  useMasterFaskesDialogGuard,
+} from "./MasterFaskesDialog";
 import { emptyLocation } from "./constants";
 import { locationFormSchema } from "./schemas";
 import { LocationFormContextStep } from "./LocationFormContextStep";
@@ -29,7 +32,6 @@ import type {
 type LocationFormProps = {
   canWrite: boolean;
   organizations: OrganizationSummary[];
-  serviceUnits: ServiceUnitSummary[];
   locations: LocationSummary[];
   submitting: SubmittingKind | null;
   onSubmit: SubmitHandler<LocationFormValues>;
@@ -42,7 +44,7 @@ type LocationFormProps = {
 const locationSteps: FormStep[] = [
   {
     label: "Konteks",
-    description: "Organisasi, unit, dan lokasi induk",
+    description: "Organisasi dan lokasi induk",
   },
   {
     label: "Identitas & status",
@@ -55,7 +57,7 @@ const locationSteps: FormStep[] = [
 ];
 
 const locationStepFields: FieldPath<LocationFormValues>[][] = [
-  ["organizationId", "serviceUnitId", "parentId"],
+  ["organizationId", "parentId"],
   ["code", "name", "type", "mode", "status", "active"],
   [
     "description",
@@ -73,7 +75,6 @@ const locationStepFields: FieldPath<LocationFormValues>[][] = [
 export function LocationForm({
   canWrite,
   organizations,
-  serviceUnits,
   locations,
   submitting,
   onSubmit,
@@ -84,7 +85,7 @@ export function LocationForm({
 }: LocationFormProps) {
   const {
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isDirty, isSubmitting },
     register,
     reset,
     handleSubmit,
@@ -97,6 +98,13 @@ export function LocationForm({
   });
   const [currentStep, setCurrentStep] = useState(0);
   const organizationId = useWatch({ control, name: "organizationId" });
+  const requestClose = useMasterFaskesDialogClose(onCancel);
+  const formBusy = isSubmitting || submitting === "location";
+
+  useMasterFaskesDialogGuard({
+    hasUnsavedChanges: canWrite && isDirty,
+    isBusy: formBusy,
+  });
 
   const submit = handleSubmit(async (values) => {
     if (currentStep !== locationSteps.length - 1) return;
@@ -127,10 +135,10 @@ export function LocationForm({
           <FormActions
             currentStep={currentStep}
             stepCount={locationSteps.length}
-            onCancel={onCancel}
+            onCancel={onCancel ? requestClose : undefined}
             onBack={() => setCurrentStep((step) => Math.max(step - 1, 0))}
             onNext={() => void goToNextStep()}
-            isSubmitting={isSubmitting || submitting === "location"}
+            isSubmitting={formBusy}
             submitLabel={mode === "edit" ? "Simpan perubahan" : "Simpan Location"}
             submittingLabel="Menyimpan..."
           />
@@ -143,7 +151,6 @@ export function LocationForm({
             <LocationFormContextStep
               control={control}
               organizations={organizations}
-              serviceUnits={serviceUnits}
               locations={locations}
               organizationId={organizationId}
               excludeId={excludeId}

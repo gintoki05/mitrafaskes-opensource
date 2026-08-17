@@ -3,7 +3,10 @@ import type { SatusehatPatientRemoteSummary } from '@mitrafaskes/shared';
 import type { PatientFormValues } from './patient-form-schema';
 
 export type PatientDraftPrefill = Partial<
-  Pick<PatientFormValues, 'fullName' | 'nik' | 'birthDate' | 'gender' | 'active'>
+  Pick<
+    PatientFormValues,
+    'fullName' | 'nik' | 'birthDate' | 'gender' | 'active' | 'satusehatId'
+  >
 >;
 
 const NIK_SYSTEM = 'https://fhir.kemkes.go.id/id/nik';
@@ -22,6 +25,7 @@ export function toPatientDraftPrefill(
     : undefined;
 
   return {
+    satusehatId: remote.externalResourceId,
     fullName: remote.name,
     ...(validNik ? { nik: validNik } : {}),
     ...(validBirthDate ? { birthDate: validBirthDate } : {}),

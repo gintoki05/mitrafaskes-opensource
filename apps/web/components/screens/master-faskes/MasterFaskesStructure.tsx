@@ -1,15 +1,14 @@
 import {
   Building2,
   CircleDot,
-  Layers3,
   MapPin,
   type LucideIcon,
 } from "lucide-react";
 import type {
   LocationSummary,
   OrganizationSummary,
-  ServiceUnitSummary,
 } from "@mitrafaskes/shared";
+import { ActiveStatusBadge } from "@/components/ActiveStatusBadge";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScreenState } from "@/components/ScreenState";
@@ -18,7 +17,6 @@ import { OrganizationHierarchyBadge } from "./OrganizationHierarchyBadge";
 type MasterFaskesStructureProps = {
   loading: boolean;
   organizations: OrganizationSummary[];
-  serviceUnits: ServiceUnitSummary[];
   locations: LocationSummary[];
 };
 
@@ -66,9 +64,7 @@ function ResourceCard({
                   {item.name}
                 </span>
               </span>
-              <span className="shrink-0 text-[10px] text-muted-foreground">
-                {item.active ? "Aktif" : "Nonaktif"}
-              </span>
+              <ActiveStatusBadge active={item.active} className="text-[10px]" />
             </div>
           ))}
         </div>
@@ -82,19 +78,14 @@ function ResourceCard({
 function OrganizationStructureItem({
   organization,
   organizations,
-  serviceUnits,
   locations,
 }: {
   organization: OrganizationSummary;
   organizations: OrganizationSummary[];
-  serviceUnits: ServiceUnitSummary[];
   locations: LocationSummary[];
 }) {
   const childOrganizations = organizations.filter(
     (child) => child.parentId === organization.id,
-  );
-  const organizationUnits = serviceUnits.filter(
-    (unit) => unit.organizationId === organization.id,
   );
   const organizationLocations = locations.filter(
     (location) => location.organizationId === organization.id,
@@ -125,15 +116,7 @@ function OrganizationStructureItem({
             </div>
           </div>
         </div>
-        <Badge
-          className={
-            organization.active
-              ? "clinical-status-success border text-[10px] font-bold"
-              : "clinical-status-error border text-[10px] font-bold"
-          }
-        >
-          {organization.active ? "AKTIF" : "NONAKTIF"}
-        </Badge>
+        <ActiveStatusBadge active={organization.active} className="text-[10px]" />
       </div>
       {childOrganizations.length > 0 ? (
         <div className="ml-12 space-y-1 border-l border-dashed border-border pl-4 text-xs text-muted-foreground">
@@ -146,13 +129,7 @@ function OrganizationStructureItem({
           ))}
         </div>
       ) : null}
-      <div className="ml-0 grid gap-3 border-t border-border pt-3 sm:grid-cols-2">
-        <ResourceCard
-          title="Unit layanan"
-          emptyLabel="Belum ada unit layanan."
-          icon={Layers3}
-          items={organizationUnits}
-        />
+      <div className="ml-0 border-t border-border pt-3">
         <ResourceCard
           title="Location fisik"
           emptyLabel="Belum ada location."
@@ -167,7 +144,6 @@ function OrganizationStructureItem({
 export function MasterFaskesStructure({
   loading,
   organizations,
-  serviceUnits,
   locations,
 }: MasterFaskesStructureProps) {
   const activeOrganizationCount = organizations.filter(
@@ -185,7 +161,7 @@ export function MasterFaskesStructure({
             Struktur master saat ini
           </CardTitle>
           <p className="mt-1 text-xs text-muted-foreground">
-            Organization/faskes → unit layanan → location fisik.
+            Organization/faskes → location fisik.
           </p>
         </div>
         <Badge
@@ -201,7 +177,7 @@ export function MasterFaskesStructure({
             <ScreenState
               kind="loading"
               title="Memuat struktur master"
-              description="Organisasi, unit, dan location sedang diambil."
+              description="Organisasi dan location sedang diambil."
               compact
             />
           </div>
@@ -220,7 +196,6 @@ export function MasterFaskesStructure({
                 key={organization.id}
                 organization={organization}
                 organizations={organizations}
-                serviceUnits={serviceUnits}
                 locations={locations}
               />
             ))}

@@ -1,16 +1,44 @@
 import './env';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { getAllowedWebOrigins } from './auth/auth.config';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
+  app.use(
+    helmet({
+      // The Next.js app and API normally use different origins in development
+      // and may do so behind a SaaS gateway in production. CORS remains the
+      // read-access boundary for those origins.
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }),
+  );
+  app.use(cookieParser());
+
+  const allowedOrigins = new Set(getAllowedWebOrigins());
+  app.enableCors({
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error('Origin tidak diizinkan oleh konfigurasi CORS'));
+    },
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token'],
+  });
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Mitra Faskes API')
     .setDescription(
-      'API Rekam Medis Elektronik Mitra Faskes dengan integrasi SATUSEHAT.',
+      'API Rekam Medis Elektronik Mitra Faskes dengan integrasi SATUSEHAT opsional.',
     )
     .setVersion('1.0')
     .addTag('General', 'Informasi umum layanan API.')
@@ -23,10 +51,13 @@ async function bootstrap() {
     .addTag('Master Data', 'Data referensi klinis, termasuk ICD-10.')
     .addTag(
       'Master Faskes',
-      'Pengaturan organisasi, unit layanan, dan lokasi fasilitas kesehatan.',
+      'Pengaturan organisasi dan lokasi fasilitas kesehatan.',
     )
     .addTag('Medical Records', 'Pencatatan rekam medis elektronik (RME).')
-    .addTag('SATUSEHAT', 'Status dan sinkronisasi data ke SATUSEHAT.')
+    .addTag(
+      'Integrations',
+      'Capability dan operasi provider integrasi opsional.',
+    )
     .build();
   const swaggerDocument = SwaggerModule.createDocument(app, swaggerConfig, {
     autoTagControllers: false,

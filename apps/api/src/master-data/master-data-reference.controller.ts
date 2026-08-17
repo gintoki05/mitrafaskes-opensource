@@ -6,19 +6,13 @@ import {
   Post,
   Query,
   Req,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
-import {
-  AccessPermission,
-  UserRole,
-} from '@mitrafaskes/shared';
+import { AccessPermission } from '@mitrafaskes/shared';
 import { Request } from 'express';
 import { RequirePermission } from '../auth/access-control.decorator';
-import {
-  AuthenticatedUser,
-  SessionPermissionGuard,
-} from '../auth/session-permission.guard';
+import { hasAuthenticatedPermission } from '../auth/access-control.service';
+import { AuthenticatedUser } from '../auth/session-permission.guard';
 import { MasterWilayahService } from './master-wilayah.service';
 import { MasterMaritalStatusService } from './master-marital-status.service';
 import { MasterIcd10Service } from './master-icd10.service';
@@ -41,7 +35,6 @@ const parsePositiveInteger = (
 };
 
 @Controller('api/master-data')
-@UseGuards(SessionPermissionGuard)
 @ApiTags('Master Data')
 export class MasterDataReferenceController {
   constructor(
@@ -54,7 +47,10 @@ export class MasterDataReferenceController {
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
   listDatasets(@Req() request: MasterDataRequest) {
     return this.masterWilayah.listDatasets(
-      request.user.role === UserRole.ADMIN,
+      hasAuthenticatedPermission(
+        request.user,
+        AccessPermission.MASTER_DATA_WRITE,
+      ),
     );
   }
 
@@ -77,7 +73,7 @@ export class MasterDataReferenceController {
   @Get('regions')
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
   listRegions(@Query() query: RegionQuery) {
-    let level;
+    let level: ReturnType<typeof parseRegionLevel>;
     try {
       level = parseRegionLevel(query.level || 'PROVINCE');
     } catch (error) {

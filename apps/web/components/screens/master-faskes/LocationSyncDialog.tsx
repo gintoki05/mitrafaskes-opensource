@@ -72,7 +72,7 @@ function LocationSyncDialogContent({
     void (async () => {
       try {
         const response = await apiFetch(
-          `/api/master/locations/${location.id}/satusehat/preview`,
+          `/api/integrations/SATUSEHAT/resources/Location/${location.id}/preview`,
         );
         if (!response.ok) {
           throw await readApiError(
@@ -106,7 +106,7 @@ function LocationSyncDialogContent({
 
     try {
       const response = await apiFetch(
-        `/api/master/locations/${location.id}/satusehat/sync`,
+          `/api/integrations/SATUSEHAT/resources/Location/${location.id}/sync`,
         { method: "POST" },
       );
       if (!response.ok) {

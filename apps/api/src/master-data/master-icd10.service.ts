@@ -6,9 +6,7 @@ import type {
 } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
 
-type Icd10Record = Prisma.MasterIcd10GetPayload<
-  Prisma.MasterIcd10DefaultArgs
->;
+type Icd10Record = Prisma.MasterIcd10GetPayload<Prisma.MasterIcd10DefaultArgs>;
 
 const toIcd10Summary = (record: Icd10Record): Icd10Summary => ({
   code: record.code,
@@ -94,7 +92,10 @@ export class MasterIcd10Service {
     };
   }
 
-  private normalizePositiveInteger(value: number | undefined, fallback: number) {
+  private normalizePositiveInteger(
+    value: number | undefined,
+    fallback: number,
+  ) {
     return typeof value === 'number' && Number.isInteger(value) && value > 0
       ? value
       : fallback;

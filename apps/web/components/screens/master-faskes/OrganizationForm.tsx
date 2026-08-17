@@ -14,6 +14,10 @@ import {
   type FormStep,
   MasterFaskesFormShell,
 } from "./FormLayout";
+import {
+  useMasterFaskesDialogClose,
+  useMasterFaskesDialogGuard,
+} from "./MasterFaskesDialog";
 import { emptyOrganization } from "./constants";
 import { OrganizationFormContactStep } from "./OrganizationFormContactStep";
 import { OrganizationFormIdentityStep } from "./OrganizationFormIdentityStep";
@@ -64,7 +68,7 @@ export function OrganizationForm({
 }: OrganizationFormProps) {
   const {
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isDirty, isSubmitting },
     register,
     reset,
     handleSubmit,
@@ -76,6 +80,13 @@ export function OrganizationForm({
   });
   const [currentStep, setCurrentStep] = useState(0);
   const organizationType = useWatch({ control, name: "type" });
+  const requestClose = useMasterFaskesDialogClose(onCancel);
+  const formBusy = isSubmitting || submitting === "organization";
+
+  useMasterFaskesDialogGuard({
+    hasUnsavedChanges: canWrite && isDirty,
+    isBusy: formBusy,
+  });
 
   const submit = handleSubmit(async (values) => {
     if (currentStep !== organizationSteps.length - 1) return;
@@ -107,10 +118,10 @@ export function OrganizationForm({
           <FormActions
             currentStep={currentStep}
             stepCount={organizationSteps.length}
-            onCancel={onCancel}
+            onCancel={onCancel ? requestClose : undefined}
             onBack={() => setCurrentStep((step) => Math.max(step - 1, 0))}
             onNext={() => void goToNextStep()}
-            isSubmitting={isSubmitting || submitting === "organization"}
+            isSubmitting={formBusy}
             submitLabel={mode === "edit" ? "Simpan perubahan" : "Simpan organisasi"}
             submittingLabel="Menyimpan..."
           />

@@ -5,7 +5,6 @@ import {
   LocationSummary,
   MasterFaskesData,
   OrganizationSummary,
-  ServiceUnitSummary,
 } from '@mitrafaskes/shared';
 import { apiFetch } from '@/lib/auth';
 
@@ -22,7 +21,6 @@ type MasterFaskesAction =
 
 const emptyData: MasterFaskesData = {
   organizations: [],
-  serviceUnits: [],
   locations: [],
 };
 
@@ -114,18 +112,6 @@ export function useMasterFaskesData() {
     return result;
   }, [refresh]);
 
-  const createServiceUnit = useCallback(async (input: unknown): Promise<ServiceUnitSummary> => {
-    const result = await postMasterData<ServiceUnitSummary>('service-units', input);
-    await refresh();
-    return result;
-  }, [refresh]);
-
-  const updateServiceUnit = useCallback(async (id: string, input: unknown): Promise<ServiceUnitSummary> => {
-    const result = await patchMasterData<ServiceUnitSummary>(`service-units/${id}`, input);
-    await refresh();
-    return result;
-  }, [refresh]);
-
   const createLocation = useCallback(async (input: unknown): Promise<LocationSummary> => {
     const result = await postMasterData<LocationSummary>('locations', input);
     await refresh();
@@ -144,8 +130,6 @@ export function useMasterFaskesData() {
     refresh,
     createOrganization,
     updateOrganization,
-    createServiceUnit,
-    updateServiceUnit,
     createLocation,
     updateLocation,
   };

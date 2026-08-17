@@ -5,6 +5,7 @@ const {
   AccessPermission,
   DEFAULT_ROUTE_BY_ROLE,
   UserRole,
+  expandPermissionDependencies,
   evaluateAccess,
   hasPermission,
 } = require('../dist');
@@ -18,23 +19,24 @@ test('login is public while protected permissions require a session', () => {
   });
 });
 
-test('every phase-one role has an explicit landing route', () => {
-  assert.equal(DEFAULT_ROUTE_BY_ROLE[UserRole.PERAWAT], '/pendaftaran');
+test('every operational role has an explicit landing route', () => {
+  assert.equal(DEFAULT_ROUTE_BY_ROLE[UserRole.PERAWAT], '/triase');
+  assert.equal(DEFAULT_ROUTE_BY_ROLE[UserRole.PETUGAS_PENDAFTARAN], '/pendaftaran');
   assert.equal(DEFAULT_ROUTE_BY_ROLE[UserRole.DOKTER], '/rme');
-  assert.equal(DEFAULT_ROUTE_BY_ROLE[UserRole.ADMIN], '/satusehat');
+  assert.equal(DEFAULT_ROUTE_BY_ROLE[UserRole.ADMIN], '/master-faskes');
 });
 
 test('registration officer can manage registration and queue intake only', () => {
   assert.equal(
-    hasPermission(UserRole.PERAWAT, AccessPermission.PATIENT_WRITE),
+    hasPermission(UserRole.PETUGAS_PENDAFTARAN, AccessPermission.PATIENT_WRITE),
     true,
   );
   assert.equal(
-    hasPermission(UserRole.PERAWAT, AccessPermission.QUEUE_CREATE),
+    hasPermission(UserRole.PETUGAS_PENDAFTARAN, AccessPermission.QUEUE_CREATE),
     true,
   );
   assert.equal(
-    hasPermission(UserRole.PERAWAT, AccessPermission.RME_WRITE_DRAFT),
+    hasPermission(UserRole.PETUGAS_PENDAFTARAN, AccessPermission.RME_WRITE_DRAFT),
     false,
   );
 });
@@ -80,6 +82,13 @@ test('authenticated access outside the role matrix is forbidden', () => {
   );
 });
 
+test('clinical nurse can triage but cannot finalize or register patients', () => {
+  assert.equal(hasPermission(UserRole.PERAWAT, AccessPermission.RME_TRIAGE_WRITE), true);
+  assert.equal(hasPermission(UserRole.PERAWAT, AccessPermission.RME_TRIAGE_COMPLETE), true);
+  assert.equal(hasPermission(UserRole.PERAWAT, AccessPermission.PATIENT_WRITE), false);
+  assert.equal(hasPermission(UserRole.PERAWAT, AccessPermission.RME_FINALIZE), false);
+});
+
 test('all operational roles can read local master data while write stays admin-only', () => {
   assert.equal(
     hasPermission(UserRole.PERAWAT, AccessPermission.MASTER_DATA_READ),
@@ -96,5 +105,27 @@ test('all operational roles can read local master data while write stays admin-o
   assert.equal(
     hasPermission(UserRole.PERAWAT, AccessPermission.MASTER_DATA_WRITE),
     false,
+  );
+});
+
+test('custom role permissions always include their prerequisites', () => {
+  assert.deepEqual(
+    expandPermissionDependencies([AccessPermission.QUEUE_CREATE]),
+    [
+      AccessPermission.PATIENT_READ,
+      AccessPermission.QUEUE_READ,
+      AccessPermission.QUEUE_CREATE,
+    ],
+  );
+  assert.deepEqual(
+    expandPermissionDependencies([
+      AccessPermission.ACCOUNT_WRITE,
+      AccessPermission.ACCESS_AUDIT_READ,
+    ]),
+    [
+      AccessPermission.ACCOUNT_READ,
+      AccessPermission.ACCOUNT_WRITE,
+      AccessPermission.ACCESS_AUDIT_READ,
+    ],
   );
 });

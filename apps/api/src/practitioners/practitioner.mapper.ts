@@ -1,8 +1,7 @@
 import type { User } from '@prisma/client';
 import type {
   PractitionerSummary,
-  SatusehatLinkageSummary,
-  SatusehatSyncSummary,
+  ResourceIntegrationSummary,
 } from '@mitrafaskes/shared';
 
 type PractitionerUser = Pick<
@@ -31,18 +30,49 @@ type PractitionerUser = Pick<
     code: string;
     name: string;
   } | null;
+  locationAssignments?: Array<{
+    location: {
+      id: string;
+      organizationId: string;
+      code: string;
+      name: string;
+    };
+  }>;
 };
+
+function toLocationReference(location: {
+  id: string;
+  organizationId: string;
+  code: string;
+  name: string;
+}) {
+  return {
+    id: location.id,
+    organizationId: location.organizationId,
+    code: location.code,
+    name: location.name,
+  };
+}
 
 export function toPractitionerSummary(
   record: PractitionerUser,
-  satusehat?: SatusehatLinkageSummary,
-  satusehatSync?: SatusehatSyncSummary,
+  integrations: ResourceIntegrationSummary[] = [],
 ): PractitionerSummary {
+  const locations =
+    record.locationAssignments?.map((assignment) =>
+      toLocationReference(assignment.location),
+    ) ?? (record.location ? [toLocationReference(record.location)] : []);
+
   return {
     id: record.id,
     username: record.username,
     fullName: record.fullName,
-    role: record.role === 'DOKTER' ? 'DOKTER' : 'PERAWAT',
+    role:
+      record.role === 'DOKTER'
+        ? 'DOKTER'
+        : record.role === 'PETUGAS_PENDAFTARAN'
+          ? 'PETUGAS_PENDAFTARAN'
+          : 'PERAWAT',
     nik: record.nik ?? undefined,
     birthDate: record.birthDate?.toISOString().slice(0, 10),
     gender: record.gender ?? undefined,
@@ -56,16 +86,11 @@ export function toPractitionerSummary(
         }
       : undefined,
     location: record.location
-      ? {
-          id: record.location.id,
-          organizationId: record.location.organizationId,
-          code: record.location.code,
-          name: record.location.name,
-        }
+      ? toLocationReference(record.location)
       : undefined,
+    locations,
     active: record.active,
-    satusehat,
-    satusehatSync,
+    integrations,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
   };

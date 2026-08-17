@@ -1,7 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import type { Control, FieldErrors, UseFormRegister } from 'react-hook-form';
-import { Controller } from 'react-hook-form';
+import { Controller, useWatch } from 'react-hook-form';
+import { ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -25,12 +27,22 @@ export function PatientIdentityFields({
   disabled,
   maritalStatusLookup,
 }: PatientIdentityFieldsProps) {
+  const values = useWatch({ control });
+  const hasAdditionalData = Boolean(
+    values.motherNik ||
+      values.preferredName ||
+      values.aliasName ||
+      values.birthPlaceText ||
+      values.maritalStatusCode ||
+      (values.citizenshipCode && values.citizenshipCode !== 'IDN'),
+  );
+  const [additionalOpen, setAdditionalOpen] = useState(() => hasAdditionalData);
   return (
     <Card>
       <CardHeader className="border-b border-border pb-3">
-        <CardTitle className="text-sm font-bold">Identitas & demografi</CardTitle>
+        <CardTitle className="text-sm font-bold">Identitas utama</CardTitle>
         <p className="text-xs text-muted-foreground">
-          Data utama disimpan lokal dan menjadi sumber model Patient terstruktur.
+          Nama, NIK, tanggal lahir, dan jenis kelamin.
         </p>
       </CardHeader>
       <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">
@@ -61,41 +73,6 @@ export function PatientIdentityFields({
             aria-invalid={Boolean(errors.nik)}
           />
           <FieldError errors={[errors.nik]} />
-        </Field>
-
-        <Field data-invalid={Boolean(errors.motherNik)}>
-          <FieldLabel htmlFor="patient-mother-nik">NIK ibu (bayi)</FieldLabel>
-          <Input
-            id="patient-mother-nik"
-            {...register('motherNik')}
-            disabled={disabled}
-            inputMode="numeric"
-            maxLength={16}
-            placeholder="Opsional, 16 digit"
-            className="font-mono"
-            aria-invalid={Boolean(errors.motherNik)}
-          />
-          <FieldError errors={[errors.motherNik]} />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="patient-preferred-name">Nama preferred</FieldLabel>
-          <Input
-            id="patient-preferred-name"
-            {...register('preferredName')}
-            disabled={disabled}
-            placeholder="Nama panggilan resmi"
-          />
-        </Field>
-
-        <Field>
-          <FieldLabel htmlFor="patient-alias-name">Nama alias</FieldLabel>
-          <Input
-            id="patient-alias-name"
-            {...register('aliasName')}
-            disabled={disabled}
-            placeholder="Nama lain bila diperlukan"
-          />
         </Field>
 
         <Field data-invalid={Boolean(errors.birthDate)}>
@@ -135,55 +112,86 @@ export function PatientIdentityFields({
           )}
         />
 
-        <Field>
-          <FieldLabel htmlFor="patient-birth-place">Tempat lahir</FieldLabel>
-          <Input
-            id="patient-birth-place"
-            {...register('birthPlaceText')}
-            disabled={disabled}
-            placeholder="Kota/kabupaten tempat lahir"
-          />
-        </Field>
-
-        <PatientMaritalStatusField
-          control={control}
-          errors={errors}
-          disabled={disabled}
-          lookup={maritalStatusLookup}
-        />
-
-        <Field data-invalid={Boolean(errors.citizenshipCode)}>
-          <FieldLabel htmlFor="patient-citizenship">Kewarganegaraan</FieldLabel>
-          <Input
-            id="patient-citizenship"
-            {...register('citizenshipCode')}
-            disabled={disabled}
-            maxLength={3}
-            placeholder="IDN"
-            className="uppercase"
-            aria-invalid={Boolean(errors.citizenshipCode)}
-          />
-          <FieldError errors={[errors.citizenshipCode]} />
-        </Field>
-
-        <Controller
-          control={control}
-          name="active"
-          render={({ field }) => (
-            <Field>
-              <FieldLabel htmlFor="patient-active">Status lokal</FieldLabel>
-              <SelectField
-                id="patient-active"
-                value={field.value ? 'true' : 'false'}
-                onChange={(value) => field.onChange(value === 'true')}
+        <details
+          className="group sm:col-span-2 rounded-[var(--radius-card)] border border-border bg-muted/20"
+          open={additionalOpen}
+          onToggle={(event) => setAdditionalOpen(event.currentTarget.open)}
+        >
+          <summary className="flex cursor-pointer list-none items-center gap-3 px-3 py-2.5 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 [&::-webkit-details-marker]:hidden">
+            <span className="min-w-0 flex-1">
+              <span className="block text-xs font-semibold text-foreground">Data tambahan</span>
+              <span className="mt-0.5 block text-[11px] text-muted-foreground">Opsional untuk pendaftaran awal</span>
+            </span>
+            <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="grid gap-4 border-t border-border p-3 sm:grid-cols-2">
+            <Field data-invalid={Boolean(errors.motherNik)}>
+              <FieldLabel htmlFor="patient-mother-nik">NIK ibu (bayi)</FieldLabel>
+              <Input
+                id="patient-mother-nik"
+                {...register('motherNik')}
                 disabled={disabled}
-              >
-                <option value="true">Aktif</option>
-                <option value="false">Nonaktif</option>
-              </SelectField>
+                inputMode="numeric"
+                maxLength={16}
+                placeholder="16 digit NIK"
+                className="font-mono"
+                aria-invalid={Boolean(errors.motherNik)}
+              />
+              <FieldError errors={[errors.motherNik]} />
             </Field>
-          )}
-        />
+
+            <Field>
+              <FieldLabel htmlFor="patient-preferred-name">Nama panggilan</FieldLabel>
+              <Input
+                id="patient-preferred-name"
+                {...register('preferredName')}
+                disabled={disabled}
+                placeholder="Nama pilihan"
+              />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="patient-alias-name">Nama alias</FieldLabel>
+              <Input
+                id="patient-alias-name"
+                {...register('aliasName')}
+                disabled={disabled}
+                placeholder="Nama lain"
+              />
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="patient-birth-place">Tempat lahir</FieldLabel>
+              <Input
+                id="patient-birth-place"
+                {...register('birthPlaceText')}
+                disabled={disabled}
+                placeholder="Kota/kabupaten"
+              />
+            </Field>
+
+            <PatientMaritalStatusField
+              control={control}
+              errors={errors}
+              disabled={disabled}
+              lookup={maritalStatusLookup}
+            />
+
+            <Field data-invalid={Boolean(errors.citizenshipCode)}>
+              <FieldLabel htmlFor="patient-citizenship">Kewarganegaraan</FieldLabel>
+              <Input
+                id="patient-citizenship"
+                {...register('citizenshipCode')}
+                disabled={disabled}
+                maxLength={3}
+                placeholder="IDN"
+                className="uppercase"
+                aria-invalid={Boolean(errors.citizenshipCode)}
+              />
+              <FieldError errors={[errors.citizenshipCode]} />
+            </Field>
+          </div>
+        </details>
       </CardContent>
     </Card>
   );

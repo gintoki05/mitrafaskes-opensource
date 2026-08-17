@@ -7,6 +7,7 @@ import type {
   PractitionerFormState,
 } from './practitionerCreateTypes';
 import { FieldLabel, SelectField } from './FormField';
+import { PractitionerLocationSelector } from './PractitionerLocationSelector';
 
 export function PractitionerCreatePlacementFields({
   form,
@@ -21,9 +22,9 @@ export function PractitionerCreatePlacementFields({
   locations: LocationSummary[];
   updateField: PractitionerFormFieldUpdater;
 }) {
-  const availableLocations = form.organizationId
-    ? locations.filter((location) => location.organizationId === form.organizationId)
-    : [];
+  const activeOrganizations = organizations.filter(
+    (organization) => organization.active,
+  );
 
   return (
     <section className="space-y-4 border-t border-border pt-5">
@@ -36,8 +37,8 @@ export function PractitionerCreatePlacementFields({
           tidak wajib untuk menyimpan profil lokal.
         </p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="min-w-0">
           <FieldLabel htmlFor="practitioner-create-organization">
             Organization
           </FieldLabel>
@@ -46,37 +47,27 @@ export function PractitionerCreatePlacementFields({
             value={form.organizationId ?? ''}
             onChange={(value) => {
               updateField('organizationId', value || null);
-              updateField('locationId', null);
+              updateField('locationIds', []);
             }}
             disabled={disabled}
           >
             <option value="">Belum ditetapkan</option>
-            {organizations.map((organization) => (
+            {activeOrganizations.map((organization) => (
               <option key={organization.id} value={organization.id}>
                 {organization.code} - {organization.name}
               </option>
             ))}
           </SelectField>
         </div>
-        <div>
-          <FieldLabel htmlFor="practitioner-create-location">
-            Location
-          </FieldLabel>
-          <SelectField
+        <div className="sm:col-span-2">
+          <PractitionerLocationSelector
             id="practitioner-create-location"
-            value={form.locationId ?? ''}
-            onChange={(value) => updateField('locationId', value || null)}
-            disabled={disabled || !form.organizationId}
-          >
-            <option value="">
-              {form.organizationId ? 'Belum ditetapkan' : 'Pilih Organization dulu'}
-            </option>
-            {availableLocations.map((location) => (
-              <option key={location.id} value={location.id}>
-                {location.code} - {location.name}
-              </option>
-            ))}
-          </SelectField>
+            organizationId={form.organizationId}
+            locations={locations}
+            value={form.locationIds ?? []}
+            onChange={(value) => updateField('locationIds', value)}
+            disabled={disabled}
+          />
         </div>
       </div>
     </section>

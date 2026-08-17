@@ -1,6 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import { Patient } from '@mitrafaskes/shared';
+import {
+  Patient,
+  PatientListQuery,
+  PatientListResponse,
+} from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
 import { MedicalRecordNumberGenerator } from './medical-record-number.generator';
 import { patientInclude, toPatient } from './patient.mapper';
@@ -38,6 +42,18 @@ const uniqueDetails = (error: unknown): string[] => {
 const matchesUniqueField = (details: string[], field: string): boolean =>
   details.some((candidate) => candidate.includes(field.toLowerCase()));
 
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 25;
+const MAX_PAGE_SIZE = 100;
+
+const normalizePositiveInteger = (
+  value: number | undefined,
+  fallback: number,
+) =>
+  value !== undefined && Number.isInteger(value) && value > 0
+    ? value
+    : fallback;
+
 @Injectable()
 export class PatientRepository {
   constructor(
@@ -45,63 +61,93 @@ export class PatientRepository {
     private readonly medicalRecordNumbers: MedicalRecordNumberGenerator,
   ) {}
 
-  async findMany(search?: string): Promise<Patient[]> {
-    const normalizedSearch = search?.trim();
-    const records = await this.prisma.patient.findMany({
-      where: normalizedSearch
-        ? {
-            OR: [
-              { nik: { contains: normalizedSearch } },
-              {
-                fullName: {
-                  contains: normalizedSearch,
-                  mode: 'insensitive',
-                },
+  async findMany(input: PatientListQuery = {}): Promise<PatientListResponse> {
+    const page = normalizePositiveInteger(input.page, DEFAULT_PAGE);
+    const pageSize = Math.min(
+      normalizePositiveInteger(input.pageSize, DEFAULT_PAGE_SIZE),
+      MAX_PAGE_SIZE,
+    );
+    const normalizedSearch = input.search?.trim();
+    const searchWhere: Prisma.PatientWhereInput | undefined = normalizedSearch
+      ? {
+          OR: [
+            { nik: { contains: normalizedSearch } },
+            {
+              fullName: {
+                contains: normalizedSearch,
+                mode: 'insensitive',
               },
-              {
-                medicalRecNo: {
-                  contains: normalizedSearch,
-                  mode: 'insensitive',
-                },
+            },
+            {
+              medicalRecNo: {
+                contains: normalizedSearch,
+                mode: 'insensitive',
               },
-              {
-                identifiers: {
-                  some: {
-                    normalizedValue: {
-                      contains: normalizedSearch,
-                      mode: 'insensitive',
-                    },
+            },
+            {
+              identifiers: {
+                some: {
+                  normalizedValue: {
+                    contains: normalizedSearch,
+                    mode: 'insensitive',
                   },
                 },
               },
-              {
-                names: {
-                  some: {
-                    text: {
-                      contains: normalizedSearch,
-                      mode: 'insensitive',
-                    },
+            },
+            {
+              names: {
+                some: {
+                  text: {
+                    contains: normalizedSearch,
+                    mode: 'insensitive',
                   },
                 },
               },
-              {
-                telecoms: {
-                  some: {
-                    normalizedValue: {
-                      contains: normalizedSearch,
-                      mode: 'insensitive',
-                    },
+            },
+            {
+              telecoms: {
+                some: {
+                  normalizedValue: {
+                    contains: normalizedSearch,
+                    mode: 'insensitive',
                   },
                 },
               },
-            ],
-          }
-        : undefined,
-      include: patientInclude,
-      orderBy: { createdAt: 'desc' },
-    });
+            },
+          ],
+        }
+      : undefined;
+    const where: Prisma.PatientWhereInput | undefined =
+      input.active === undefined
+        ? searchWhere
+        : { ...(searchWhere ?? {}), active: input.active };
+    const activeWhere: Prisma.PatientWhereInput = {
+      ...(searchWhere ?? {}),
+      active: true,
+    };
+    const inactiveWhere: Prisma.PatientWhereInput = {
+      ...(searchWhere ?? {}),
+      active: false,
+    };
 
-    return records.map(toPatient);
+    const [records, total, activeCount, inactiveCount] = await Promise.all([
+      this.prisma.patient.findMany({
+        where,
+        include: patientInclude,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.patient.count({ where }),
+      this.prisma.patient.count({ where: activeWhere }),
+      this.prisma.patient.count({ where: inactiveWhere }),
+    ]);
+
+    return {
+      items: records.map(toPatient),
+      meta: { page, pageSize, total },
+      statusCounts: { active: activeCount, inactive: inactiveCount },
+    };
   }
 
   async findById(id: string): Promise<Patient | null> {
@@ -151,6 +197,12 @@ export class PatientRepository {
           select: { id: true, medicalRecNo: true },
         });
         if (!current) throw new PatientNotFoundError();
+
+        await this.updateRelatedPersonDetails(
+          transaction,
+          id,
+          input.relationships,
+        );
 
         const archivedAt = new Date();
         await Promise.all([
@@ -288,19 +340,19 @@ export class PatientRepository {
           relatedPatient: relationship.relatedPatientId
             ? { connect: { id: relationship.relatedPatientId } }
             : undefined,
-          relatedPerson: relationship.relatedPerson
-            ? {
-                create: {
-                  fullName: relationship.relatedPerson.fullName,
-                  gender: relationship.relatedPerson.gender,
-                  birthDate: relationship.relatedPerson.birthDate,
-                  phone: relationship.relatedPerson.phone,
-                  email: relationship.relatedPerson.email,
-                  addressText: relationship.relatedPerson.addressText,
-                },
-              }
-            : relationship.relatedPersonId
-              ? { connect: { id: relationship.relatedPersonId } }
+          relatedPerson: relationship.relatedPersonId
+            ? { connect: { id: relationship.relatedPersonId } }
+            : relationship.relatedPerson
+              ? {
+                  create: {
+                    fullName: relationship.relatedPerson.fullName,
+                    gender: relationship.relatedPerson.gender,
+                    birthDate: relationship.relatedPerson.birthDate,
+                    phone: relationship.relatedPerson.phone,
+                    email: relationship.relatedPerson.email,
+                    addressText: relationship.relatedPerson.addressText,
+                  },
+                }
               : undefined,
           startAt: relationship.startAt,
           endAt: relationship.endAt,
@@ -310,5 +362,31 @@ export class PatientRepository {
         })),
       },
     };
+  }
+
+  private async updateRelatedPersonDetails(
+    transaction: Prisma.TransactionClient,
+    patientId: string,
+    relationships: ValidatedPatientInput['relationships'],
+  ): Promise<void> {
+    for (const relationship of relationships) {
+      if (!relationship.relatedPersonId || !relationship.relatedPerson)
+        continue;
+
+      await transaction.patientRelatedPerson.updateMany({
+        where: {
+          id: relationship.relatedPersonId,
+          relationships: { some: { patientId } },
+        },
+        data: {
+          fullName: relationship.relatedPerson.fullName,
+          gender: relationship.relatedPerson.gender ?? null,
+          birthDate: relationship.relatedPerson.birthDate ?? null,
+          phone: relationship.relatedPerson.phone ?? null,
+          email: relationship.relatedPerson.email ?? null,
+          addressText: relationship.relatedPerson.addressText ?? null,
+        },
+      });
+    }
   }
 }

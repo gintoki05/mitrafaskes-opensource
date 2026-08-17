@@ -1,12 +1,13 @@
 import type { RegionLevel } from '@mitrafaskes/shared';
 import type { MasterWilayahProviderRecord } from './master-wilayah.provider';
 
-const PARENT_LEVEL_BY_LEVEL: Readonly<Record<RegionLevel, RegionLevel | null>> = {
-  PROVINCE: null,
-  REGENCY: 'PROVINCE',
-  DISTRICT: 'REGENCY',
-  VILLAGE: 'DISTRICT',
-};
+const PARENT_LEVEL_BY_LEVEL: Readonly<Record<RegionLevel, RegionLevel | null>> =
+  {
+    PROVINCE: null,
+    REGENCY: 'PROVINCE',
+    DISTRICT: 'REGENCY',
+    VILLAGE: 'DISTRICT',
+  };
 
 const REGION_LEVELS = new Set<RegionLevel>([
   'PROVINCE',
@@ -27,9 +28,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const normalizeText = (value: unknown, field: string): string => {
   if (typeof value !== 'string' || !value.trim()) {
-    throw new MasterRegionValidationError(
-      `Field wilayah ${field} wajib diisi`,
-    );
+    throw new MasterRegionValidationError(`Field wilayah ${field} wajib diisi`);
   }
 
   return value.trim().replace(/\s+/g, ' ');
@@ -47,7 +46,8 @@ const normalizeCode = (value: unknown, field: string): string => {
 };
 
 export function parseRegionLevel(value: unknown): RegionLevel {
-  const normalized = typeof value === 'string' ? value.trim().toUpperCase() : '';
+  const normalized =
+    typeof value === 'string' ? value.trim().toUpperCase() : '';
   if (!REGION_LEVELS.has(normalized as RegionLevel)) {
     throw new MasterRegionValidationError(
       'Level wilayah harus PROVINCE, REGENCY, DISTRICT, atau VILLAGE',

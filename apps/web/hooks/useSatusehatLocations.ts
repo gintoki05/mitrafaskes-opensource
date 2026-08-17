@@ -50,7 +50,7 @@ export function useSatusehatLocations() {
       input: SatusehatLocationSearchQuery,
     ): Promise<SatusehatLocationSearchResponse> => {
       const response = await apiFetch(
-        `/api/master/locations/satusehat/search?${searchQuery(input)}`,
+        `/api/integrations/SATUSEHAT/resources/Location/search?${searchQuery(input)}`,
       );
       if (!response.ok) {
         throw await readApiError(
@@ -69,7 +69,7 @@ export function useSatusehatLocations() {
       input: SatusehatLocationLinkRequest,
     ): Promise<SatusehatLocationMutationResponse> => {
       const response = await apiFetch(
-        `/api/master/locations/${localResourceId}/satusehat/link`,
+        `/api/integrations/SATUSEHAT/resources/Location/${localResourceId}/link`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -91,7 +91,7 @@ export function useSatusehatLocations() {
     async (
       input: SatusehatLocationImportRequest,
     ): Promise<SatusehatLocationMutationResponse> => {
-      const response = await apiFetch('/api/master/locations/satusehat/import', {
+      const response = await apiFetch('/api/integrations/SATUSEHAT/resources/Location/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),

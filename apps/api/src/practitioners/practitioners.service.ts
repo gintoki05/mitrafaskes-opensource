@@ -3,24 +3,30 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
-import { randomBytes, scryptSync } from 'node:crypto';
 import { Prisma, Role } from '@prisma/client';
 import type {
   MasterDataListQuery,
   MasterDataListResponse,
   PractitionerSummary,
+  ResourceIntegrationSummary,
 } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
+import { hashPassword } from '../auth/password.service';
+import { IntegrationRegistry } from '../integrations/integration-registry';
 import { toPractitionerSummary } from './practitioner.mapper';
-import { PractitionerSyncStatusRepository } from './practitioner-sync-status.repository';
 import {
   PractitionerValidationError,
   validatePractitionerCreate,
   validatePractitionerUpdate,
 } from './practitioner.validation';
 
-const PRACTITIONER_ROLES = [Role.DOKTER, Role.PERAWAT];
+const PRACTITIONER_ROLES = [
+  Role.DOKTER,
+  Role.PERAWAT,
+  Role.PETUGAS_PENDAFTARAN,
+];
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -32,15 +38,21 @@ const practitionerRelationInclude = {
   location: {
     select: { id: true, organizationId: true, code: true, name: true },
   },
+  locationAssignments: {
+    include: {
+      location: {
+        select: { id: true, organizationId: true, code: true, name: true },
+      },
+    },
+  },
 };
 
 @Injectable()
 export class PractitionersService {
-  private readonly syncStatus: PractitionerSyncStatusRepository;
-
-  constructor(private readonly prisma: PrismaService) {
-    this.syncStatus = new PractitionerSyncStatusRepository(prisma);
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly integrations?: IntegrationRegistry,
+  ) {}
 
   async create(input: unknown): Promise<PractitionerSummary> {
     let validated: ReturnType<typeof validatePractitionerCreate>;
@@ -58,19 +70,23 @@ export class PractitionersService {
     }
 
     try {
-      const { password, ...profile } = validated;
+      const { password, locationIds, ...profile } = validated;
       await this.validatePractitionerContext(
         profile.organizationId,
-        profile.locationId,
+        locationIds,
       );
       const record = await this.prisma.user.create({
         data: {
           ...profile,
-          passwordHash: this.hashPassword(password),
+          locationId: locationIds[0] ?? null,
+          passwordHash: await hashPassword(password),
+          locationAssignments: locationIds.length
+            ? { create: locationIds.map((locationId) => ({ locationId })) }
+            : undefined,
         },
         include: practitionerRelationInclude,
       });
-      return toPractitionerSummary(record);
+      return this.toSummary(record);
     } catch (error) {
       const conflictField = this.readUniqueConflictField(error);
       if (conflictField === 'nik') {
@@ -100,18 +116,35 @@ export class PractitionersService {
       MAX_PAGE_SIZE,
     );
     const search = input.search?.trim();
-    const where: Prisma.UserWhereInput = {
+    const baseWhere: Prisma.UserWhereInput = {
       role: { in: PRACTITIONER_ROLES },
     };
 
-    if (input.active !== undefined) where.active = input.active;
+    if (input.organizationId) baseWhere.organizationId = input.organizationId;
+    if (input.locationId) {
+      baseWhere.locationAssignments = {
+        some: { locationId: input.locationId },
+      };
+    }
+    if (input.role) baseWhere.role = input.role;
     if (search) {
-      where.OR = [
+      baseWhere.OR = [
         { username: { contains: search, mode: 'insensitive' } },
         { fullName: { contains: search, mode: 'insensitive' } },
         { nik: { contains: search, mode: 'insensitive' } },
       ];
     }
+
+    const where: Prisma.UserWhereInput = { ...baseWhere };
+    if (input.active !== undefined) where.active = input.active;
+    const activeWhere: Prisma.UserWhereInput = {
+      ...baseWhere,
+      active: true,
+    };
+    const inactiveWhere: Prisma.UserWhereInput = {
+      ...baseWhere,
+      active: false,
+    };
 
     const orderDirection = input.direction ?? 'asc';
     const orderBy: Prisma.UserOrderByWithRelationInput[] =
@@ -121,7 +154,7 @@ export class PractitionersService {
           ? [{ active: orderDirection }, { fullName: 'asc' }]
           : [{ fullName: orderDirection }, { username: 'asc' }];
 
-    const [records, total] = await Promise.all([
+    const [records, total, activeCount, inactiveCount] = await Promise.all([
       this.prisma.user.findMany({
         where,
         orderBy,
@@ -130,31 +163,29 @@ export class PractitionersService {
         include: practitionerRelationInclude,
       }),
       this.prisma.user.count({ where }),
+      this.prisma.user.count({ where: activeWhere }),
+      this.prisma.user.count({ where: inactiveWhere }),
     ]);
 
-    const ids = records.map((record) => record.id);
-    const { links, logs } = await this.syncStatus.findForList(ids);
+    const ids = records
+      .filter((record) => record.role !== Role.PETUGAS_PENDAFTARAN)
+      .map((record) => record.id);
+    const integrations = this.integrations
+      ? await this.integrations.findResourceSummaries('Practitioner', ids)
+      : new Map<string, ResourceIntegrationSummary[]>();
 
     return {
       items: records.map((record) =>
-        toPractitionerSummary(
-          record,
-          this.syncStatus.toLinkage(links.get(record.id)),
-          this.syncStatus.toSyncSummary(logs.get(record.id)),
-        ),
+        toPractitionerSummary(record, integrations.get(record.id) ?? []),
       ),
       meta: { page, pageSize, total },
+      statusCounts: { active: activeCount, inactive: inactiveCount },
     };
   }
 
   async findById(id: string): Promise<PractitionerSummary> {
     const record = await this.getPractitionerRecord(id);
-    const { link, log } = await this.syncStatus.findForRecord(id);
-    return toPractitionerSummary(
-      record,
-      this.syncStatus.toLinkage(link),
-      this.syncStatus.toSyncSummary(log),
-    );
+    return this.toSummary(record);
   }
 
   async update(id: string, input: unknown): Promise<PractitionerSummary> {
@@ -179,18 +210,48 @@ export class PractitionersService {
     )
       ? validated.organizationId
       : existing.organizationId;
-    const nextLocationId = Object.prototype.hasOwnProperty.call(
-      validated,
-      'locationId',
-    )
-      ? validated.locationId
-      : existing.locationId;
-    await this.validatePractitionerContext(nextOrganizationId, nextLocationId);
+    const hasLocationIds = 'locationIds' in validated;
+    const existingLocationIds =
+      existing.locationAssignments?.map(
+        (assignment) => assignment.location.id,
+      ) ?? (existing.locationId ? [existing.locationId] : []);
+    const nextLocationIds = hasLocationIds
+      ? (validated.locationIds ?? [])
+      : existingLocationIds;
+    await this.validatePractitionerContext(nextOrganizationId, nextLocationIds);
     try {
-      await this.prisma.user.update({
-        where: { id },
-        data: validated,
-      });
+      const profile = { ...validated };
+      delete profile.locationIds;
+      const nextPrimaryLocationId = nextLocationIds.includes(
+        existing.locationId ?? '',
+      )
+        ? existing.locationId
+        : (nextLocationIds[0] ?? null);
+
+      if (hasLocationIds) {
+        await this.prisma.$transaction(async (transaction) => {
+          await transaction.user.update({
+            where: { id },
+            data: { ...profile, locationId: nextPrimaryLocationId },
+          });
+          await transaction.practitionerLocationAssignment.deleteMany({
+            where: { practitionerId: id },
+          });
+          if (nextLocationIds.length > 0) {
+            await transaction.practitionerLocationAssignment.createMany({
+              data: nextLocationIds.map((locationId) => ({
+                practitionerId: id,
+                locationId,
+              })),
+            });
+          }
+        });
+      } else {
+        await this.prisma.user.update({
+          where: { id },
+          data: profile,
+        });
+      }
     } catch (error) {
       if (this.isUniqueConstraintError(error)) {
         throw new ConflictException({
@@ -212,7 +273,9 @@ export class PractitionersService {
     });
     if (
       !record ||
-      (record.role !== Role.DOKTER && record.role !== Role.PERAWAT)
+      (record.role !== Role.DOKTER &&
+        record.role !== Role.PERAWAT &&
+        record.role !== Role.PETUGAS_PENDAFTARAN)
     ) {
       throw new NotFoundException('Tenaga kesehatan tidak ditemukan');
     }
@@ -221,16 +284,16 @@ export class PractitionersService {
 
   private async validatePractitionerContext(
     organizationId: string | null | undefined,
-    locationId: string | null | undefined,
+    locationIds: string[],
   ): Promise<void> {
-    if (locationId && !organizationId) {
+    if (locationIds.length > 0 && !organizationId) {
       throw new ConflictException({
         code: 'PRACTITIONER_ORGANIZATION_REQUIRED_FOR_LOCATION',
         message: 'Pilih Organization sebelum memilih Location.',
         field: 'organizationId',
       });
     }
-    if (!organizationId && !locationId) return;
+    if (!organizationId && locationIds.length === 0) return;
 
     if (organizationId) {
       const organization = await this.prisma.healthcareOrganization.findUnique({
@@ -244,44 +307,48 @@ export class PractitionersService {
       }
     }
 
-    if (locationId) {
-      const location = await this.prisma.location.findUnique({
-        where: { id: locationId },
-        select: { id: true, organizationId: true },
+    if (locationIds.length === 0) return;
+
+    const locations = await this.prisma.location.findMany({
+      where: { id: { in: locationIds } },
+      select: { id: true, organizationId: true },
+    });
+    if (locations.length !== locationIds.length) {
+      throw new NotFoundException('Location Practitioner tidak ditemukan.');
+    }
+    if (
+      locations.some((location) => location.organizationId !== organizationId)
+    ) {
+      throw new ConflictException({
+        code: 'PRACTITIONER_LOCATION_ORGANIZATION_MISMATCH',
+        message: 'Semua Location harus berada pada Organization yang dipilih.',
+        field: 'locationIds',
       });
-      if (!location) {
-        throw new NotFoundException('Location Practitioner tidak ditemukan.');
-      }
-      if (location.organizationId !== organizationId) {
-        throw new ConflictException({
-          code: 'PRACTITIONER_LOCATION_ORGANIZATION_MISMATCH',
-          message: 'Location harus berada pada Organization yang dipilih.',
-          field: 'locationId',
-        });
-      }
     }
   }
 
-  async getPractitionerForSatusehat(id: string) {
+  async getPractitionerForExternalIntegration(id: string) {
     const record = await this.getPractitionerRecord(id);
-    if (!record.nik) {
+    if (record.role === Role.PETUGAS_PENDAFTARAN) {
       throw new ConflictException({
-        code: 'SATUSEHAT_PRACTITIONER_NIK_REQUIRED',
+        code: 'EXTERNAL_PRACTITIONER_ROLE_UNSUPPORTED',
         message:
-          'NIK tenaga kesehatan wajib diisi sebelum mencari Practitioner SATUSEHAT.',
+          'Petugas pendaftaran dikelola sebagai akun lokal dan tidak dapat dihubungkan sebagai Practitioner eksternal.',
       });
     }
     return record;
   }
 
-  async findLinkageByExternalId(
-    externalResourceId: string,
-    environment: string,
+  private async toSummary(
+    record: Awaited<ReturnType<PractitionersService['getPractitionerRecord']>>,
   ) {
-    return this.syncStatus.findLinkageByExternalId(
-      externalResourceId,
-      environment,
-    );
+    const integrations =
+      this.integrations && record.role !== Role.PETUGAS_PENDAFTARAN
+        ? await this.integrations.findResourceSummaries('Practitioner', [
+            record.id,
+          ])
+        : new Map<string, ResourceIntegrationSummary[]>();
+    return toPractitionerSummary(record, integrations.get(record.id) ?? []);
   }
 
   private normalizePositiveInteger(
@@ -308,11 +375,5 @@ export class PractitionersService {
     if (Array.isArray(target) && target.includes('nik')) return 'nik';
     if (Array.isArray(target) && target.includes('username')) return 'username';
     return undefined;
-  }
-
-  private hashPassword(password: string): string {
-    const salt = randomBytes(16).toString('hex');
-    const derivedKey = scryptSync(password, salt, 64).toString('hex');
-    return `${salt}:${derivedKey}`;
   }
 }

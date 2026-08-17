@@ -1,0 +1,5 @@
+{
+  "error": "upstream_failure",
+  "message": "FHIR gateway returned an unstructured response",
+  "access_token": "must-not-be-exposed"
+}

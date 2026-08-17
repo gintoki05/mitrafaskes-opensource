@@ -1,128 +1,191 @@
-'use client';
+"use client";
 
 import {
   AccessPermission,
   DEFAULT_ROUTE_BY_ROLE,
   hasPermission,
   UserRole,
-} from '@mitrafaskes/shared';
-import { resolveApiInput } from './api';
+  type AccessRoleSummary,
+  type UserLocationReference,
+  type UserOrganizationReference,
+  WorkProfileType,
+} from "@mitrafaskes/shared";
+import { resolveApiInput } from "./api";
 
-const TOKEN_KEY = 'mitrafaskes_token';
-const USER_KEY = 'mitrafaskes_user';
-const SESSION_CHANGE_EVENT = 'mitrafaskes:session-change';
+const SESSION_CHANGE_EVENT = "mitrafaskes:session-change";
+const unsafeMethods = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
 export interface SessionUser {
   id: string;
   username: string;
   fullName: string;
   role: UserRole;
+  accessRole?: AccessRoleSummary;
+  permissions?: string[];
+  defaultRoute?: string;
+  workProfileType?: WorkProfileType;
+  mustChangePassword?: boolean;
+  temporaryPasswordExpiresAt?: string;
   sipNumber?: string;
+  strNumber?: string;
+  organization?: UserOrganizationReference;
+  locations?: UserLocationReference[];
 }
 
 export interface Session {
-  accessToken: string;
   user: SessionUser;
 }
 
-let sessionSnapshot: Session | null = null;
+let sessionSnapshot: Session | null | undefined =
+  typeof window === "undefined" ? null : undefined;
 let hasLoadedSessionSnapshot = false;
+let sessionLoadPromise: Promise<void> | null = null;
+let csrfToken: string | null = null;
+let csrfLoadPromise: Promise<string> | null = null;
 
 function isUserRole(role: unknown): role is UserRole {
   return Object.values(UserRole).includes(role as UserRole);
 }
 
-function readSession(): Session | null {
-  const accessToken = localStorage.getItem(TOKEN_KEY);
-  const rawUser = localStorage.getItem(USER_KEY);
-  if (!accessToken || !rawUser) return null;
-
-  try {
-    const user = JSON.parse(rawUser) as SessionUser;
-    return user?.id && user?.username && user?.fullName && isUserRole(user.role)
-      ? { accessToken, user }
-      : null;
-  } catch {
-    return null;
-  }
-}
-
-function refreshSessionSnapshot(): void {
-  if (typeof window === 'undefined') return;
-  sessionSnapshot = readSession();
-  hasLoadedSessionSnapshot = true;
-}
-
-export function getSession(): Session | null {
-  if (typeof window !== 'undefined' && !hasLoadedSessionSnapshot) {
-    refreshSessionSnapshot();
-  }
-
-  return sessionSnapshot;
-}
-
-export function saveSession(accessToken: string, user: SessionUser): void {
-  localStorage.setItem(TOKEN_KEY, accessToken);
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
-  sessionSnapshot = { accessToken, user };
-  hasLoadedSessionSnapshot = true;
-  notifySessionChange();
-}
-
-export function clearSession(): void {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
-  sessionSnapshot = null;
-  hasLoadedSessionSnapshot = true;
-  notifySessionChange();
+function isSessionUser(value: unknown): value is SessionUser {
+  if (!value || typeof value !== "object") return false;
+  const user = value as Partial<SessionUser>;
+  return Boolean(
+    user.id && user.username && user.fullName && isUserRole(user.role),
+  );
 }
 
 function notifySessionChange(): void {
-  window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(SESSION_CHANGE_EVENT));
+  }
+}
+
+function setSessionSnapshot(user: SessionUser | null): void {
+  sessionSnapshot = user ? { user } : null;
+  hasLoadedSessionSnapshot = true;
+  notifySessionChange();
+}
+
+export function getSession(): Session | null | undefined {
+  return sessionSnapshot;
+}
+
+export async function ensureSessionLoaded(): Promise<void> {
+  if (typeof window === "undefined" || hasLoadedSessionSnapshot) return;
+  if (sessionLoadPromise) return sessionLoadPromise;
+
+  sessionLoadPromise = fetch(resolveApiInput("/api/auth/me"), {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  })
+    .then(async (response) => {
+      if (!response.ok) {
+        setSessionSnapshot(null);
+        return;
+      }
+      const data = (await response.json()) as { user?: unknown };
+      setSessionSnapshot(isSessionUser(data.user) ? data.user : null);
+    })
+    .catch(() => {
+      setSessionSnapshot(null);
+    })
+    .finally(() => {
+      sessionLoadPromise = null;
+    });
+
+  return sessionLoadPromise;
+}
+
+export function setSession(user: SessionUser): void {
+  setSessionSnapshot(user);
+}
+
+export function clearSession(): void {
+  csrfToken = null;
+  csrfLoadPromise = null;
+  setSessionSnapshot(null);
 }
 
 export function subscribeToSession(onStoreChange: () => void): () => void {
-  const handleStorageChange = (event: StorageEvent) => {
-    if (event.key === TOKEN_KEY || event.key === USER_KEY || event.key === null) {
-      refreshSessionSnapshot();
-      onStoreChange();
-    }
-  };
-
-  const handleSessionChange = () => {
-    onStoreChange();
-  };
-
+  const handleSessionChange = () => onStoreChange();
   window.addEventListener(SESSION_CHANGE_EVENT, handleSessionChange);
-  window.addEventListener('storage', handleStorageChange);
 
   return () => {
     window.removeEventListener(SESSION_CHANGE_EVENT, handleSessionChange);
-    window.removeEventListener('storage', handleStorageChange);
   };
 }
 
-export function can(user: SessionUser | null, permission: AccessPermission): boolean {
+export function can(
+  user: SessionUser | null,
+  permission: AccessPermission,
+): boolean {
+  if (user?.accessRole?.system === 'SUPER_ADMIN') return true;
+  if (user?.permissions) return user.permissions.includes(permission);
   return hasPermission(user?.role, permission);
 }
 
 export function defaultRoute(user: SessionUser): string {
-  return DEFAULT_ROUTE_BY_ROLE[user.role];
+  return user.defaultRoute ?? DEFAULT_ROUTE_BY_ROLE[user.role];
 }
 
-export function authHeaders(): HeadersInit {
-  const session = getSession();
-  return session ? { Authorization: `Bearer ${session.accessToken}` } : {};
+function isAuthTokenEndpoint(input: RequestInfo | URL): boolean {
+  const value = typeof input === "string" ? input : input.toString();
+  return value.endsWith("/api/auth/token");
 }
 
-export async function apiFetch(input: RequestInfo | URL, init: RequestInit = {}) {
+async function ensureCsrfToken(): Promise<string> {
+  if (csrfToken) return csrfToken;
+  if (csrfLoadPromise) return csrfLoadPromise;
+
+  csrfLoadPromise = fetch(resolveApiInput("/api/auth/csrf"), {
+    credentials: "include",
+    headers: { Accept: "application/json" },
+  })
+    .then(async (response) => {
+      if (!response.ok) throw new Error("Tidak dapat menyiapkan keamanan form");
+      const data = (await response.json()) as { csrfToken?: unknown };
+      if (typeof data.csrfToken !== "string" || !data.csrfToken) {
+        throw new Error("Token CSRF tidak tersedia");
+      }
+      csrfToken = data.csrfToken;
+      return data.csrfToken;
+    })
+    .finally(() => {
+      csrfLoadPromise = null;
+    });
+
+  return csrfLoadPromise;
+}
+
+export async function apiFetch(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+) {
+  const method = (init.method || "GET").toUpperCase();
+  const headers = new Headers(init.headers);
+  const shouldProtect =
+    unsafeMethods.has(method) && !isAuthTokenEndpoint(input);
+
+  if (shouldProtect && typeof window !== "undefined") {
+    headers.set("X-CSRF-Token", await ensureCsrfToken());
+  }
+
   const response = await fetch(resolveApiInput(input), {
     ...init,
-    headers: { ...authHeaders(), ...init.headers },
+    credentials: init.credentials ?? "include",
+    headers,
   });
-  if (response.status === 401 && typeof window !== 'undefined') {
+
+  const path = typeof input === "string" ? input : input.toString();
+  if (
+    response.status === 401 &&
+    typeof window !== "undefined" &&
+    !path.endsWith("/api/auth/login")
+  ) {
     clearSession();
-    if (window.location.pathname !== '/login') window.location.replace('/login');
+    if (window.location.pathname !== "/login")
+      window.location.replace("/login");
   }
   return response;
 }

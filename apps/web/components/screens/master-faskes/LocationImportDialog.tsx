@@ -3,7 +3,6 @@
 import type {
   LocationSummary,
   OrganizationSummary,
-  ServiceUnitSummary,
 } from '@mitrafaskes/shared';
 import { Download, RefreshCw, Search } from 'lucide-react';
 import { ScreenState } from '@/components/ScreenState';
@@ -14,14 +13,17 @@ import { Input } from '@/components/ui/input';
 import { FieldLabel } from './FormField';
 import { LocationImportBulkPanel } from './LocationImportBulkPanel';
 import { LocationImportResults } from './LocationImportResults';
-import { MasterFaskesDialog } from './MasterFaskesDialog';
+import {
+  MasterFaskesDialog,
+  useMasterFaskesDialogClose,
+  useMasterFaskesDialogGuard,
+} from './MasterFaskesDialog';
 import { useLocationImportDialog } from './useLocationImportDialog';
 
 type LocationImportDialogProps = {
   open: boolean;
   organizations: OrganizationSummary[];
   locations: LocationSummary[];
-  serviceUnits: ServiceUnitSummary[];
   canWrite: boolean;
   onClose: () => void;
   onImported: () => void | Promise<void>;
@@ -31,7 +33,6 @@ export function LocationImportDialog({
   open,
   organizations,
   locations,
-  serviceUnits,
   canWrite,
   onClose,
   onImported,
@@ -48,7 +49,6 @@ export function LocationImportDialog({
       <LocationImportDialogContent
         organizations={organizations}
         locations={locations}
-        serviceUnits={serviceUnits}
         canWrite={canWrite}
         onClose={onClose}
         onImported={onImported}
@@ -60,7 +60,6 @@ export function LocationImportDialog({
 function LocationImportDialogContent({
   organizations,
   locations,
-  serviceUnits,
   canWrite,
   onClose,
   onImported,
@@ -83,13 +82,10 @@ function LocationImportDialogContent({
     selectedImportItems,
     bulkCodes,
     parentIds,
-    serviceUnitIds,
     code,
     setCode,
     parentId,
     setParentId,
-    serviceUnitId,
-    setServiceUnitId,
     page,
     setPage,
     totalPages,
@@ -100,7 +96,6 @@ function LocationImportDialogContent({
     allSelectableSelected,
     someSelectableSelected,
     parentOptions,
-    serviceUnitOptions,
     searching,
     importing,
     runSearch,
@@ -111,15 +106,35 @@ function LocationImportDialogContent({
     importSelectedBulk,
     setBulkCodes,
     setParentIds,
-    setServiceUnitIds,
     resetSelection,
   } = useLocationImportDialog({
     organizations,
     locations,
-    serviceUnits,
     canWrite,
     onClose,
     onImported,
+  });
+  const requestClose = useMasterFaskesDialogClose(onClose);
+  const defaultOrganizationId =
+    activeOrganizations.find(
+      (organization) =>
+        organization.type === 'HEALTHCARE_FACILITY' &&
+        !organization.parentId,
+    )?.id ?? activeOrganizations[0]?.id ?? '';
+  const hasUnsavedChanges =
+    organizationId !== defaultOrganizationId ||
+    externalId.trim() !== '' ||
+    identifier.trim() !== '' ||
+    name.trim() !== '' ||
+    selectedIds.length > 0 ||
+    code.trim() !== '' ||
+    parentId !== '' ||
+    Object.values(bulkCodes).some((value) => value.trim() !== '') ||
+    Object.values(parentIds).some((value) => value.trim() !== '');
+
+  useMasterFaskesDialogGuard({
+    hasUnsavedChanges: canWrite && hasUnsavedChanges,
+    isBusy: importing,
   });
 
   return (
@@ -240,10 +255,8 @@ function LocationImportDialogContent({
           <LocationImportBulkPanel
             items={selectedImportItems}
             parentOptions={parentOptions}
-            serviceUnitOptions={serviceUnitOptions}
             codes={bulkCodes}
             parentIds={parentIds}
-            serviceUnitIds={serviceUnitIds}
             canWrite={canWrite}
             importing={importing}
             onCodeChange={(externalResourceId, value) =>
@@ -258,12 +271,6 @@ function LocationImportDialogContent({
                 [externalResourceId]: value,
               }))
             }
-            onServiceUnitChange={(externalResourceId, value) =>
-              setServiceUnitIds((current) => ({
-                ...current,
-                [externalResourceId]: value,
-              }))
-            }
             onImport={() => void importSelectedBulk()}
           />
         ) : selected ? (
@@ -271,7 +278,22 @@ function LocationImportDialogContent({
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Pengaturan data lokal</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-3 sm:grid-cols-3">
+            <CardContent className="grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <FieldLabel htmlFor="satusehat-location-remote-id">
+                  ID SATUSEHAT
+                </FieldLabel>
+                <Input
+                  id="satusehat-location-remote-id"
+                  value={selected.externalResourceId}
+                  readOnly
+                  className="font-mono"
+                />
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  ID ini berasal dari resource Location yang ditemukan; kode
+                  lokal di bawah hanya untuk aplikasi.
+                </p>
+              </div>
               <div>
                 <FieldLabel htmlFor="satusehat-location-local-code">
                   Kode lokal
@@ -299,28 +321,12 @@ function LocationImportDialogContent({
                   }))}
                 />
               </div>
-              <div>
-                <FieldLabel htmlFor="satusehat-location-service-unit">
-                  Unit layanan lokal
-                </FieldLabel>
-                <ComboboxField
-                  id="satusehat-location-service-unit"
-                  value={serviceUnitId}
-                  onChange={setServiceUnitId}
-                  placeholder="Tidak ditetapkan"
-                  clearable
-                  options={serviceUnitOptions.map((serviceUnit) => ({
-                    value: serviceUnit.id,
-                    label: `${serviceUnit.code} - ${serviceUnit.name}`,
-                  }))}
-                />
-              </div>
             </CardContent>
           </Card>
         ) : null}
 
         <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={onClose}>
+          <Button type="button" variant="outline" onClick={requestClose}>
             Tutup
           </Button>
           {canWrite ? (

@@ -1,32 +1,49 @@
 'use client';
 
-import type { FieldErrors, UseFormRegister } from 'react-hook-form';
+import type {
+  Control,
+  FieldErrors,
+  UseFormRegister,
+  UseFormSetValue,
+} from 'react-hook-form';
+import { ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 import type { PatientFormValues } from './patient-form-schema';
+import { PatientRegionFields } from './PatientRegionFields';
+import type { PatientWilayahLookupState } from './usePatientWilayahLookup';
 
 type PatientContactFieldsProps = {
+  control: Control<PatientFormValues>;
   errors: FieldErrors<PatientFormValues>;
   register: UseFormRegister<PatientFormValues>;
+  setValue: UseFormSetValue<PatientFormValues>;
   disabled: boolean;
+  wilayahLookup: PatientWilayahLookupState;
 };
 
 export function PatientContactFields({
+  control,
   errors,
   register,
+  setValue,
   disabled,
+  wilayahLookup,
 }: PatientContactFieldsProps) {
+  const satusehat = useIntegrationCapability('SATUSEHAT');
   return (
     <>
-      <Card>
-        <CardHeader className="border-b border-border pb-3">
-          <CardTitle className="text-sm font-bold">Identifier tambahan</CardTitle>
-          <p className="text-xs text-muted-foreground">
-            Isi hanya identifier yang memang tersedia; namespace disimpan bersama nilainya.
-          </p>
-        </CardHeader>
-        <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">
+      <details className="group rounded-[var(--radius-card)] border border-border bg-card">
+        <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/30 [&::-webkit-details-marker]:hidden">
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold text-foreground">Identifier{satusehat.available ? ' & SATUSEHAT' : ''}</span>
+            <span className="mt-0.5 block text-xs text-muted-foreground">Opsional</span>
+          </span>
+          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="grid gap-4 border-t border-border p-4 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor="patient-passport">Paspor</FieldLabel>
             <Input
@@ -45,40 +62,30 @@ export function PatientContactFields({
               placeholder="Nomor KK"
             />
           </Field>
-          <Field data-invalid={Boolean(errors.otherIdentifierSystem)}>
-            <FieldLabel htmlFor="patient-other-identifier-system">
-              Namespace lain
-            </FieldLabel>
-            <Input
-              id="patient-other-identifier-system"
-              {...register('otherIdentifierSystem')}
-              disabled={disabled}
-              placeholder="Contoh: urn:id:asuransi"
-              aria-invalid={Boolean(errors.otherIdentifierSystem)}
-            />
-            <FieldError errors={[errors.otherIdentifierSystem]} />
-          </Field>
-          <Field data-invalid={Boolean(errors.otherIdentifierValue)}>
-            <FieldLabel htmlFor="patient-other-identifier-value">
-              Nilai identifier lain
-            </FieldLabel>
-            <Input
-              id="patient-other-identifier-value"
-              {...register('otherIdentifierValue')}
-              disabled={disabled}
-              placeholder="Nomor/kode identifier"
-              aria-invalid={Boolean(errors.otherIdentifierValue)}
-            />
-            <FieldError errors={[errors.otherIdentifierValue]} />
-          </Field>
-        </CardContent>
-      </Card>
+          {satusehat.available ? (
+            <Field className="sm:col-span-2" data-invalid={Boolean(errors.satusehatId)}>
+              <FieldLabel htmlFor="patient-satusehat-id">Nomor IHS / SATUSEHAT ID</FieldLabel>
+              <Input
+                id="patient-satusehat-id"
+                {...register('satusehatId')}
+                disabled={disabled}
+                readOnly
+                className="font-mono"
+                placeholder="Diisi dari lookup atau linkage"
+                aria-invalid={Boolean(errors.satusehatId)}
+              />
+              <p className="text-[11px] text-muted-foreground">Terisi otomatis dari SATUSEHAT.</p>
+              <FieldError errors={[errors.satusehatId]} />
+            </Field>
+          ) : null}
+        </div>
+      </details>
 
       <Card>
         <CardHeader className="border-b border-border pb-3">
           <CardTitle className="text-sm font-bold">Kontak & alamat</CardTitle>
           <p className="text-xs text-muted-foreground">
-            Alamat disimpan sebagai struktur terpisah tanpa menghilangkan teks display legacy.
+            Telepon, email, dan alamat pasien.
           </p>
         </CardHeader>
         <CardContent className="grid gap-4 pt-4 sm:grid-cols-2">
@@ -127,60 +134,14 @@ export function PatientContactFields({
               placeholder="Kode pos"
             />
           </Field>
-          <Field>
-            <FieldLabel htmlFor="patient-province-name">Provinsi</FieldLabel>
-            <Input
-              id="patient-province-name"
-              {...register('provinceName')}
-              disabled={disabled}
-              placeholder="Nama provinsi"
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="patient-regency-name">Kabupaten/kota</FieldLabel>
-            <Input
-              id="patient-regency-name"
-              {...register('regencyName')}
-              disabled={disabled}
-              placeholder="Nama kabupaten/kota"
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="patient-district-name">Kecamatan</FieldLabel>
-            <Input
-              id="patient-district-name"
-              {...register('districtName')}
-              disabled={disabled}
-              placeholder="Nama kecamatan"
-            />
-          </Field>
-          <Field>
-            <FieldLabel htmlFor="patient-village-name">Desa/kelurahan</FieldLabel>
-            <Input
-              id="patient-village-name"
-              {...register('villageName')}
-              disabled={disabled}
-              placeholder="Nama desa/kelurahan"
-            />
-          </Field>
-          <div className="grid gap-4 sm:col-span-2 sm:grid-cols-4">
-            <Field>
-              <FieldLabel htmlFor="patient-province-code">Kode provinsi</FieldLabel>
-              <Input id="patient-province-code" {...register('provinceCode')} disabled={disabled} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="patient-regency-code">Kode kab/kota</FieldLabel>
-              <Input id="patient-regency-code" {...register('regencyCode')} disabled={disabled} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="patient-district-code">Kode kecamatan</FieldLabel>
-              <Input id="patient-district-code" {...register('districtCode')} disabled={disabled} />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor="patient-village-code">Kode desa</FieldLabel>
-              <Input id="patient-village-code" {...register('villageCode')} disabled={disabled} />
-            </Field>
-          </div>
+          <PatientRegionFields
+            control={control}
+            errors={errors}
+            register={register}
+            setValue={setValue}
+            disabled={disabled}
+            lookup={wilayahLookup}
+          />
         </CardContent>
       </Card>
     </>

@@ -21,27 +21,25 @@ Referensi resmi:
   longitude sebagai mandatory, tetapi implementasi ini mengikuti perilaku
   sandbox yang menerima Location tanpa `position`; kegagalan validasi remote
   tetap dicatat sebagai `FAILED` pada log sinkronisasi.
-- `serviceUnitId` adalah relasi internal Mitra Faskes dan tidak dikirim sebagai
-  referensi FHIR pada tahap ini.
 
 ## Endpoint lokal
 
 Preview payload tanpa memanggil SATUSEHAT:
 
 ```text
-GET /api/master/locations/:id/satusehat/preview
+GET /api/integrations/SATUSEHAT/resources/Location/:id/preview
 ```
 
 Sinkronisasi ke sandbox:
 
 ```text
-POST /api/master/locations/:id/satusehat/sync
+POST /api/integrations/SATUSEHAT/resources/Location/:id/sync
 ```
 
 Pencarian Location yang sudah tersedia di SATUSEHAT:
 
 ```text
-GET /api/master/locations/satusehat/search
+GET /api/integrations/SATUSEHAT/resources/Location/search
 ```
 
 Parameter pencarian yang didukung:
@@ -57,11 +55,11 @@ Parameter pencarian yang didukung:
 Import Location SATUSEHAT menjadi data lokal:
 
 ```text
-POST /api/master/locations/satusehat/import
+POST /api/integrations/SATUSEHAT/resources/Location/import
 ```
 
-Body menerima `externalResourceId`, `organizationId` opsional, `parentId`,
-`serviceUnitId`, dan `code` lokal opsional. Jika Organization tidak diberikan,
+Body menerima `externalResourceId`, `organizationId` opsional, `parentId`, dan
+`code` lokal opsional. Jika Organization tidak diberikan,
 sistem mencari Organization lokal melalui linkage `managingOrganization`.
 Parent remote harus sudah diimpor atau dihubungkan agar relasi `partOf` dapat
 dipertahankan.
@@ -69,14 +67,14 @@ dipertahankan.
 Hubungkan Location lokal dengan data yang sudah ada di SATUSEHAT:
 
 ```text
-POST /api/master/locations/:id/satusehat/link
+POST /api/integrations/SATUSEHAT/resources/Location/:id/link
 ```
 
 Link memuat detail remote, lalu memvalidasi `managingOrganization` dan `partOf`
 sebelum menyimpan `ExternalResourceLink`.
 
-Preview membutuhkan `master-data.read`, sedangkan sync membutuhkan
-`master-data.write`.
+Preview membutuhkan `sync.status-read`, sedangkan sync, import, dan link
+membutuhkan `sync.retry`.
 
 ## Mapping payload
 

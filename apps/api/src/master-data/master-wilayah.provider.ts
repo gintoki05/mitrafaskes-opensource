@@ -1,7 +1,4 @@
-import type {
-  MasterDataSource,
-  RegionLevel,
-} from '@mitrafaskes/shared';
+import type { RegionLevel } from '@mitrafaskes/shared';
 
 export const MASTER_WILAYAH_PROVIDER = 'MASTER_WILAYAH_PROVIDER';
 
@@ -14,7 +11,7 @@ export interface MasterWilayahProviderRecord {
 }
 
 export interface MasterWilayahSnapshot {
-  source: MasterDataSource | string;
+  source: string;
   sourceVersion: string;
   complete: boolean;
   records: readonly MasterWilayahProviderRecord[];

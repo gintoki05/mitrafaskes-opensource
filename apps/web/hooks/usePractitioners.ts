@@ -131,7 +131,7 @@ export function usePractitioners(query?: MasterDataListQuery) {
   const searchSatusehat = useCallback(
     async (localResourceId: string): Promise<SatusehatPractitionerSearchResponse> => {
       const response = await apiFetch(
-        `/api/practitioners/${localResourceId}/satusehat/search`,
+        `/api/integrations/SATUSEHAT/resources/Practitioner/search?localResourceId=${encodeURIComponent(localResourceId)}`,
       );
       if (!response.ok) {
         throw await readApiError(
@@ -153,7 +153,7 @@ export function usePractitioners(query?: MasterDataListQuery) {
         identifier: query.identifier,
       });
       const response = await apiFetch(
-        `/api/practitioners/satusehat/lookup?${params.toString()}`,
+        `/api/integrations/SATUSEHAT/resources/Practitioner/lookup?${params.toString()}`,
       );
       if (!response.ok) {
         throw await readApiError(
@@ -190,7 +190,7 @@ export function usePractitioners(query?: MasterDataListQuery) {
       input: SatusehatPractitionerLinkRequest,
     ): Promise<SatusehatPractitionerMutationResponse> => {
       const response = await apiFetch(
-        `/api/practitioners/${localResourceId}/satusehat/link`,
+        `/api/integrations/SATUSEHAT/resources/Practitioner/${localResourceId}/link`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -216,6 +216,8 @@ export function usePractitioners(query?: MasterDataListQuery) {
         birthDate?: string | null;
         gender?: string | null;
         organizationId?: string | null;
+        locationIds?: string[] | null;
+        /** @deprecated Use locationIds for new clients. */
         locationId?: string | null;
         active?: boolean;
       },

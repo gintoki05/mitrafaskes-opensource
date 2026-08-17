@@ -2,6 +2,7 @@
 
 import type { SatusehatPractitionerRemoteSummary } from '@mitrafaskes/shared';
 import { CheckCircle2, Link2, Stethoscope } from 'lucide-react';
+import { ActiveStatusBadge } from '@/components/ActiveStatusBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,9 +35,7 @@ export function SatusehatPractitionerResult({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <strong className="text-sm text-foreground">{item.name}</strong>
-              <Badge className="border-primary/25 bg-primary/10 text-[10px] text-primary">
-                {item.active ? 'AKTIF' : 'NONAKTIF'}
-              </Badge>
+              <ActiveStatusBadge active={item.active} className="text-[10px]" />
               {linkedToCurrent ? (
                 <Badge className="clinical-status-success border text-[10px]">
                   Terhubung ke data ini

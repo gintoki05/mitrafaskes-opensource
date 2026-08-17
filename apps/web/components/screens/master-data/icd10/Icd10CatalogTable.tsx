@@ -1,10 +1,9 @@
 'use client';
 
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Icd10CatalogTableProps } from './types';
 import { ScreenState } from '@/components/ScreenState';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { PaginationControl } from '@/components/ui/pagination';
 import {
   Table,
   TableBody,
@@ -109,28 +108,14 @@ export function Icd10CatalogTable({
             Halaman {meta.page}/{totalPages}
           </Badge>
         </div>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(meta.page - 1)}
-            disabled={loading || meta.page <= 1}
-          >
-            <ChevronLeft aria-hidden="true" />
-            Sebelumnya
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => onPageChange(meta.page + 1)}
-            disabled={loading || meta.page >= totalPages}
-          >
-            Berikutnya
-            <ChevronRight aria-hidden="true" />
-          </Button>
-        </div>
+        <PaginationControl
+          page={meta.page}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+          disabled={loading}
+          aria-label="Navigasi halaman katalog ICD-10"
+          className="mx-0 w-auto"
+        />
       </div>
     </div>
   );

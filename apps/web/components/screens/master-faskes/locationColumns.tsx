@@ -2,24 +2,26 @@ import type { ColumnDef } from "@tanstack/react-table";
 import type {
   LocationSummary,
   OrganizationSummary,
-  ServiceUnitSummary,
 } from "@mitrafaskes/shared";
-import { Edit3, Link2, Power, RefreshCw } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Edit3, Power, UserRoundPlus } from "lucide-react";
+import { ActiveStatusBadge } from "@/components/ActiveStatusBadge";
 import { Button } from "@/components/ui/button";
+import { SatusehatActionGroup } from "@/components/satusehat/SatusehatActionGroup";
 import {
   locationModes,
-  locationStatuses,
   locationTypes,
 } from "./constants";
-import { SatusehatLinkageBadge } from "./SatusehatLinkageBadge";
+import { LocationOperationalStatusBadge } from "./LocationOperationalStatusBadge";
+import { SatusehatLinkageBadge } from "@/components/satusehat/SatusehatLinkageBadge";
+import { getIntegrationLinkage } from "@/lib/integrations";
 
 type LocationColumnOptions = {
   canWrite: boolean;
+  integrationEnabled: boolean;
   organizations: OrganizationSummary[];
-  serviceUnits: ServiceUnitSummary[];
   onPreview: (location: LocationSummary) => void;
   onLink: (location: LocationSummary) => void;
+  onAssignDoctors: (location: LocationSummary) => void;
   onEdit: (location: LocationSummary) => void;
   onToggleStatus: (location: LocationSummary) => void;
 };
@@ -31,12 +33,25 @@ function labelFor<T extends string>(
   return options.find((option) => option.value === value)?.label ?? value;
 }
 
+const satusehatColumn: ColumnDef<LocationSummary> = {
+  id: "satusehat",
+  header: "SATUSEHAT",
+  enableSorting: false,
+  cell: ({ row }) => (
+    <SatusehatLinkageBadge
+      linkage={getIntegrationLinkage(row.original.integrations, "SATUSEHAT")}
+      resourceName={row.original.name}
+    />
+  ),
+};
+
 export function getLocationColumns({
   canWrite,
+  integrationEnabled,
   organizations,
-  serviceUnits,
   onPreview,
   onLink,
+  onAssignDoctors,
   onEdit,
   onToggleStatus,
 }: LocationColumnOptions): ColumnDef<LocationSummary>[] {
@@ -76,89 +91,47 @@ export function getLocationColumns({
       ),
     },
     {
-      id: "serviceUnit",
-      header: "Unit layanan",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <span className="text-xs text-muted-foreground">
-          {serviceUnits.find((unit) => unit.id === row.original.serviceUnitId)
-            ?.name ?? "Tidak ditetapkan"}
-        </span>
-      ),
-    },
-    {
       accessorKey: "status",
       header: "Status location",
       enableSorting: false,
       cell: ({ row }) => (
-        <Badge
-          variant="outline"
-          className={
-            row.original.status === "ACTIVE"
-              ? "border-success/35 text-success"
-              : row.original.status === "SUSPENDED"
-                ? "border-warning/35 text-warning"
-                : "border-destructive/35 text-destructive"
-          }
-        >
-          {labelFor(locationStatuses, row.original.status)}
-        </Badge>
+        <LocationOperationalStatusBadge status={row.original.status} />
       ),
     },
     {
       accessorKey: "active",
-      header: "Data",
+      header: "Status data",
       cell: ({ row }) => (
-        <Badge
-          className={
-            row.original.active
-              ? "clinical-status-success border text-[10px] font-bold"
-              : "clinical-status-error border text-[10px] font-bold"
-          }
-        >
-          {row.original.active ? "AKTIF" : "NONAKTIF"}
-        </Badge>
+        <ActiveStatusBadge active={row.original.active} />
       ),
     },
-    {
-      id: "satusehat",
-      header: "SATUSEHAT",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <SatusehatLinkageBadge
-          linkage={row.original.satusehat}
-          resourceName={row.original.name}
-        />
-      ),
-    },
+    ...(integrationEnabled ? [satusehatColumn] : []),
     {
       id: "actions",
       header: "Aksi",
       enableSorting: false,
       cell: ({ row }) => (
         <div className="flex flex-wrap justify-end gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => onPreview(row.original)}
-            aria-label={`Sinkronkan SATUSEHAT ${row.original.name}`}
-            title="Sinkronkan SATUSEHAT"
-            className="text-primary hover:bg-primary/10 hover:text-primary focus-visible:border-primary/40 focus-visible:ring-primary/20"
-          >
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-          </Button>
+          <SatusehatActionGroup
+            resourceName={row.original.name}
+            onSync={() => onPreview(row.original)}
+            onLink={
+              canWrite && !getIntegrationLinkage(row.original.integrations, "SATUSEHAT")
+                ? () => onLink(row.original)
+                : undefined
+            }
+          />
           {canWrite ? (
             <>
               <Button
                 type="button"
                 variant="outline"
                 size="icon-xs"
-                onClick={() => onLink(row.original)}
-                aria-label={`Hubungkan SATUSEHAT untuk ${row.original.name}`}
-                title="Hubungkan Location SATUSEHAT"
+                onClick={() => onAssignDoctors(row.original)}
+                aria-label={`Tugaskan dokter ke ${row.original.name}`}
+                title="Tugaskan dokter"
               >
-                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+                <UserRoundPlus className="h-3.5 w-3.5" aria-hidden="true" />
               </Button>
               <Button
                 type="button"

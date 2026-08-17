@@ -1,18 +1,47 @@
 import type { ColumnDef } from '@tanstack/react-table';
 import type { PractitionerSummary } from '@mitrafaskes/shared';
-import { Edit3, Link2 } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Edit3 } from 'lucide-react';
+import { ActiveStatusBadge } from '@/components/ActiveStatusBadge';
 import { Button } from '@/components/ui/button';
-import { SatusehatLinkageBadge } from './SatusehatLinkageBadge';
+import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
+import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
+import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 
 type PractitionerColumnOptions = {
   canWrite: boolean;
+  integrationEnabled: boolean;
   onLink: (practitioner: PractitionerSummary) => void;
   onEdit: (practitioner: PractitionerSummary) => void;
 };
 
+const satusehatColumn: ColumnDef<PractitionerSummary> = {
+  id: 'satusehat',
+  header: 'SATUSEHAT',
+  enableSorting: false,
+  cell: ({ row }) => {
+    if (row.original.role === 'PETUGAS_PENDAFTARAN') {
+      return <span className="text-xs text-muted-foreground">Tidak berlaku</span>;
+    }
+
+    return (
+      <div className="space-y-1">
+        <SatusehatLinkageBadge
+          linkage={getIntegrationLinkage(row.original.integrations, 'SATUSEHAT')}
+          resourceName={row.original.fullName}
+        />
+        {getLatestIntegrationSync(row.original.integrations, 'SATUSEHAT')?.status === 'FAILED' ? (
+          <p className="max-w-44 text-[10px] font-semibold text-destructive" title={getLatestIntegrationSync(row.original.integrations, 'SATUSEHAT')?.errorMessage}>
+            Sinkronisasi terakhir gagal
+          </p>
+        ) : null}
+      </div>
+    );
+  },
+};
+
 export function getPractitionerColumns({
   canWrite,
+  integrationEnabled,
   onLink,
   onEdit,
 }: PractitionerColumnOptions): ColumnDef<PractitionerSummary>[] {
@@ -24,7 +53,7 @@ export function getPractitionerColumns({
         <div className="min-w-48">
           <div className="font-semibold text-foreground">{row.original.fullName}</div>
           <div className="mt-1 text-[11px] text-muted-foreground">
-            @{row.original.username} · {row.original.role === 'DOKTER' ? 'Dokter' : 'Perawat'}
+            @{row.original.username} · {row.original.role === 'DOKTER' ? 'Dokter' : row.original.role === 'PETUGAS_PENDAFTARAN' ? 'Petugas pendaftaran' : 'Perawat'}
           </div>
         </div>
       ),
@@ -61,19 +90,33 @@ export function getPractitionerColumns({
       id: 'location',
       header: 'Location',
       enableSorting: false,
-      cell: ({ row }) =>
-        row.original.location ? (
-          <div className="min-w-36 space-y-1 text-xs">
-            <div className="font-semibold text-foreground">
-              {row.original.location.code}
-            </div>
-            <div className="text-muted-foreground">
-              {row.original.location.name}
-            </div>
+      cell: ({ row }) => {
+        const locations =
+          row.original.locations?.length > 0
+            ? row.original.locations
+            : row.original.location
+              ? [row.original.location]
+              : [];
+        return locations.length > 0 ? (
+          <div className="min-w-44 space-y-1 text-xs" title={locations.map((location) => location.name).join(', ')}>
+            {locations.slice(0, 2).map((location) => (
+              <div key={location.id}>
+                <div className="font-semibold text-foreground">{location.name}</div>
+                <div className="font-mono text-[10px] text-muted-foreground">
+                  {location.code}
+                </div>
+              </div>
+            ))}
+            {locations.length > 2 ? (
+              <div className="text-[10px] font-semibold text-primary">
+                +{locations.length - 2} Location lain
+              </div>
+            ) : null}
           </div>
         ) : (
           <span className="text-xs text-muted-foreground">Belum ditetapkan</span>
-        ),
+        );
+      },
     },
     {
       id: 'license',
@@ -90,35 +133,10 @@ export function getPractitionerColumns({
       accessorKey: 'active',
       header: 'Status',
       cell: ({ row }) => (
-        <Badge
-          className={
-            row.original.active
-              ? 'clinical-status-success border text-[10px] font-bold'
-              : 'clinical-status-error border text-[10px] font-bold'
-          }
-        >
-          {row.original.active ? 'AKTIF' : 'NONAKTIF'}
-        </Badge>
+        <ActiveStatusBadge active={row.original.active} />
       ),
     },
-    {
-      id: 'satusehat',
-      header: 'SATUSEHAT',
-      enableSorting: false,
-      cell: ({ row }) => (
-        <div className="space-y-1">
-          <SatusehatLinkageBadge
-            linkage={row.original.satusehat}
-            resourceName={row.original.fullName}
-          />
-          {row.original.satusehatSync?.status === 'FAILED' ? (
-            <p className="max-w-44 text-[10px] font-semibold text-destructive" title={row.original.satusehatSync.errorMessage}>
-              Sinkronisasi terakhir gagal
-            </p>
-          ) : null}
-        </div>
-      ),
-    },
+    ...(integrationEnabled ? [satusehatColumn] : []),
     {
       id: 'actions',
       header: 'Aksi',
@@ -127,17 +145,14 @@ export function getPractitionerColumns({
         <div className="flex flex-wrap justify-end gap-1">
           {canWrite ? (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-xs"
-                onClick={() => onLink(row.original)}
-                aria-label={`Sinkronkan SATUSEHAT untuk ${row.original.fullName}`}
-                title="Sinkronkan SATUSEHAT"
-                disabled={!row.original.nik}
-              >
-                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
+              {row.original.role !== 'PETUGAS_PENDAFTARAN' ? (
+                <SatusehatActionGroup
+                  resourceName={row.original.fullName}
+                  onLink={() => onLink(row.original)}
+                  linkDisabled={!row.original.nik}
+                  linkDisabledReason="NIK wajib diisi untuk lookup Practitioner SATUSEHAT"
+                />
+              ) : null}
               <Button
                 type="button"
                 variant="outline"

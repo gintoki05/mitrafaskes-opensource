@@ -6,6 +6,7 @@ import type {
 } from './practitionerCreateTypes';
 import { FieldLabel, SelectField } from './FormField';
 import { PractitionerSatusehatLookupPanel } from './PractitionerSatusehatLookupPanel';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 
 export function PractitionerCreateClinicalFields({
   form,
@@ -18,22 +19,41 @@ export function PractitionerCreateClinicalFields({
   updateField: PractitionerFormFieldUpdater;
   onApply: (remote: SatusehatPractitionerRemoteSummary) => void;
 }) {
+  const satusehat = useIntegrationCapability('SATUSEHAT');
   return (
     <section className="space-y-4 border-t border-border pt-5">
       <div>
         <h2 className="text-sm font-bold text-foreground">Data Practitioner</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Tarik identitas bila tersedia di SATUSEHAT, atau lengkapi data lokal
-          secara manual.
+          {form.role === 'PETUGAS_PENDAFTARAN'
+            ? 'Lengkapi profil akun pendaftaran secara lokal.'
+            : `Lengkapi data lokal secara manual${satusehat.configured ? ', atau tarik identitas bila tersedia di SATUSEHAT.' : '.'}`}
         </p>
       </div>
-      <PractitionerSatusehatLookupPanel
-        nik={form.nik ?? ''}
-        disabled={disabled}
-        onNikChange={(value) => updateField('nik', value)}
-        onApply={onApply}
-      />
+      {satusehat.configured && form.role !== 'PETUGAS_PENDAFTARAN' ? (
+        <PractitionerSatusehatLookupPanel
+          nik={form.nik ?? ''}
+          disabled={disabled}
+          onNikChange={(value) => updateField('nik', value)}
+          onApply={onApply}
+        />
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
+        {satusehat.available && form.role !== 'PETUGAS_PENDAFTARAN' ? (
+          <div>
+            <FieldLabel htmlFor="practitioner-create-satusehat-id">
+              ID SATUSEHAT
+            </FieldLabel>
+            <Input
+              id="practitioner-create-satusehat-id"
+              value={form.satusehatId}
+              readOnly
+              className="font-mono"
+              placeholder="Diisi dari hasil lookup"
+              disabled={disabled}
+            />
+          </div>
+        ) : null}
         <div>
           <FieldLabel htmlFor="practitioner-create-birth-date">
             Tanggal lahir

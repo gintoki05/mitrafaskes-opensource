@@ -1,14 +1,17 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import type { OrganizationSummary } from "@mitrafaskes/shared";
-import { Badge } from "@/components/ui/badge";
+import { ActiveStatusBadge } from "@/components/ActiveStatusBadge";
 import { Button } from "@/components/ui/button";
-import { Edit3, Link2, Power, RefreshCw } from "lucide-react";
+import { Edit3, Power } from "lucide-react";
 import { organizationTypes } from "./constants";
 import { OrganizationHierarchyBadge } from "./OrganizationHierarchyBadge";
-import { SatusehatLinkageBadge } from "./SatusehatLinkageBadge";
+import { SatusehatLinkageBadge } from "@/components/satusehat/SatusehatLinkageBadge";
+import { SatusehatActionGroup } from "@/components/satusehat/SatusehatActionGroup";
+import { getIntegrationLinkage } from "@/lib/integrations";
 
 type OrganizationColumnOptions = {
   canWrite: boolean;
+  integrationEnabled: boolean;
   organizations: OrganizationSummary[];
   onPreview: (organization: OrganizationSummary) => void;
   onLink: (organization: OrganizationSummary) => void;
@@ -22,8 +25,21 @@ function labelForType(type: OrganizationSummary["type"]): string {
   );
 }
 
+const satusehatColumn: ColumnDef<OrganizationSummary> = {
+  id: "satusehat",
+  header: "SATUSEHAT",
+  enableSorting: false,
+  cell: ({ row }) => (
+    <SatusehatLinkageBadge
+      linkage={getIntegrationLinkage(row.original.integrations, "SATUSEHAT")}
+      resourceName={row.original.name}
+    />
+  ),
+};
+
 export function getOrganizationColumns({
   canWrite,
+  integrationEnabled,
   organizations,
   onPreview,
   onLink,
@@ -86,56 +102,29 @@ export function getOrganizationColumns({
       accessorKey: "active",
       header: "Status",
       cell: ({ row }) => (
-        <Badge
-          className={
-            row.original.active
-              ? "clinical-status-success border text-[10px] font-bold"
-              : "clinical-status-error border text-[10px] font-bold"
-          }
-        >
-          {row.original.active ? "AKTIF" : "NONAKTIF"}
-        </Badge>
+        <ActiveStatusBadge active={row.original.active} />
       ),
     },
-    {
-      id: "satusehat",
-      header: "SATUSEHAT",
-      enableSorting: false,
-      cell: ({ row }) => (
-        <SatusehatLinkageBadge
-          linkage={row.original.satusehat}
-          resourceName={row.original.name}
-        />
-      ),
-    },
+    ...(integrationEnabled ? [satusehatColumn] : []),
     {
       id: "actions",
       header: "Aksi",
       enableSorting: false,
       cell: ({ row }) => (
-        <div className="flex flex-wrap justify-end gap-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="icon-xs"
-            onClick={() => onPreview(row.original)}
-            aria-label={`Sinkronkan SATUSEHAT untuk ${row.original.name}`}
-            title="Sinkronkan SATUSEHAT"
-          >
-            <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-          </Button>
+        <div className="flex min-w-max flex-nowrap items-center justify-end gap-1">
+          <SatusehatActionGroup
+            resourceName={row.original.name}
+            onSync={() => onPreview(row.original)}
+            className="flex-nowrap"
+            onLink={
+              canWrite &&
+              !getIntegrationLinkage(row.original.integrations, "SATUSEHAT")
+                ? () => onLink(row.original)
+                : undefined
+            }
+          />
           {canWrite ? (
             <>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon-xs"
-                onClick={() => onLink(row.original)}
-                aria-label={`Hubungkan SATUSEHAT untuk ${row.original.name}`}
-                title="Hubungkan Organization SATUSEHAT"
-              >
-                <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
-              </Button>
               <Button
                 type="button"
                 variant="outline"

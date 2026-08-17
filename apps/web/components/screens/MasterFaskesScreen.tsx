@@ -14,7 +14,6 @@ import { MasterFaskesSummary } from "./master-faskes/MasterFaskesSummary";
 export default function MasterFaskesScreen() {
   const {
     organizations,
-    serviceUnits,
     locations,
     loading,
     error,
@@ -27,7 +26,7 @@ export default function MasterFaskesScreen() {
         <PageHeader
           icon={<Building2 className="h-6 w-6" />}
           title="Master Fasilitas Kesehatan"
-          description="Ikhtisar struktur lokal sebelum dipetakan ke resource SATUSEHAT: organisasi/faskes, unit layanan, dan lokasi fisik."
+          description="Ikhtisar struktur lokal fasilitas: organisasi/faskes dan lokasi fisik, dengan pemetaan provider eksternal bila diaktifkan."
           action={
             <Button
               type="button"
@@ -58,14 +57,12 @@ export default function MasterFaskesScreen() {
 
         <MasterFaskesSummary
           organizationCount={organizations.length}
-          serviceUnitCount={serviceUnits.length}
           locationCount={locations.length}
         />
 
         <MasterFaskesStructure
           loading={loading}
           organizations={organizations}
-          serviceUnits={serviceUnits}
           locations={locations}
         />
 
@@ -73,8 +70,8 @@ export default function MasterFaskesScreen() {
           <Building2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
           <p>
             Organization induk perlu divalidasi terlebih dahulu sebelum
-            sub-organisasi, unit layanan, dan Location disinkronkan ke
-            SATUSEHAT. Kelola setiap daftar melalui submenu di atas.
+            sub-organisasi dan Location dipetakan ke provider eksternal.
+            Kelola setiap daftar melalui submenu di atas.
           </p>
         </div>
       </div>

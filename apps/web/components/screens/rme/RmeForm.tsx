@@ -1,133 +1,169 @@
-'use client';
+"use client";
 
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useFieldArray, useForm, useWatch } from 'react-hook-form';
-import { CheckCircle, FileText } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Field, FieldError, FieldLabel } from '@/components/ui/field';
-import { ScreenState } from '@/components/ScreenState';
-import type { Encounter, Icd10Entry } from '@/lib/clinical-types';
-import { RmeDiagnosisSection } from './RmeDiagnosisSection';
-import { RmePatientBanner } from './RmePatientBanner';
-import { RmePrescriptionSection } from './RmePrescriptionSection';
-import { RmeVitalSigns } from './RmeVitalSigns';
-import { rmeFormSchema, type RmeFormValues } from './rme-form-schema';
-import type { RmePrescriptionField, RmePresetBundle } from './types';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect } from "react";
+import { useFieldArray, useForm, useWatch } from "react-hook-form";
+import {
+  ClinicalHistoryCategory,
+  type MedicalRecord,
+  type RmeValidationIssue,
+} from "@mitrafaskes/shared";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { ScreenState } from "@/components/ScreenState";
+import type { Icd10Entry } from "@/lib/clinical-types";
+import { RmeDiagnosisSection } from "./RmeDiagnosisSection";
+import { RmeConflictNotice } from "./RmeConflictNotice";
+import { RmePrescriptionSection } from "./RmePrescriptionSection";
+import { RmeVitalSigns } from "./RmeVitalSigns";
+import { RmeObservationSection } from "./RmeObservationSection";
+import {
+  emptyRmeFormValues,
+  rmeFormSchema,
+  type RmeFormValues,
+} from "./rme-form-schema";
+import { formValuesFrom } from "./rme-form-mappers";
+import { rmePresetValues } from "./rme-presets";
+import type { RmePrescriptionField, RmePresetBundle } from "./types";
+import type { RmeMutationState } from "@/hooks/useRmeLifecycle";
+import { isRmeReadOnly, type RmeVersionConflict } from "./rme-workspace-model";
+import {
+  RmeLifecycleActions,
+  RmeLifecycleSummary,
+} from "./RmeLifecycleControls";
+import {
+  RmeAssessmentSections,
+  RmePhysicalExamSection,
+} from "./RmeAssessmentSections";
+import { RmeHistorySection } from "./RmeHistorySection";
+import { RmeCarePlanSection } from "./RmeCarePlanSection";
+import { useRmeDiagnosisEditor } from "./useRmeDiagnosisEditor";
+import {
+  RmeGlobalFinalizationIssues,
+  RmeSectionIssues,
+} from "./RmeFinalizationIssues";
+import { RmeFormSectionNav } from "./RmeFormSectionNav";
 
 type RmeFormProps = {
-  encounter: Encounter;
+  record: MedicalRecord | null;
   icdSearch: string;
   icdResults: Icd10Entry[];
-  saving: boolean;
-  onSubmit: (values: RmeFormValues) => Promise<void>;
+  mutationState: RmeMutationState;
+  canSaveDraft: boolean;
+  canFinalize: boolean;
+  conflict: RmeVersionConflict | null;
+  finalizationIssues: RmeValidationIssue[];
+  onSaveDraft: (values: RmeFormValues) => Promise<void>;
+  onPreflight: () => Promise<boolean>;
+  onFinalize: () => Promise<void>;
+  onReload: () => void;
   onIcdSearchChange: (value: string) => void;
+  canSyncDiagnosis: boolean;
+  syncingDiagnosisId: string | null;
+  onSyncDiagnosis: (id: string) => void;
+  canSyncObservation: boolean;
+  syncingObservationId: string | null;
+  onSyncObservation: (id: string) => void;
 };
-
-const defaultRmeValues: RmeFormValues = {
-  anamnesis: 'Pasien mengeluh demam dan batuk sejak 2 hari yang lalu.',
-  systolic: '120',
-  diastolic: '80',
-  heartRate: '78',
-  temperature: '37.2',
-  diagnoses: [
-    { icd10Code: 'J00', nameIndo: 'Nasofaringitis Akut (Flu / Batuk Pilek)', isPrimary: true },
-  ],
-  prescriptions: [
-    { medicineName: 'Paracetamol 500mg', dosage: '1 Tablet', frequency: '3x Sehari sesudah makan', quantity: 10 },
-    { medicineName: 'Amoxicillin 500mg', dosage: '1 Kaplet', frequency: '3x Sehari sesudah makan', quantity: 15 },
-  ],
-};
-
-function presetValues(type: RmePresetBundle): Pick<RmeFormValues, 'diagnoses' | 'prescriptions'> {
-  if (type === 'ISPA') {
-    return {
-      diagnoses: [
-        { icd10Code: 'J00', nameIndo: 'Nasofaringitis Akut (Flu / Batuk Pilek)', isPrimary: true },
-      ],
-      prescriptions: [
-        { medicineName: 'Paracetamol 500mg', dosage: '1 Tablet', frequency: '3x Sehari sesudah makan', quantity: 10 },
-        { medicineName: 'CTM 4mg', dosage: '1 Tablet', frequency: '3x Sehari sesudah makan', quantity: 10 },
-        { medicineName: 'Vitamin C 50mg', dosage: '1 Tablet', frequency: '2x Sehari sesudah makan', quantity: 10 },
-      ],
-    };
-  }
-
-  if (type === 'GASTRITIS') {
-    return {
-      diagnoses: [
-        { icd10Code: 'K29.7', nameIndo: 'Gastritis, Tidak Spesifik (Sakit Maag)', isPrimary: true },
-      ],
-      prescriptions: [
-        { medicineName: 'Antasida Doen', dosage: '1 Tablet Kunyah', frequency: '3x Sehari sebelum makan', quantity: 12 },
-        { medicineName: 'Omeprazole 20mg', dosage: '1 Kapsul', frequency: '2x Sehari sebelum makan', quantity: 10 },
-      ],
-    };
-  }
-
-  return {
-    diagnoses: [
-      { icd10Code: 'I10', nameIndo: 'Hipertensi Esensial (Tekanan Darah Tinggi)', isPrimary: true },
-    ],
-    prescriptions: [
-      { medicineName: 'Amlodipine 5mg', dosage: '1 Tablet', frequency: '1x Sehari pagi hari', quantity: 30 },
-    ],
-  };
-}
 
 export function RmeForm({
-  encounter,
+  record,
   icdSearch,
   icdResults,
-  saving,
-  onSubmit,
+  mutationState,
+  canSaveDraft,
+  canFinalize,
+  conflict,
+  finalizationIssues,
+  onSaveDraft,
+  onPreflight,
+  onFinalize,
+  onReload,
   onIcdSearchChange,
+  canSyncDiagnosis,
+  syncingDiagnosisId,
+  onSyncDiagnosis,
+  canSyncObservation,
+  syncingObservationId,
+  onSyncObservation,
 }: RmeFormProps) {
   const {
     control,
-    formState: { errors, isSubmitting },
+    formState: { errors, isDirty, isSubmitting },
     register,
+    reset,
     setValue,
+    getValues,
     handleSubmit,
   } = useForm<RmeFormValues>({
     resolver: zodResolver(rmeFormSchema),
-    defaultValues: defaultRmeValues,
-    mode: 'onBlur',
+    defaultValues: emptyRmeFormValues(),
+    mode: "onBlur",
   });
-  const { append, replace } = useFieldArray({ control, name: 'prescriptions' });
-  const systolic = useWatch({ control, name: 'systolic' });
-  const diastolic = useWatch({ control, name: 'diastolic' });
-  const heartRate = useWatch({ control, name: 'heartRate' });
-  const temperature = useWatch({ control, name: 'temperature' });
-  const diagnoses = useWatch({ control, name: 'diagnoses' }) ?? [];
-  const prescriptions = useWatch({ control, name: 'prescriptions' }) ?? [];
+  const { append, replace } = useFieldArray({ control, name: "prescriptions" });
+  const {
+    fields: historyFields,
+    append: appendHistory,
+    remove: removeHistory,
+  } = useFieldArray({ control, name: "histories" });
+  const systolic = useWatch({ control, name: "systolic" });
+  const diastolic = useWatch({ control, name: "diastolic" });
+  const heartRate = useWatch({ control, name: "heartRate" });
+  const temperature = useWatch({ control, name: "temperature" });
+  const weight = useWatch({ control, name: "weight" });
+  const height = useWatch({ control, name: "height" });
+  const respiratoryRate = useWatch({ control, name: "respiratoryRate" });
+  const oxygenSaturation = useWatch({ control, name: "oxygenSaturation" });
+  const allergyReviewStatus = useWatch({
+    control,
+    name: "allergyReviewStatus",
+  });
+  const disposition = useWatch({ control, name: "disposition" });
+  const prescriptions = useWatch({ control, name: "prescriptions" }) ?? [];
+  const {
+    selectedDiagnoses,
+    updateDiagnoses,
+    handleAddDiagnosis,
+    handleRemoveDiagnosis,
+  } = useRmeDiagnosisEditor({
+    control,
+    setValue,
+    record,
+    onSearchChange: onIcdSearchChange,
+  });
+  const readOnly = isRmeReadOnly(record);
+  const busy =
+    mutationState === "preflighting" ||
+    mutationState === "saving-draft" ||
+    mutationState === "finalizing";
+
+  useEffect(() => {
+    reset(formValuesFrom(record));
+  }, [record, reset]);
+
+  useEffect(() => {
+    const firstIssue = finalizationIssues[0];
+    if (!firstIssue) return;
+    const section = document.querySelector<HTMLElement>(
+      `[data-rme-section="${firstIssue.section}"]`,
+    );
+    section?.scrollIntoView({ behavior: "smooth", block: "center" });
+    section?.focus({ preventScroll: true });
+  }, [finalizationIssues]);
 
   const updateStringValue = (
-    field: 'systolic' | 'diastolic' | 'temperature' | 'heartRate',
+    field:
+      | "systolic"
+      | "diastolic"
+      | "temperature"
+      | "heartRate"
+      | "weight"
+      | "height"
+      | "respiratoryRate"
+      | "oxygenSaturation",
     value: string,
   ) => {
     setValue(field, value, { shouldDirty: true, shouldValidate: true });
-  };
-
-  const updateDiagnoses = (value: RmeFormValues['diagnoses']) => {
-    setValue('diagnoses', value, { shouldDirty: true, shouldValidate: true });
-  };
-
-  const handleAddDiagnosis = (icd: Icd10Entry) => {
-    if (diagnoses.some((diagnosis) => diagnosis.icd10Code === icd.code)) return;
-    updateDiagnoses([
-      ...diagnoses,
-      {
-        icd10Code: icd.code,
-        nameIndo: icd.nameIndo ?? icd.display,
-        isPrimary: diagnoses.length === 0,
-      },
-    ]);
-    onIcdSearchChange('');
-  };
-
-  const handleRemoveDiagnosis = (code: string) => {
-    updateDiagnoses(diagnoses.filter((diagnosis) => diagnosis.icd10Code !== code));
   };
 
   const handleUpdatePrescription = (
@@ -135,7 +171,7 @@ export function RmeForm({
     field: RmePrescriptionField,
     value: string | number,
   ) => {
-    if (field === 'quantity') {
+    if (field === "quantity") {
       setValue(`prescriptions.${index}.quantity`, Number(value) || 0, {
         shouldDirty: true,
         shouldValidate: true,
@@ -150,89 +186,244 @@ export function RmeForm({
   };
 
   const handleApplyPresetBundle = (type: RmePresetBundle) => {
-    const values = presetValues(type);
+    const values = rmePresetValues(type);
     updateDiagnoses(values.diagnoses);
     replace(values.prescriptions);
   };
 
-  const submit = handleSubmit(onSubmit);
+  const saveDraft = handleSubmit(onSaveDraft);
+
+  const copyDraft = async () => {
+    try {
+      if (!navigator.clipboard) throw new Error("Clipboard tidak tersedia");
+      await navigator.clipboard.writeText(JSON.stringify(getValues(), null, 2));
+      toast.success("Draft disalin", {
+        description:
+          "Simpan salinan ini secara aman sebelum memuat versi server.",
+      });
+    } catch {
+      toast.error("Draft tidak dapat disalin", {
+        description:
+          "Salin isi form secara manual sebelum memuat versi terbaru.",
+      });
+    }
+  };
 
   return (
-    <form onSubmit={submit} className="space-y-6" noValidate>
-      <RmePatientBanner encounter={encounter} />
-
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
-            <FileText className="h-4 w-4 text-primary" />
-            1. Anamnesis & Keluhan Utama
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Field data-invalid={Boolean(errors.anamnesis)}>
-            <FieldLabel htmlFor="anamnesis">Anamnesis dan keluhan utama</FieldLabel>
-            <textarea
-              {...register('anamnesis')}
-              id="anamnesis"
-              rows={3}
-              className="clinical-field w-full p-3 text-xs"
-              placeholder="Input keluhan utama, riwayat penyakit, alergi obat..."
-              aria-invalid={Boolean(errors.anamnesis)}
-              aria-describedby="anamnesis-error"
-            />
-            <FieldError id="anamnesis-error" errors={[errors.anamnesis]} />
-          </Field>
-        </CardContent>
-      </Card>
-
-      <RmeVitalSigns
-        systolic={systolic}
-        diastolic={diastolic}
-        temperature={temperature}
-        heartRate={heartRate}
-        onChange={(field, value) => updateStringValue(field, value)}
-      />
-      <RmeDiagnosisSection
-        icdSearch={icdSearch}
-        icdResults={icdResults}
-        selectedDiagnoses={diagnoses}
-        onSearchChange={onIcdSearchChange}
-        onAddDiagnosis={handleAddDiagnosis}
-        onRemoveDiagnosis={handleRemoveDiagnosis}
-      />
-      <RmePrescriptionSection
-        prescriptions={prescriptions}
-        onAddPrescription={() =>
-          append({
-            medicineName: '',
-            dosage: '1 Tablet',
-            frequency: '3x Sehari',
-            quantity: 10,
-          })
-        }
-        onUpdatePrescription={handleUpdatePrescription}
-        onApplyPresetBundle={handleApplyPresetBundle}
+    <form
+      onSubmit={saveDraft}
+      className="grid gap-6 lg:grid-cols-[12rem_minmax(0,1fr)] lg:items-start"
+      noValidate
+    >
+      <RmeFormSectionNav />
+      <div className="min-w-0 space-y-6">
+      <RmeLifecycleSummary
+        record={record}
+        readOnly={readOnly}
+        isDirty={isDirty}
+        mutationState={mutationState}
       />
 
-      <Button
-        id="btn-save-rme"
-        type="submit"
-        disabled={saving || isSubmitting}
-        className="w-full rounded-[var(--radius-panel)] bg-primary py-4 text-sm font-bold text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary/85"
+      <RmeGlobalFinalizationIssues issues={finalizationIssues} />
+
+      {conflict ? (
+        <RmeConflictNotice
+          conflict={conflict}
+          localVersion={record?.version ?? 0}
+          onCopyDraft={copyDraft}
+          onReload={onReload}
+        />
+      ) : null}
+
+      <fieldset disabled={readOnly || busy} className="space-y-6">
+        <RmeAssessmentSections
+          register={register}
+          allergyReviewStatus={allergyReviewStatus}
+          onAllergyReviewChange={(value) =>
+            setValue("allergyReviewStatus", value, { shouldDirty: true })
+          }
+          issues={finalizationIssues}
+        />
+
+        <RmeHistorySection
+          control={control}
+          fields={historyFields}
+          register={register}
+          errors={
+            errors.histories as
+              | Array<
+                  | {
+                      category?: { message?: string };
+                      text?: { message?: string };
+                    }
+                  | undefined
+                >
+              | undefined
+          }
+          disabled={readOnly || busy}
+          onAdd={() =>
+            appendHistory({
+              category: ClinicalHistoryCategory.PAST_MEDICAL,
+              text: "",
+              status: "",
+              onset: "",
+              note: "",
+            })
+          }
+          onRemove={removeHistory}
+        />
+
+        <div
+          id="rme-section-vital-signs"
+          data-rme-section="vitalSigns"
+          className="scroll-mt-24"
+          tabIndex={-1}
+        >
+          <RmeVitalSigns
+            systolic={systolic}
+            diastolic={diastolic}
+            temperature={temperature}
+            heartRate={heartRate}
+            weight={weight}
+            height={height}
+            respiratoryRate={respiratoryRate}
+            oxygenSaturation={oxygenSaturation}
+            onChange={(field, value) => updateStringValue(field, value)}
+          />
+          <RmeSectionIssues issues={finalizationIssues} section="vitalSigns" />
+        </div>
+        <RmePhysicalExamSection
+          register={register}
+          issues={finalizationIssues}
+        />
+      </fieldset>
+      <div
+        id="rme-section-observations"
+        className="scroll-mt-24"
+        tabIndex={-1}
       >
-        <CheckCircle className="mr-2 h-5 w-5 stroke-[2.5]" />
-        {saving || isSubmitting ? 'Menyimpan & Mensinkronkan...' : 'Simpan Rekam Medis (RME) & Sinkronkan ke SATUSEHAT'}
-      </Button>
+        <RmeObservationSection
+          observations={record?.observations ?? []}
+          syncDisabled={isDirty || busy}
+          syncDisabledReason={
+            busy
+              ? "Tunggu proses RME selesai."
+              : "Simpan perubahan lokal sebelum sinkronisasi."
+          }
+          canSyncObservation={canSyncObservation}
+          syncingObservationId={syncingObservationId}
+          onSyncObservation={onSyncObservation}
+        />
+      </div>
+      <div data-rme-section="diagnoses" tabIndex={-1}>
+        <RmeDiagnosisSection
+          icdSearch={icdSearch}
+          icdResults={icdResults}
+          selectedDiagnoses={selectedDiagnoses}
+          onSearchChange={onIcdSearchChange}
+          onAddDiagnosis={handleAddDiagnosis}
+          onRemoveDiagnosis={handleRemoveDiagnosis}
+          disabled={readOnly || busy}
+          syncDisabled={isDirty || busy}
+          syncDisabledReason={
+            busy
+              ? "Tunggu proses RME selesai."
+              : "Simpan perubahan lokal sebelum sinkronisasi."
+          }
+          canSyncDiagnosis={canSyncDiagnosis}
+          syncingDiagnosisId={syncingDiagnosisId}
+          onSyncDiagnosis={onSyncDiagnosis}
+        />
+        <RmeSectionIssues issues={finalizationIssues} section="diagnoses" />
+      </div>
+
+      <fieldset disabled={readOnly || busy} className="space-y-6">
+        <div data-rme-section="prescriptions" tabIndex={-1}>
+          <RmePrescriptionSection
+            prescriptions={prescriptions}
+            onAddPrescription={() =>
+              append({
+                medicineName: "",
+                kfaCode: "",
+                dosage: "",
+                frequency: "",
+                quantity: 0,
+                instructions: "",
+              })
+            }
+            onUpdatePrescription={handleUpdatePrescription}
+            onApplyPresetBundle={handleApplyPresetBundle}
+          />
+          <RmeSectionIssues
+            issues={finalizationIssues}
+            section="prescriptions"
+          />
+        </div>
+        <RmeCarePlanSection
+          register={register}
+          disposition={disposition}
+          onDispositionChange={(value) =>
+            setValue("disposition", value, { shouldDirty: true })
+          }
+          issues={finalizationIssues}
+        />
+      </fieldset>
+
+      <RmeLifecycleActions
+        record={record}
+        readOnly={readOnly}
+        isDirty={isDirty}
+        mutationState={mutationState}
+        busy={busy}
+        isSubmitting={isSubmitting}
+        canSaveDraft={canSaveDraft}
+        canFinalize={canFinalize}
+        onPreflight={onPreflight}
+        onFinalize={onFinalize}
+      />
+      </div>
     </form>
   );
 }
 
-export function RmeFormPlaceholder({ encountersLoading }: { encountersLoading: boolean }) {
+export function RmeFormPlaceholder({
+  encountersLoading,
+  loadError = "",
+  onRetry,
+}: {
+  encountersLoading: boolean;
+  loadError?: string;
+  onRetry?: () => void;
+}) {
+  if (loadError) {
+    return (
+      <ScreenState
+        kind="error"
+        title="Ruang kerja RME tidak tersedia"
+        description={loadError}
+        action={
+          onRetry ? (
+            <Button type="button" size="sm" onClick={onRetry}>
+              Coba lagi
+            </Button>
+          ) : undefined
+        }
+      />
+    );
+  }
   return (
     <ScreenState
-      kind={encountersLoading ? 'loading' : 'empty'}
-      title={encountersLoading ? 'Menyiapkan ruang kerja RME' : 'Belum ada pasien yang dipilih'}
-      description={encountersLoading ? 'Antrean pasien sedang dimuat.' : 'Pilih antrean pasien untuk mulai mengisi rekam medis.'}
+      kind={encountersLoading ? "loading" : "empty"}
+      title={
+        encountersLoading
+          ? "Menyiapkan ruang kerja RME"
+          : "Belum ada pasien yang dipilih"
+      }
+      description={
+        encountersLoading
+          ? "Antrean pasien sedang dimuat."
+          : "Pilih antrean pasien untuk mulai mengisi rekam medis."
+      }
     />
   );
 }

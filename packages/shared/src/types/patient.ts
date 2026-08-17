@@ -1,4 +1,5 @@
-import type { SatusehatLinkageSummary, SatusehatSyncSummary } from './master-data';
+import type { ResourceIntegrationSummary } from './integrations';
+import type { ListMeta, PaginatedListResponse } from "./pagination";
 
 export enum Gender {
   MALE = "MALE",
@@ -157,9 +158,7 @@ export interface Patient {
   address?: string;
   phone?: string;
   medicalRecNo: string;
-  satusehatId?: string;
-  satusehat?: SatusehatLinkageSummary;
-  satusehatSync?: SatusehatSyncSummary;
+  integrations: ResourceIntegrationSummary[];
   active?: boolean;
   birthPlaceText?: string;
   multipleBirthOrder?: number;
@@ -174,6 +173,24 @@ export interface Patient {
   relationships?: PatientRelationship[];
   createdAt: string;
   updatedAt: string;
+}
+
+export type PatientListMeta = ListMeta;
+
+export interface PatientStatusCounts {
+  active: number;
+  inactive: number;
+}
+
+export interface PatientListResponse extends PaginatedListResponse<Patient> {
+  statusCounts?: PatientStatusCounts;
+}
+
+export interface PatientListQuery {
+  search?: string;
+  page?: number;
+  pageSize?: number;
+  active?: boolean;
 }
 
 export interface CreatePatientIdentifierDto {
@@ -242,6 +259,7 @@ export interface CreatePatientRelatedPersonDto {
 export interface CreatePatientRelationshipDto {
   relationshipCode: PatientRelationshipCode;
   relatedPatientId?: string;
+  /** Existing related-person details may accompany the id during an edit. */
   relatedPersonId?: string;
   relatedPerson?: CreatePatientRelatedPersonDto;
   startAt?: string;

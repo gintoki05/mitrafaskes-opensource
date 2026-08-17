@@ -99,14 +99,13 @@ export function PatientSatusehatLookupPanel({
   };
 
   return (
-    <section className="space-y-4 rounded-xl border border-border bg-muted/30 p-4">
+    <section className="space-y-3 rounded-xl border border-border bg-muted/30 p-3 sm:p-4">
       <div className="space-y-1">
         <h2 className="text-sm font-semibold text-foreground">
-          Tarik data dari SATUSEHAT
+          Cari data SATUSEHAT <span className="text-xs font-normal text-muted-foreground">(opsional)</span>
         </h2>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Cari dengan NIK atau Nomor IHS untuk mengisi identitas inti. Aksi ini
-          belum menyimpan atau menghubungkan pasien lokal.
+          Gunakan NIK atau Nomor IHS untuk mengisi data inti. Tidak menyimpan atau menghubungkan pasien.
         </p>
       </div>
 
@@ -157,8 +156,8 @@ export function PatientSatusehatLookupPanel({
 
       <p id="patient-satusehat-lookup-help" className="text-xs text-muted-foreground">
         {identifierType === 'NIK'
-          ? 'NIK lokal tetap dapat digunakan meski data SATUSEHAT tidak ditemukan.'
-          : 'Nomor IHS digunakan untuk mengambil Patient yang sudah dikenal SATUSEHAT.'}
+          ? 'Jika tidak ditemukan, lanjutkan isi form manual.'
+          : 'Gunakan Nomor IHS pasien yang sudah ada.'}
       </p>
 
       {message ? (
@@ -173,7 +172,7 @@ export function PatientSatusehatLookupPanel({
       {items.length > 0 ? (
         <div className="space-y-2 border-t border-border pt-4" aria-live="polite">
           <p className="text-xs font-medium text-foreground">
-            Pilih data yang ingin dimasukkan ke form.
+            Pilih hasil untuk mengisi form.
           </p>
           {items.map((item) => (
             <PatientSatusehatLookupResult
@@ -229,7 +228,7 @@ function PatientSatusehatLookupResult({
         </div>
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
           <span>
-            Nomor IHS:{' '}
+            Nomor IHS / SATUSEHAT ID:{' '}
             <strong className="font-mono font-medium text-foreground">
               {item.externalResourceId}
             </strong>

@@ -12,8 +12,15 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { usePractitioners } from '@/hooks/usePractitioners';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
+import { getIntegrationLinkage } from '@/lib/integrations';
 import { FieldLabel, SelectField } from './FormField';
-import { MasterFaskesDialog } from './MasterFaskesDialog';
+import {
+  MasterFaskesDialog,
+  useMasterFaskesDialogClose,
+  useMasterFaskesDialogGuard,
+} from './MasterFaskesDialog';
+import { PractitionerLocationSelector } from './PractitionerLocationSelector';
 
 type PractitionerProfileDialogProps = {
   open: boolean;
@@ -67,18 +74,42 @@ function PractitionerProfileDialogContent({
   practitioner: PractitionerSummary;
 }) {
   const { update } = usePractitioners();
+  const satusehat = useIntegrationCapability('SATUSEHAT');
   const [nik, setNik] = useState(practitioner.nik ?? '');
   const [birthDate, setBirthDate] = useState(practitioner.birthDate ?? '');
   const [gender, setGender] = useState(practitioner.gender ?? '');
   const [organizationId, setOrganizationId] = useState(
     practitioner.organization?.id ?? '',
   );
-  const [locationId, setLocationId] = useState(practitioner.location?.id ?? '');
+  const [locationIds, setLocationIds] = useState(() =>
+    practitioner.locations?.map((location) => location.id) ??
+    (practitioner.location?.id ? [practitioner.location.id] : []),
+  );
   const [active, setActive] = useState(practitioner.active ? 'true' : 'false');
   const [saving, setSaving] = useState(false);
-  const availableLocations = organizationId
-    ? locations.filter((location) => location.organizationId === organizationId)
-    : [];
+  const requestClose = useMasterFaskesDialogClose(onClose);
+  const initialLocationIds =
+    practitioner.locations?.map((location) => location.id) ??
+    (practitioner.location?.id ? [practitioner.location.id] : []);
+  const hasUnsavedChanges =
+    canWrite &&
+    (nik !== (practitioner.nik ?? '') ||
+      birthDate !== (practitioner.birthDate ?? '') ||
+      gender !== (practitioner.gender ?? '') ||
+      organizationId !== (practitioner.organization?.id ?? '') ||
+      active !== (practitioner.active ? 'true' : 'false') ||
+      locationIds.length !== initialLocationIds.length ||
+      locationIds.some(
+        (locationId, index) => locationId !== initialLocationIds[index],
+      ));
+
+  useMasterFaskesDialogGuard({
+    hasUnsavedChanges,
+    isBusy: saving,
+  });
+  const organizationOptions = organizations.filter(
+    (organization) => organization.active || organization.id === organizationId,
+  );
 
   const submit = async () => {
     if (!canWrite) return;
@@ -89,7 +120,7 @@ function PractitionerProfileDialogContent({
         birthDate: birthDate || null,
         gender: gender || null,
         organizationId: organizationId || null,
-        locationId: locationId || null,
+        locationIds,
         active: active === 'true',
       });
       toast.success('Profil Practitioner berhasil diperbarui.');
@@ -123,10 +154,25 @@ function PractitionerProfileDialogContent({
         <div className="rounded-[var(--radius-control)] border border-border bg-muted/40 p-3 text-sm">
           <strong>{practitioner.fullName}</strong>
           <p className="mt-1 text-xs text-muted-foreground">
-            @{practitioner.username} · {practitioner.role === 'DOKTER' ? 'Dokter' : 'Perawat'}
+            @{practitioner.username} · {practitioner.role === 'DOKTER' ? 'Dokter' : practitioner.role === 'PETUGAS_PENDAFTARAN' ? 'Petugas pendaftaran' : 'Perawat'}
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
+          {satusehat.available && practitioner.role !== 'PETUGAS_PENDAFTARAN' ? (
+            <div>
+              <FieldLabel htmlFor="practitioner-profile-satusehat-id">
+                ID SATUSEHAT
+              </FieldLabel>
+              <Input
+                id="practitioner-profile-satusehat-id"
+                value={getIntegrationLinkage(practitioner.integrations, 'SATUSEHAT')?.externalResourceId ?? ''}
+                readOnly
+                className="font-mono"
+                placeholder="Belum terhubung"
+                disabled={!canWrite || saving}
+              />
+            </div>
+          ) : null}
           <div>
             <FieldLabel htmlFor="practitioner-profile-nik" required>
               NIK
@@ -189,41 +235,31 @@ function PractitionerProfileDialogContent({
               value={organizationId}
               onChange={(value) => {
                 setOrganizationId(value);
-                setLocationId('');
+                setLocationIds([]);
               }}
               disabled={!canWrite || saving}
             >
               <option value="">Belum ditetapkan</option>
-              {organizations.map((organization) => (
+              {organizationOptions.map((organization) => (
                 <option key={organization.id} value={organization.id}>
                   {organization.code} - {organization.name}
                 </option>
               ))}
             </SelectField>
           </div>
-          <div>
-            <FieldLabel htmlFor="practitioner-profile-location">
-              Location
-            </FieldLabel>
-            <SelectField
+          <div className="sm:col-span-2">
+            <PractitionerLocationSelector
               id="practitioner-profile-location"
-              value={locationId}
-              onChange={setLocationId}
-              disabled={!canWrite || saving || !organizationId}
-            >
-              <option value="">
-                {organizationId ? 'Belum ditetapkan' : 'Pilih Organization dulu'}
-              </option>
-              {availableLocations.map((location) => (
-                <option key={location.id} value={location.id}>
-                  {location.code} - {location.name}
-                </option>
-              ))}
-            </SelectField>
+              organizationId={organizationId}
+              locations={locations}
+              value={locationIds}
+              onChange={setLocationIds}
+              disabled={!canWrite || saving}
+            />
           </div>
         </div>
         <div className="flex flex-col-reverse gap-2 border-t border-border pt-4 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={onClose} disabled={saving}>
+          <Button type="button" variant="outline" onClick={requestClose} disabled={saving}>
             Batal
           </Button>
           {canWrite ? (

@@ -9,7 +9,6 @@ import {
   LocationType,
   OrganizationType,
   Prisma,
-  ServiceUnitType,
 } from '@prisma/client';
 import {
   LocationSummary,
@@ -17,37 +16,22 @@ import {
   MasterDataListResponse,
   MasterFaskesData,
   OrganizationSummary,
-  SatusehatLinkageSummary,
-  ServiceUnitSummary,
+  ResourceIntegrationSummary,
 } from '@mitrafaskes/shared';
 import { PrismaService } from '../database/prisma.service';
+import { IntegrationRegistry } from '../integrations/integration-registry';
 import {
   MasterDataValidationError,
   validateLocationInput,
   validateOrganizationInput,
-  validateServiceUnitInput,
 } from './master-data.validation';
-import {
-  DEFAULT_SATUSEHAT_ENVIRONMENT,
-  LOCAL_ORGANIZATION_RESOURCE_TYPE,
-  ORGANIZATION_RESOURCE_TYPE,
-  SATUSEHAT_PROVIDER,
-} from './satusehat-organization.constants';
-import {
-  LOCAL_LOCATION_RESOURCE_TYPE,
-  LOCATION_RESOURCE_TYPE,
-} from './satusehat-location.constants';
 
 const optional = (value: string | null | undefined): string | undefined =>
   value ?? undefined;
 
 const optionalNumber = (value: unknown): number | undefined => {
   if (typeof value === 'number') return value;
-  if (
-    typeof value === 'object' &&
-    value !== null &&
-    'toNumber' in value
-  ) {
+  if (typeof value === 'object' && value !== null && 'toNumber' in value) {
     const decimal = value as { toNumber?: () => number };
     return typeof decimal.toNumber === 'function'
       ? decimal.toNumber()
@@ -56,26 +40,9 @@ const optionalNumber = (value: unknown): number | undefined => {
   return undefined;
 };
 
-type SatusehatLinkageRecord = {
-  localResourceId: string;
-  externalResourceId: string;
-  lastSyncedAt: Date | null;
-};
-
-const toSatusehatLinkage = (
-  record?: SatusehatLinkageRecord,
-): SatusehatLinkageSummary | undefined => {
-  if (!record) return undefined;
-
-  return {
-    externalResourceId: record.externalResourceId,
-    lastSyncedAt: record.lastSyncedAt?.toISOString(),
-  };
-};
-
 const toOrganization = (
   record: Prisma.HealthcareOrganizationGetPayload<Prisma.HealthcareOrganizationDefaultArgs>,
-  satusehat?: SatusehatLinkageRecord,
+  integrations: ResourceIntegrationSummary[] = [],
 ): OrganizationSummary => ({
   id: record.id,
   code: record.code,
@@ -85,21 +52,7 @@ const toOrganization = (
   addressText: optional(record.addressText),
   phone: optional(record.phone),
   email: optional(record.email),
-  satusehat: toSatusehatLinkage(satusehat),
-  active: record.active,
-  createdAt: record.createdAt.toISOString(),
-  updatedAt: record.updatedAt.toISOString(),
-});
-
-const toServiceUnit = (
-  record: Prisma.ServiceUnitGetPayload<Prisma.ServiceUnitDefaultArgs>,
-): ServiceUnitSummary => ({
-  id: record.id,
-  organizationId: record.organizationId,
-  parentId: optional(record.parentId),
-  code: record.code,
-  name: record.name,
-  type: record.type,
+  integrations,
   active: record.active,
   createdAt: record.createdAt.toISOString(),
   updatedAt: record.updatedAt.toISOString(),
@@ -107,11 +60,10 @@ const toServiceUnit = (
 
 const toLocation = (
   record: Prisma.LocationGetPayload<Prisma.LocationDefaultArgs>,
-  satusehat?: SatusehatLinkageRecord,
+  integrations: ResourceIntegrationSummary[] = [],
 ): LocationSummary => ({
   id: record.id,
   organizationId: record.organizationId,
-  serviceUnitId: optional(record.serviceUnitId),
   parentId: optional(record.parentId),
   code: record.code,
   name: record.name,
@@ -124,7 +76,7 @@ const toLocation = (
   city: optional(record.city),
   postalCode: optional(record.postalCode),
   countryCode: record.countryCode,
-  satusehat: toSatusehatLinkage(satusehat),
+  integrations,
   latitude: optionalNumber(record.latitude),
   longitude: optionalNumber(record.longitude),
   altitude: optionalNumber(record.altitude),
@@ -150,12 +102,14 @@ type NormalizedListQuery = Omit<MasterDataListQuery, 'page' | 'pageSize'> & {
 const normalizeListQuery = (
   query: MasterDataListQuery = {},
 ): NormalizedListQuery => {
-  const page = Number.isInteger(query.page) && query.page! > 0
-    ? query.page!
-    : DEFAULT_PAGE;
-  const pageSize = Number.isInteger(query.pageSize) && query.pageSize! > 0
-    ? Math.min(query.pageSize!, MAX_PAGE_SIZE)
-    : DEFAULT_PAGE_SIZE;
+  const page =
+    Number.isInteger(query.page) && query.page! > 0
+      ? query.page!
+      : DEFAULT_PAGE;
+  const pageSize =
+    Number.isInteger(query.pageSize) && query.pageSize! > 0
+      ? Math.min(query.pageSize!, MAX_PAGE_SIZE)
+      : DEFAULT_PAGE_SIZE;
 
   return { ...query, page, pageSize };
 };
@@ -175,14 +129,14 @@ const orderBy = (query: NormalizedListQuery) => {
 
 @Injectable()
 export class MasterDataService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly integrations?: IntegrationRegistry,
+  ) {}
 
   async findAll(): Promise<MasterFaskesData> {
-    const [organizations, serviceUnits, locations] = await Promise.all([
+    const [organizations, locations] = await Promise.all([
       this.prisma.healthcareOrganization.findMany({
-        orderBy: [{ active: 'desc' }, { name: 'asc' }],
-      }),
-      this.prisma.serviceUnit.findMany({
         orderBy: [{ active: 'desc' }, { name: 'asc' }],
       }),
       this.prisma.location.findMany({
@@ -190,26 +144,31 @@ export class MasterDataService {
       }),
     ]);
 
-    const [organizationLinks, locationLinks] = await Promise.all([
-      this.findSatusehatLinkages(
-        ORGANIZATION_RESOURCE_TYPE,
-        LOCAL_ORGANIZATION_RESOURCE_TYPE,
-        organizations.map((organization) => organization.id),
-      ),
-      this.findSatusehatLinkages(
-        LOCATION_RESOURCE_TYPE,
-        LOCAL_LOCATION_RESOURCE_TYPE,
-        locations.map((location) => location.id),
-      ),
-    ]);
+    const [organizationIntegrations, locationIntegrations] = this.integrations
+      ? await Promise.all([
+          this.integrations.findResourceSummaries(
+            'Organization',
+            organizations.map((organization) => organization.id),
+          ),
+          this.integrations.findResourceSummaries(
+            'Location',
+            locations.map((location) => location.id),
+          ),
+        ])
+      : [
+          new Map<string, ResourceIntegrationSummary[]>(),
+          new Map<string, ResourceIntegrationSummary[]>(),
+        ];
 
     return {
       organizations: organizations.map((organization) =>
-        toOrganization(organization, organizationLinks.get(organization.id)),
+        toOrganization(
+          organization,
+          organizationIntegrations.get(organization.id) ?? [],
+        ),
       ),
-      serviceUnits: serviceUnits.map(toServiceUnit),
       locations: locations.map((location) =>
-        toLocation(location, locationLinks.get(location.id)),
+        toLocation(location, locationIntegrations.get(location.id) ?? []),
       ),
     };
   }
@@ -218,14 +177,26 @@ export class MasterDataService {
     input: MasterDataListQuery = {},
   ): Promise<MasterDataListResponse<OrganizationSummary>> {
     const query = normalizeListQuery(input);
-    const where: Prisma.HealthcareOrganizationWhereInput = {};
+    const baseWhere: Prisma.HealthcareOrganizationWhereInput = {};
     const search = searchOr(query.search, ['code', 'name', 'addressText']);
 
-    if (search) where.OR = search;
-    if (query.active !== undefined) where.active = query.active;
-    if (query.type) where.type = query.type as OrganizationType;
+    if (search) baseWhere.OR = search;
+    if (query.type) baseWhere.type = query.type as OrganizationType;
 
-    const [records, total] = await Promise.all([
+    const where: Prisma.HealthcareOrganizationWhereInput = {
+      ...baseWhere,
+    };
+    if (query.active !== undefined) where.active = query.active;
+    const activeWhere: Prisma.HealthcareOrganizationWhereInput = {
+      ...baseWhere,
+      active: true,
+    };
+    const inactiveWhere: Prisma.HealthcareOrganizationWhereInput = {
+      ...baseWhere,
+      active: false,
+    };
+
+    const [records, total, activeCount, inactiveCount] = await Promise.all([
       this.prisma.healthcareOrganization.findMany({
         where,
         orderBy: orderBy(query),
@@ -233,46 +204,22 @@ export class MasterDataService {
         take: query.pageSize,
       }),
       this.prisma.healthcareOrganization.count({ where }),
+      this.prisma.healthcareOrganization.count({ where: activeWhere }),
+      this.prisma.healthcareOrganization.count({ where: inactiveWhere }),
     ]);
-    const linkages = await this.findSatusehatLinkages(
-      ORGANIZATION_RESOURCE_TYPE,
-      LOCAL_ORGANIZATION_RESOURCE_TYPE,
-      records.map((record) => record.id),
-    );
+    const integrations = this.integrations
+      ? await this.integrations.findResourceSummaries(
+          'Organization',
+          records.map((record) => record.id),
+        )
+      : new Map<string, ResourceIntegrationSummary[]>();
 
     return {
       items: records.map((record) =>
-        toOrganization(record, linkages.get(record.id)),
+        toOrganization(record, integrations.get(record.id) ?? []),
       ),
       meta: { page: query.page, pageSize: query.pageSize, total },
-    };
-  }
-
-  async findServiceUnits(
-    input: MasterDataListQuery = {},
-  ): Promise<MasterDataListResponse<ServiceUnitSummary>> {
-    const query = normalizeListQuery(input);
-    const where: Prisma.ServiceUnitWhereInput = {};
-    const search = searchOr(query.search, ['code', 'name']);
-
-    if (search) where.OR = search;
-    if (query.active !== undefined) where.active = query.active;
-    if (query.type) where.type = query.type as ServiceUnitType;
-    if (query.organizationId) where.organizationId = query.organizationId;
-
-    const [records, total] = await Promise.all([
-      this.prisma.serviceUnit.findMany({
-        where,
-        orderBy: orderBy(query),
-        skip: (query.page - 1) * query.pageSize,
-        take: query.pageSize,
-      }),
-      this.prisma.serviceUnit.count({ where }),
-    ]);
-
-    return {
-      items: records.map(toServiceUnit),
-      meta: { page: query.page, pageSize: query.pageSize, total },
+      statusCounts: { active: activeCount, inactive: inactiveCount },
     };
   }
 
@@ -280,17 +227,26 @@ export class MasterDataService {
     input: MasterDataListQuery = {},
   ): Promise<MasterDataListResponse<LocationSummary>> {
     const query = normalizeListQuery(input);
-    const where: Prisma.LocationWhereInput = {};
+    const baseWhere: Prisma.LocationWhereInput = {};
     const search = searchOr(query.search, ['code', 'name', 'city']);
 
-    if (search) where.OR = search;
-    if (query.active !== undefined) where.active = query.active;
-    if (query.type) where.type = query.type as LocationType;
-    if (query.status) where.status = query.status as LocationStatus;
-    if (query.organizationId) where.organizationId = query.organizationId;
-    if (query.serviceUnitId) where.serviceUnitId = query.serviceUnitId;
+    if (search) baseWhere.OR = search;
+    if (query.type) baseWhere.type = query.type as LocationType;
+    if (query.status) baseWhere.status = query.status as LocationStatus;
+    if (query.organizationId) baseWhere.organizationId = query.organizationId;
 
-    const [records, total] = await Promise.all([
+    const where: Prisma.LocationWhereInput = { ...baseWhere };
+    if (query.active !== undefined) where.active = query.active;
+    const activeWhere: Prisma.LocationWhereInput = {
+      ...baseWhere,
+      active: true,
+    };
+    const inactiveWhere: Prisma.LocationWhereInput = {
+      ...baseWhere,
+      active: false,
+    };
+
+    const [records, total, activeCount, inactiveCount] = await Promise.all([
       this.prisma.location.findMany({
         where,
         orderBy: orderBy(query),
@@ -298,49 +254,23 @@ export class MasterDataService {
         take: query.pageSize,
       }),
       this.prisma.location.count({ where }),
+      this.prisma.location.count({ where: activeWhere }),
+      this.prisma.location.count({ where: inactiveWhere }),
     ]);
-    const linkages = await this.findSatusehatLinkages(
-      LOCATION_RESOURCE_TYPE,
-      LOCAL_LOCATION_RESOURCE_TYPE,
-      records.map((record) => record.id),
-    );
+    const integrations = this.integrations
+      ? await this.integrations.findResourceSummaries(
+          'Location',
+          records.map((record) => record.id),
+        )
+      : new Map<string, ResourceIntegrationSummary[]>();
 
     return {
-      items: records.map((record) => toLocation(record, linkages.get(record.id))),
+      items: records.map((record) =>
+        toLocation(record, integrations.get(record.id) ?? []),
+      ),
       meta: { page: query.page, pageSize: query.pageSize, total },
+      statusCounts: { active: activeCount, inactive: inactiveCount },
     };
-  }
-
-  private async findSatusehatLinkages(
-    resourceType: string,
-    localResourceType: string,
-    localResourceIds: string[],
-  ): Promise<Map<string, SatusehatLinkageRecord>> {
-    const linkages = new Map<string, SatusehatLinkageRecord>();
-    if (localResourceIds.length === 0) return linkages;
-
-    const records = await this.prisma.externalResourceLink.findMany({
-      where: {
-        provider: SATUSEHAT_PROVIDER,
-        environment:
-          process.env.SATUSEHAT_ENVIRONMENT?.trim() ||
-          DEFAULT_SATUSEHAT_ENVIRONMENT,
-        resourceType,
-        localResourceType,
-        localResourceId: { in: localResourceIds },
-      },
-      select: {
-        localResourceId: true,
-        externalResourceId: true,
-        lastSyncedAt: true,
-      },
-    });
-
-    for (const record of records) {
-      linkages.set(record.localResourceId, record);
-    }
-
-    return linkages;
   }
 
   async createOrganization(input: unknown): Promise<OrganizationSummary> {
@@ -383,66 +313,9 @@ export class MasterDataService {
     }
   }
 
-  async createServiceUnit(input: unknown): Promise<ServiceUnitSummary> {
-    const validated = this.validate(() => validateServiceUnitInput(input));
-    await this.ensureOrganization(validated.organizationId);
-    await this.ensureServiceUnitParent(
-      validated.parentId,
-      validated.organizationId,
-    );
-    try {
-      const record = await this.prisma.serviceUnit.create({ data: validated });
-      return toServiceUnit(record);
-    } catch (error) {
-      this.handleWriteError(
-        error,
-        'Kode unit layanan sudah digunakan dalam organisasi ini',
-      );
-    }
-  }
-
-  async updateServiceUnit(
-    id: string,
-    input: unknown,
-  ): Promise<ServiceUnitSummary> {
-    const validated = this.validate(() => validateServiceUnitInput(input));
-    if (validated.parentId === id) {
-      throw new ConflictException({
-        code: 'SERVICE_UNIT_SELF_PARENT',
-        message: 'Unit layanan tidak dapat menjadi induk bagi dirinya sendiri',
-      });
-    }
-    await this.ensureExists(
-      () => this.prisma.serviceUnit.findUnique({ where: { id } }),
-      'Unit layanan tidak ditemukan',
-    );
-    await this.ensureOrganization(validated.organizationId);
-    await this.ensureServiceUnitParent(
-      validated.parentId,
-      validated.organizationId,
-      id,
-    );
-    try {
-      const record = await this.prisma.serviceUnit.update({
-        where: { id },
-        data: { ...validated, parentId: validated.parentId ?? null },
-      });
-      return toServiceUnit(record);
-    } catch (error) {
-      this.handleWriteError(
-        error,
-        'Kode unit layanan sudah digunakan dalam organisasi ini',
-      );
-    }
-  }
-
   async createLocation(input: unknown): Promise<LocationSummary> {
     const validated = this.validate(() => validateLocationInput(input));
     await this.ensureOrganization(validated.organizationId);
-    await this.ensureServiceUnit(
-      validated.serviceUnitId,
-      validated.organizationId,
-    );
     await this.ensureLocationParent(
       validated.parentId,
       validated.organizationId,
@@ -471,10 +344,6 @@ export class MasterDataService {
       'Lokasi tidak ditemukan',
     );
     await this.ensureOrganization(validated.organizationId);
-    await this.ensureServiceUnit(
-      validated.serviceUnitId,
-      validated.organizationId,
-    );
     await this.ensureLocationParent(
       validated.parentId,
       validated.organizationId,
@@ -486,7 +355,6 @@ export class MasterDataService {
         data: {
           ...validated,
           parentId: validated.parentId ?? null,
-          serviceUnitId: validated.serviceUnitId ?? null,
           latitude: validated.latitude ?? null,
           longitude: validated.longitude ?? null,
           altitude: validated.altitude ?? null,
@@ -543,55 +411,6 @@ export class MasterDataService {
       },
       'ORGANIZATION_HIERARCHY_CYCLE',
       'Organisasi tidak dapat dipindahkan menjadi anak dari turunannya',
-    );
-  }
-
-  private async ensureServiceUnit(
-    id: string | undefined,
-    organizationId: string,
-  ): Promise<void> {
-    if (!id) return;
-    const unit = await this.prisma.serviceUnit.findUnique({ where: { id } });
-    if (!unit) throw new NotFoundException('Unit layanan tidak ditemukan');
-    if (unit.organizationId !== organizationId) {
-      throw new ConflictException({
-        code: 'SERVICE_UNIT_ORGANIZATION_MISMATCH',
-        message: 'Unit layanan harus berada pada organisasi yang sama',
-      });
-    }
-  }
-
-  private async ensureServiceUnitParent(
-    parentId: string | undefined,
-    organizationId: string,
-    childId?: string,
-  ): Promise<void> {
-    if (!parentId) return;
-    const parent = await this.prisma.serviceUnit.findUnique({
-      where: { id: parentId },
-    });
-    if (!parent)
-      throw new NotFoundException('Induk unit layanan tidak ditemukan');
-    if (parent.organizationId !== organizationId) {
-      throw new ConflictException({
-        code: 'SERVICE_UNIT_PARENT_ORGANIZATION_MISMATCH',
-        message: 'Induk unit layanan harus berada pada organisasi yang sama',
-      });
-    }
-    if (!childId) return;
-
-    await this.ensureNoHierarchyCycle(
-      childId,
-      parentId,
-      async (id) => {
-        const record = await this.prisma.serviceUnit.findUnique({
-          where: { id },
-          select: { parentId: true },
-        });
-        return record?.parentId;
-      },
-      'SERVICE_UNIT_HIERARCHY_CYCLE',
-      'Unit layanan tidak dapat dipindahkan menjadi anak dari turunannya',
     );
   }
 

@@ -79,6 +79,22 @@ export function OrganizationImportLocalPanel({
       </div>
 
       <div>
+        <FieldLabel htmlFor="satusehat-import-organization-id">
+          ID SATUSEHAT
+        </FieldLabel>
+        <Input
+          id="satusehat-import-organization-id"
+          value={selected.externalResourceId}
+          readOnly
+          className="font-mono"
+        />
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          ID ini berasal dari resource Organization yang ditemukan; kode di
+          bawah tetap kode lokal aplikasi.
+        </p>
+      </div>
+
+      <div>
         <FieldLabel htmlFor="satusehat-import-code">{codeLabel}</FieldLabel>
         <Input
           id="satusehat-import-code"

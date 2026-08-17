@@ -1,13 +1,8 @@
-import {
-  LocationType,
-  OrganizationType,
-  ServiceUnitType,
-} from '@prisma/client';
+import { LocationType, OrganizationType } from '@prisma/client';
 import {
   MasterDataValidationError,
   validateLocationInput,
   validateOrganizationInput,
-  validateServiceUnitInput,
 } from './master-data.validation';
 
 describe('master faskes validation', () => {
@@ -53,15 +48,7 @@ describe('master faskes validation', () => {
     ).toThrow(MasterDataValidationError);
   });
 
-  it('requires an organization for service units and locations', () => {
-    expect(() =>
-      validateServiceUnitInput({
-        code: 'POLI-UMUM',
-        name: 'Poli Umum',
-        type: ServiceUnitType.POLYCLINIC,
-      }),
-    ).toThrow(MasterDataValidationError);
-
+  it('requires an organization for locations', () => {
     expect(() =>
       validateLocationInput({
         code: 'RUANG-01',
@@ -71,11 +58,10 @@ describe('master faskes validation', () => {
     ).toThrow(MasterDataValidationError);
   });
 
-  it('accepts a room attached to a service unit and location hierarchy', () => {
+  it('accepts a room in an organization and location hierarchy', () => {
     expect(
       validateLocationInput({
         organizationId: 'org-1',
-        serviceUnitId: 'unit-1',
         parentId: 'location-floor-1',
         code: 'room-01',
         name: 'Ruang Pemeriksaan 1',
@@ -86,7 +72,6 @@ describe('master faskes validation', () => {
       }),
     ).toEqual({
       organizationId: 'org-1',
-      serviceUnitId: 'unit-1',
       parentId: 'location-floor-1',
       code: 'ROOM-01',
       name: 'Ruang Pemeriksaan 1',

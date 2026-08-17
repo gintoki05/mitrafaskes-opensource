@@ -8,16 +8,16 @@ import {
   ArrowRight,
   LockKeyhole,
   ShieldCheck,
-  Stethoscope,
   UserCheck,
 } from 'lucide-react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { z } from 'zod';
-import { apiFetch, defaultRoute, saveSession } from '@/lib/auth';
+import { apiFetch, defaultRoute, setSession } from '@/lib/auth';
 import { getLastRoute } from '@/lib/route-state';
 import { useSession } from '@/hooks/useSession';
 import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
+import { PasswordInput } from '@/components/ui/password-input';
 import { toast } from 'sonner';
 
 const loginSchema = z.object({
@@ -30,7 +30,6 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 function getSessionEntryRoute(user: Parameters<typeof defaultRoute>[0]): string {
   return getLastRoute(user) ?? defaultRoute(user);
 }
-
 export default function LoginPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -43,13 +42,13 @@ export default function LoginPage() {
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      username: 'dr_budi',
-      password: 'dok123',
+      username: 'admin',
+      password: 'admin123',
     },
   });
 
   useEffect(() => {
-    if (session) router.replace(getSessionEntryRoute(session.user));
+    if (session) router.replace(session.user.mustChangePassword ? '/wajib-ganti-password' : getSessionEntryRoute(session.user));
   }, [router, session]);
 
   const handleLogin: SubmitHandler<LoginFormValues> = async ({ username, password }) => {
@@ -63,13 +62,28 @@ export default function LoginPage() {
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.message || 'Login gagal');
+        let serverMessage = '';
+        try {
+          const errData = (await res.json()) as { message?: string | string[] };
+          serverMessage = Array.isArray(errData.message)
+            ? errData.message.join(' ')
+            : errData.message ?? '';
+        } catch {
+          // Use the status-specific fallback when the API has no JSON body.
+        }
+        const isGenericThrottleMessage = /ThrottlerException|Too Many Requests/i.test(
+          serverMessage,
+        );
+        const message =
+          res.status === 429 && (!serverMessage || isGenericThrottleMessage)
+            ? 'Batas percobaan login tercapai. Maksimal 7 percobaan dalam 7 menit. Coba lagi setelah batas waktu berakhir.'
+            : serverMessage || 'Login gagal';
+        throw new Error(message);
       }
 
       const data = await res.json();
-      saveSession(data.accessToken, data.user);
-      router.replace(getSessionEntryRoute(data.user));
+      setSession(data.user);
+      router.replace(data.user.mustChangePassword ? '/wajib-ganti-password' : getSessionEntryRoute(data.user));
     } catch (err: unknown) {
       toast.error('Tidak dapat masuk', {
         description:
@@ -101,12 +115,11 @@ export default function LoginPage() {
           </div>
 
           <div className="mt-12 max-w-sm lg:mt-20">
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-sidebar-foreground/70">Ruang kerja klinik</p>
-            <h1 className="mt-4 text-3xl font-bold leading-tight tracking-[-0.03em] sm:text-4xl">
+            <h1 className="text-3xl font-bold leading-tight tracking-[-0.03em] sm:text-4xl">
               Satu alur untuk setiap kunjungan.
             </h1>
             <p className="mt-5 max-w-md text-sm leading-7 text-sidebar-foreground/80">
-              Kelola pendaftaran, antrean, pemeriksaan dokter, dan sinkronisasi SATUSEHAT dari ruang kerja yang sama.
+              Kelola pendaftaran, antrean, pemeriksaan dokter, dan integrasi opsional dari ruang kerja yang sama.
             </p>
           </div>
         </div>
@@ -125,8 +138,7 @@ export default function LoginPage() {
       <section className="flex min-w-0 flex-col justify-center bg-card p-6 sm:p-10 lg:p-14" aria-labelledby="login-title">
         <div className="mx-auto w-full max-w-md">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Selamat datang kembali</p>
-            <h2 id="login-title" className="mt-3 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Masuk ke sistem</h2>
+            <h2 id="login-title" className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Masuk ke sistem</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">Gunakan akun fasilitas kesehatan Anda untuk melanjutkan pekerjaan.</p>
           </div>
 
@@ -150,12 +162,10 @@ export default function LoginPage() {
                 <FieldLabel htmlFor="password">Password</FieldLabel>
                 <span className="text-xs text-muted-foreground">Akun internal fasilitas</span>
               </div>
-              <input
+              <PasswordInput
                 {...register('password')}
                 id="password"
-                type="password"
                 autoComplete="current-password"
-                className="clinical-field min-h-11 w-full px-3.5 text-sm transition-colors focus-visible:border-ring"
                 aria-invalid={Boolean(errors.password)}
                 aria-describedby="password-error"
               />
@@ -171,10 +181,10 @@ export default function LoginPage() {
 
           <div className="mt-9 border-t border-border pt-6">
             <div className="flex items-center justify-between gap-3">
-              <span className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">Akun demo</span>
-              <span className="text-xs text-muted-foreground">Klik untuk mengisi</span>
+              <span className="text-sm font-semibold text-foreground">Akun demo</span>
+              <span className="text-sm text-muted-foreground">Klik untuk mengisi</span>
             </div>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            <div className="mt-3 grid gap-2 sm:grid-cols-1">
               <button
                 type="button"
                 onClick={() => selectQuickUser('admin', 'admin123')}
@@ -185,18 +195,6 @@ export default function LoginPage() {
                   Admin
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">Siti Rahma · Operasi</div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => selectQuickUser('dr_budi', 'dok123')}
-                className="group rounded-[var(--radius-control)] border border-border bg-background p-3 text-left transition-colors hover:border-primary/35 hover:bg-primary/[0.035]"
-              >
-                <div className="flex items-center gap-2 text-sm font-bold text-primary">
-                  <Stethoscope className="h-4 w-4" aria-hidden="true" />
-                  Dokter
-                </div>
-                <div className="mt-1 text-xs text-muted-foreground">dr. Budi Santoso</div>
               </button>
             </div>
           </div>

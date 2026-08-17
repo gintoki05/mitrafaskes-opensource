@@ -1,13 +1,9 @@
 import type {
   LocationSummary,
   OrganizationSummary,
-  ServiceUnitSummary,
 } from "@mitrafaskes/shared";
-import type {
-  LocationForm,
-  OrganizationForm,
-  ServiceUnitForm,
-} from "./types";
+import type { LocationForm, OrganizationForm } from "./types";
+import { getIntegrationLinkage } from "@/lib/integrations";
 
 export function organizationToForm(
   organization: OrganizationSummary,
@@ -15,6 +11,7 @@ export function organizationToForm(
   return {
     code: organization.code,
     name: organization.name,
+    satusehatId: getIntegrationLinkage(organization.integrations, "SATUSEHAT")?.externalResourceId ?? "",
     type: organization.type,
     parentId: organization.parentId ?? "",
     addressText: organization.addressText ?? "",
@@ -24,26 +21,13 @@ export function organizationToForm(
   };
 }
 
-export function serviceUnitToForm(
-  serviceUnit: ServiceUnitSummary,
-): ServiceUnitForm {
-  return {
-    organizationId: serviceUnit.organizationId,
-    parentId: serviceUnit.parentId ?? "",
-    code: serviceUnit.code,
-    name: serviceUnit.name,
-    type: serviceUnit.type,
-    active: serviceUnit.active,
-  };
-}
-
 export function locationToForm(location: LocationSummary): LocationForm {
   return {
     organizationId: location.organizationId,
-    serviceUnitId: location.serviceUnitId ?? "",
     parentId: location.parentId ?? "",
     code: location.code,
     name: location.name,
+    satusehatId: getIntegrationLinkage(location.integrations, "SATUSEHAT")?.externalResourceId ?? "",
     type: location.type,
     description: location.description ?? "",
     status: location.status,

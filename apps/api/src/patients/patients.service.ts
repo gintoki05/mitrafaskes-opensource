@@ -5,13 +5,22 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { Patient } from '@mitrafaskes/shared';
+import {
+  Patient,
+  PatientListQuery,
+  PatientListResponse,
+} from '@mitrafaskes/shared';
+import type { ResourceIntegrationSummary } from '@mitrafaskes/shared';
+import { IntegrationRegistry } from '../integrations/integration-registry';
 import {
   PatientIdentityConflictError,
   PatientRepository,
   PatientNotFoundError,
 } from './patient.repository';
-import { PatientSyncStatusRepository } from './patient-sync-status.repository';
+import {
+  PatientAddressRegionValidationError,
+  PatientAddressRegionValidator,
+} from './patient-address-region.validator';
 import {
   PatientValidationError,
   validatePatientInput,
@@ -21,21 +30,25 @@ import {
 export class PatientsService {
   constructor(
     private readonly repository: PatientRepository,
-    @Optional() private readonly syncStatus?: PatientSyncStatusRepository,
+    private readonly addressRegions: PatientAddressRegionValidator,
+    @Optional() private readonly integrations?: IntegrationRegistry,
   ) {}
 
-  async findMany(search?: string): Promise<Patient[]> {
-    const patients = await this.repository.findMany(search);
-    return this.attachSyncStatus(patients);
+  async findMany(input: PatientListQuery = {}): Promise<PatientListResponse> {
+    const result = await this.repository.findMany(input);
+    return {
+      ...result,
+      items: await this.attachIntegrations(result.items),
+    };
   }
 
   async findById(id: string): Promise<Patient | null> {
     const patient = await this.repository.findById(id);
     if (!patient) return null;
-    return (await this.attachSyncStatus([patient]))[0];
+    return (await this.attachIntegrations([patient]))[0];
   }
 
-  async getPatientForSatusehat(id: string): Promise<Patient> {
+  async getPatientForExternalIntegration(id: string): Promise<Patient> {
     const patient = await this.repository.findById(id);
     if (!patient) throw new NotFoundException('Pasien tidak ditemukan');
     return patient;
@@ -50,11 +63,18 @@ export class PatientsService {
   async create(input: unknown): Promise<Patient> {
     try {
       const validated = validatePatientInput(input);
-      return await this.attachSyncStatus([await this.repository.create(validated)]).then(
-        ([patient]) => patient,
+      const canonical = await this.addressRegions.canonicalize(
+        validated.addresses,
+        { mode: 'CREATE' },
       );
+      return await this.attachIntegrations([
+        await this.repository.create({ ...validated, addresses: canonical }),
+      ]).then(([patient]) => patient);
     } catch (error) {
-      if (error instanceof PatientValidationError) {
+      if (
+        error instanceof PatientValidationError ||
+        error instanceof PatientAddressRegionValidationError
+      ) {
         throw new BadRequestException({
           code: 'PATIENT_VALIDATION_FAILED',
           message: error.message,
@@ -98,12 +118,24 @@ export class PatientsService {
 
   async update(id: string, input: unknown): Promise<Patient> {
     try {
+      const current = await this.repository.findById(id);
+      if (!current) throw new PatientNotFoundError();
       const validated = validatePatientInput(input);
-      return await this.attachSyncStatus([
-        await this.repository.update(id, validated),
+      const canonical = await this.addressRegions.canonicalize(
+        validated.addresses,
+        { mode: 'UPDATE', previousAddresses: current.addresses },
+      );
+      return await this.attachIntegrations([
+        await this.repository.update(id, {
+          ...validated,
+          addresses: canonical,
+        }),
       ]).then(([patient]) => patient);
     } catch (error) {
-      if (error instanceof PatientValidationError) {
+      if (
+        error instanceof PatientValidationError ||
+        error instanceof PatientAddressRegionValidationError
+      ) {
         throw new BadRequestException({
           code: 'PATIENT_VALIDATION_FAILED',
           message: error.message,
@@ -138,16 +170,17 @@ export class PatientsService {
     }
   }
 
-  private async attachSyncStatus(patients: Patient[]): Promise<Patient[]> {
-    const syncStatus = this.syncStatus;
-    if (patients.length === 0 || !syncStatus) return patients;
-    const status = await syncStatus.findForList(
-      patients.map((patient) => patient.id),
-    );
+  private async attachIntegrations(patients: Patient[]): Promise<Patient[]> {
+    if (patients.length === 0) return patients;
+    const summaries = this.integrations
+      ? await this.integrations.findResourceSummaries(
+          'Patient',
+          patients.map((patient) => patient.id),
+        )
+      : new Map<string, ResourceIntegrationSummary[]>();
     return patients.map((patient) => ({
       ...patient,
-      satusehat: syncStatus.toLinkage(status.links.get(patient.id)),
-      satusehatSync: syncStatus.toSyncSummary(status.logs.get(patient.id)),
+      integrations: summaries.get(patient.id) ?? [],
     }));
   }
 }

@@ -51,7 +51,7 @@ export function toPatient(record: PatientRecord): Patient {
     address: record.address ?? undefined,
     phone: record.phone ?? undefined,
     medicalRecNo: record.medicalRecNo,
-    satusehatId: record.satusehatId ?? undefined,
+    integrations: [],
     active: record.active,
     birthPlaceText: record.birthPlaceText ?? undefined,
     multipleBirthOrder: record.multipleBirthOrder ?? undefined,
@@ -117,7 +117,8 @@ export function toPatient(record: PatientRecord): Patient {
     })),
     relationships: record.relationshipsFrom.map((relationship) => ({
       id: relationship.id,
-      relationshipCode: relationship.relationshipCode as PatientRelationshipCode,
+      relationshipCode:
+        relationship.relationshipCode as PatientRelationshipCode,
       relatedPatientId: relationship.relatedPatientId ?? undefined,
       relatedPersonId: relationship.relatedPersonId ?? undefined,
       relatedPerson: relationship.relatedPerson

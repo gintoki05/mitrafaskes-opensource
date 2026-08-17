@@ -16,12 +16,15 @@ import { useMasterFaskesData } from "@/hooks/useMasterFaskesData";
 import { useMasterFaskesList } from "@/hooks/useMasterFaskesList";
 import { can } from "@/lib/auth";
 import { useSession } from "@/hooks/useSession";
+import { useIntegrationCapability } from "@/hooks/useIntegrationCapabilities";
 import { MasterFaskesDialog } from "./master-faskes/MasterFaskesDialog";
 import { MasterFaskesSubnav } from "./master-faskes/MasterFaskesSubnav";
 import { MasterFaskesTable } from "./master-faskes/MasterFaskesTable";
+import { MasterFaskesStatusFilter } from "./master-faskes/MasterFaskesStatusFilter";
 import { SelectField } from "./master-faskes/FormField";
 import { LocationForm } from "./master-faskes/LocationForm";
 import { LocationImportDialog } from "./master-faskes/LocationImportDialog";
+import { LocationPractitionerAssignmentDialog } from "./master-faskes/LocationPractitionerAssignmentDialog";
 import { LocationLinkDialog } from "./master-faskes/LocationLinkDialog";
 import { LocationStatusAlert } from "./master-faskes/LocationStatusAlert";
 import { LocationSyncDialog } from "./master-faskes/LocationSyncDialog";
@@ -44,30 +47,32 @@ const initialQuery: MasterDataListQuery = {
   pageSize: 25,
   sort: "name",
   direction: "asc",
+  active: true,
 };
 
-type ActiveFilter = "all" | "active" | "inactive";
 type TypeFilter = "ALL" | LocationSummary["type"];
 type LocationStatusFilter = "ALL" | LocationSummary["status"];
 
 export default function LocationListScreen() {
   const session = useSession();
+  const satusehat = useIntegrationCapability("SATUSEHAT");
   const canWrite = can(
     session?.user ?? null,
     AccessPermission.MASTER_DATA_WRITE,
   );
   const [query, setQuery] = useState(initialQuery);
   const [searchDraft, setSearchDraft] = useState("");
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
+  const [activeFilter, setActiveFilter] = useState<boolean | undefined>(true);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
   const [locationStatusFilter, setLocationStatusFilter] =
     useState<LocationStatusFilter>("ALL");
   const [organizationFilter, setOrganizationFilter] = useState("ALL");
-  const [serviceUnitFilter, setServiceUnitFilter] = useState("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<LocationSummary | null>(null);
   const [syncLocation, setSyncLocation] = useState<LocationSummary | null>(null);
   const [linkLocation, setLinkLocation] = useState<LocationSummary | null>(null);
+  const [assignDoctorsLocation, setAssignDoctorsLocation] =
+    useState<LocationSummary | null>(null);
   const [statusLocation, setStatusLocation] =
     useState<LocationSummary | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -81,10 +86,10 @@ export default function LocationListScreen() {
     loading: listLoading,
     error: listError,
     refresh: refreshList,
+    statusCounts,
   } = list;
   const {
     organizations,
-    serviceUnits,
     locations,
     createLocation,
     updateLocation,
@@ -105,10 +110,9 @@ export default function LocationListScreen() {
     setFilters({ search: searchDraft.trim() || undefined });
   };
 
-  const handleActiveFilter = (value: string) => {
-    const next = value as ActiveFilter;
-    setActiveFilter(next);
-    setFilters({ active: next === "all" ? undefined : next === "active" });
+  const handleActiveFilter = (active: boolean | undefined) => {
+    setActiveFilter(active);
+    setFilters({ active });
   };
 
   const handleTypeFilter = (value: string) => {
@@ -125,25 +129,15 @@ export default function LocationListScreen() {
 
   const handleOrganizationFilter = (value: string) => {
     setOrganizationFilter(value);
-    setServiceUnitFilter("ALL");
-    setFilters({
-      organizationId: value === "ALL" ? undefined : value,
-      serviceUnitId: undefined,
-    });
-  };
-
-  const handleServiceUnitFilter = (value: string) => {
-    setServiceUnitFilter(value);
-    setFilters({ serviceUnitId: value === "ALL" ? undefined : value });
+    setFilters({ organizationId: value === "ALL" ? undefined : value });
   };
 
   const clearFilters = () => {
     setSearchDraft("");
-    setActiveFilter("all");
+    setActiveFilter(true);
     setTypeFilter("ALL");
     setLocationStatusFilter("ALL");
     setOrganizationFilter("ALL");
-    setServiceUnitFilter("ALL");
     setQuery(initialQuery);
   };
 
@@ -158,6 +152,10 @@ export default function LocationListScreen() {
 
   const openLink = useCallback((location: LocationSummary) => {
     setLinkLocation(location);
+  }, []);
+
+  const openAssignDoctors = useCallback((location: LocationSummary) => {
+    setAssignDoctorsLocation(location);
   }, []);
 
   const openEdit = useCallback((location: LocationSummary) => {
@@ -178,7 +176,6 @@ export default function LocationListScreen() {
     try {
       const payload = {
         ...input,
-        serviceUnitId: input.serviceUnitId || undefined,
         parentId: input.parentId || undefined,
       };
       if (editing) {
@@ -218,7 +215,6 @@ export default function LocationListScreen() {
         await updateLocation(location.id, {
           ...locationToForm(location),
           active: !location.active,
-          serviceUnitId: location.serviceUnitId || undefined,
           parentId: location.parentId || undefined,
         });
         toast.success(
@@ -248,10 +244,11 @@ export default function LocationListScreen() {
     () =>
       getLocationColumns({
         canWrite,
+        integrationEnabled: satusehat.available,
         organizations,
-        serviceUnits,
         onPreview: setSyncLocation,
         onLink: openLink,
+        onAssignDoctors: openAssignDoctors,
         onEdit: openEdit,
         onToggleStatus: openStatusConfirmation,
       }),
@@ -259,9 +256,10 @@ export default function LocationListScreen() {
       canWrite,
       openEdit,
       openLink,
+      openAssignDoctors,
       openStatusConfirmation,
       organizations,
-      serviceUnits,
+      satusehat.available,
     ],
   );
 
@@ -271,27 +269,30 @@ export default function LocationListScreen() {
         <PageHeader
           icon={<MapPin className="h-6 w-6" />}
           title="Location / Ruangan"
-          description="Kelola struktur lokasi fisik, ruangan, gedung, dan relasinya dengan unit layanan."
+          description="Kelola struktur lokasi fisik, ruangan, dan gedung di dalam organisasi."
           action={
             canWrite ? (
               <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={openImport}
-                  title="Ambil Location dari SATUSEHAT"
-                >
-                  <span className="flex h-5 w-5 overflow-hidden rounded bg-white" aria-hidden="true">
-                    <Image
-                      src="/satusehat.png"
-                      alt=""
-                      width={40}
-                      height={40}
-                      className="h-full w-full object-cover"
-                    />
-                  </span>
-                  Ambil dari SATUSEHAT
-                </Button>
+                  {satusehat.available ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={openImport}
+                      disabled={!satusehat.configured}
+                      title={satusehat.configured ? "Ambil Location dari SATUSEHAT" : "Kredensial SATUSEHAT belum dikonfigurasi"}
+                  >
+                    <span className="flex h-5 w-5 overflow-hidden rounded bg-white" aria-hidden="true">
+                      <Image
+                        src="/satusehat.png"
+                        alt=""
+                        width={40}
+                        height={40}
+                        className="h-full w-full object-cover"
+                      />
+                    </span>
+                    Ambil dari SATUSEHAT
+                  </Button>
+                ) : null}
                 <Button type="button" onClick={openCreate}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Tambah location
@@ -316,18 +317,13 @@ export default function LocationListScreen() {
           onSearchSubmit={handleSearchSubmit}
           filters={
             <>
-              <SelectField
-                id="location-filter-active"
-                aria-label="Filter status data location"
-                size="sm"
+              <MasterFaskesStatusFilter
+                ariaLabel="Filter status data location"
+                counts={statusCounts}
                 value={activeFilter}
                 onChange={handleActiveFilter}
-                className="w-auto min-w-32 text-xs"
-              >
-                <option value="all">Semua data</option>
-                <option value="active">Aktif</option>
-                <option value="inactive">Nonaktif</option>
-              </SelectField>
+                disabled={listLoading}
+              />
               <SelectField
                 id="location-filter-type"
                 aria-label="Filter jenis location"
@@ -375,38 +371,14 @@ export default function LocationListScreen() {
                   })),
                 ]}
               />
-              <ComboboxField
-                id="location-filter-service-unit"
-                aria-label="Filter unit layanan location"
-                value={serviceUnitFilter}
-                onChange={handleServiceUnitFilter}
-                placeholder="Semua unit layanan"
-                clearable={false}
-                className="w-56 max-w-full"
-                inputClassName="text-xs"
-                options={[
-                  { value: "ALL", label: "Semua unit layanan" },
-                  ...serviceUnits
-                  .filter(
-                    (unit) =>
-                      organizationFilter === "ALL" ||
-                      unit.organizationId === organizationFilter,
-                  )
-                  .map((unit) => ({
-                    value: unit.id,
-                    label: `${unit.code} - ${unit.name}`,
-                  })),
-                ]}
-              />
             </>
           }
           hasActiveFilters={Boolean(
             query.search ||
-              query.active !== undefined ||
+              query.active !== true ||
               query.type ||
               query.status ||
-              query.organizationId ||
-              query.serviceUnitId,
+              query.organizationId,
           )}
           onClearFilters={clearFilters}
           onRefresh={() => void refreshList()}
@@ -428,7 +400,6 @@ export default function LocationListScreen() {
           key={editing?.id ?? "new"}
           canWrite={canWrite}
           organizations={organizations}
-          serviceUnits={serviceUnits}
           locations={locations}
           submitting={submitting}
           onSubmit={handleSubmit}
@@ -438,8 +409,8 @@ export default function LocationListScreen() {
           onCancel={closeForm}
         />
       </MasterFaskesDialog>
-      <LocationSyncDialog
-        open={syncLocation !== null}
+        <LocationSyncDialog
+          open={satusehat.configured && syncLocation !== null}
         location={syncLocation}
         canSync={canWrite}
         onClose={() => setSyncLocation(null)}
@@ -448,8 +419,8 @@ export default function LocationListScreen() {
           void refreshOptions();
         }}
       />
-      <LocationLinkDialog
-        open={linkLocation !== null}
+        <LocationLinkDialog
+          open={satusehat.configured && linkLocation !== null}
         location={linkLocation}
         canWrite={canWrite}
         onClose={() => setLinkLocation(null)}
@@ -457,6 +428,12 @@ export default function LocationListScreen() {
           await refreshList();
           await refreshOptions();
         }}
+      />
+      <LocationPractitionerAssignmentDialog
+        open={assignDoctorsLocation !== null}
+        location={assignDoctorsLocation}
+        canWrite={canWrite}
+        onClose={() => setAssignDoctorsLocation(null)}
       />
       <LocationStatusAlert
         location={statusLocation}
@@ -469,11 +446,10 @@ export default function LocationListScreen() {
           if (statusLocation) void confirmToggleStatus(statusLocation);
         }}
       />
-      <LocationImportDialog
-        open={importDialogOpen}
+        <LocationImportDialog
+          open={satusehat.configured && importDialogOpen}
         organizations={organizations}
         locations={locations}
-        serviceUnits={serviceUnits}
         canWrite={canWrite}
         onClose={() => setImportDialogOpen(false)}
         onImported={async () => {

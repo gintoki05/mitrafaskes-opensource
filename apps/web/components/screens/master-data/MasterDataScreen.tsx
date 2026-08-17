@@ -34,7 +34,7 @@ export default function MasterDataScreen() {
         <PageHeader
           icon={<Database className="h-6 w-6" />}
           title="Master Data"
-          description="Referensi lokal untuk operasional klinik. SATUSEHAT menjadi panduan dan sumber refresh manual, bukan dependency saat aplikasi digunakan."
+          description="Referensi lokal untuk operasional klinik. Provider integrasi opsional hanya menjadi sumber refresh manual saat diaktifkan."
           action={
             <Button
               type="button"

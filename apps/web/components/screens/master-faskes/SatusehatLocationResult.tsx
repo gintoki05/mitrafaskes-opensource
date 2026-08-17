@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { LocationOperationalStatusBadge } from './LocationOperationalStatusBadge';
 
 type SatusehatLocationResultProps = {
   item: SatusehatLocationRemoteSummary;
@@ -54,9 +55,7 @@ export function SatusehatLocationResult({
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <strong className="text-sm text-foreground">{item.name}</strong>
-              <Badge variant="outline" className="text-[10px] uppercase">
-                {item.status}
-              </Badge>
+              <LocationOperationalStatusBadge status={item.status} className="text-[10px]" />
               <Badge variant="outline" className="text-[10px] uppercase">
                 {item.mode}
               </Badge>

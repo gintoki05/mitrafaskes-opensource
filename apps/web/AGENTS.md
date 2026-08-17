@@ -1,7 +1,11 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
 <!-- END:nextjs-agent-rules -->
 
 ## Aturan arsitektur frontend
@@ -61,3 +65,19 @@ Sebelum menambahkan bagian besar ke screen yang sudah ada, AI harus:
   atau API browser.
 - Untuk perubahan visual, cek minimal default, hover, focus, open, disabled,
   loading, error, empty, dan konten panjang pada primitive yang terdampak.
+
+## Boundary integrasi opsional
+
+- Ambil capability integrasi setelah sesi tersedia melalui endpoint generic
+  `/api/integrations/capabilities`. Jangan memanggil endpoint auth provider
+  secara langsung dari shell aplikasi.
+- Menu, route, badge, linkage, action, dialog, dan field provider-specific
+  hanya boleh dirender ketika capability provider `enabled` dan statusnya
+  berhasil diketahui. Saat loading, error, atau disabled, sembunyikan fitur
+  integrasi dan biarkan workflow lokal tetap usable.
+- Gunakan kontrak `integrations: ResourceIntegrationSummary[]` pada resource
+  lokal. Jangan menambah kembali field legacy `satusehat`, `satusehatSync`, atau
+  `satusehatId` ke response core.
+- Semua operasi provider harus memakai gateway generic
+  `/api/integrations/:provider/...`; kegagalan capability tidak boleh membuat
+  halaman lokal error.

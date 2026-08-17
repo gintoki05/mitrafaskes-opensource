@@ -4,6 +4,7 @@ import type {
 
 type PractitionerDraftPrefill = {
   fullName: string;
+  satusehatId: string;
   nik?: string;
   birthDate?: string;
   gender?: 'MALE' | 'FEMALE';
@@ -20,6 +21,7 @@ export function toPractitionerDraftPrefill(
 
   return {
     fullName: remote.name,
+    satusehatId: remote.externalResourceId,
     ...(validNik ? { nik: validNik } : {}),
     ...(remote.birthDate ? { birthDate: remote.birthDate } : {}),
     ...(remote.gender === 'male'

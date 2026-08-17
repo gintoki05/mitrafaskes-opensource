@@ -1,23 +1,12 @@
 export type OrganizationType = 'HEALTHCARE_FACILITY' | 'SUB_ORGANIZATION';
 
-export type ServiceUnitType = 'POLYCLINIC' | 'DEPARTMENT' | 'SUPPORT' | 'OTHER';
-
 export type LocationType = 'BUILDING' | 'FLOOR' | 'ROOM' | 'OTHER';
 
 export type LocationStatus = 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
 
 export type LocationMode = 'INSTANCE' | 'KIND';
 
-export interface SatusehatLinkageSummary {
-  externalResourceId: string;
-  lastSyncedAt?: string;
-}
-
-export interface SatusehatSyncSummary {
-  status: 'PENDING' | 'SUCCESS' | 'FAILED';
-  errorMessage?: string;
-  updatedAt: string;
-}
+import type { ResourceIntegrationSummary } from './integrations';
 
 export interface OrganizationSummary {
   id: string;
@@ -28,19 +17,7 @@ export interface OrganizationSummary {
   addressText?: string;
   phone?: string;
   email?: string;
-  satusehat?: SatusehatLinkageSummary;
-  active: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface ServiceUnitSummary {
-  id: string;
-  organizationId: string;
-  parentId?: string;
-  code: string;
-  name: string;
-  type: ServiceUnitType;
+  integrations: ResourceIntegrationSummary[];
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -49,7 +26,6 @@ export interface ServiceUnitSummary {
 export interface LocationSummary {
   id: string;
   organizationId: string;
-  serviceUnitId?: string;
   parentId?: string;
   code: string;
   name: string;
@@ -62,7 +38,7 @@ export interface LocationSummary {
   city?: string;
   postalCode?: string;
   countryCode: string;
-  satusehat?: SatusehatLinkageSummary;
+  integrations: ResourceIntegrationSummary[];
   latitude?: number;
   longitude?: number;
   altitude?: number;
@@ -88,17 +64,19 @@ export interface PractitionerSummary {
   id: string;
   username: string;
   fullName: string;
-  role: 'DOKTER' | 'PERAWAT';
+  role: 'DOKTER' | 'PERAWAT' | 'PETUGAS_PENDAFTARAN';
   nik?: string;
   birthDate?: string;
   gender?: 'MALE' | 'FEMALE';
   sipNumber?: string;
   strNumber?: string;
   organization?: PractitionerOrganizationReference;
+  /** Primary/legacy location kept for compatibility with existing consumers. */
   location?: PractitionerLocationReference;
+  /** Complete assignment set for this practitioner. */
+  locations: PractitionerLocationReference[];
   active: boolean;
-  satusehat?: SatusehatLinkageSummary;
-  satusehatSync?: SatusehatSyncSummary;
+  integrations: ResourceIntegrationSummary[];
   createdAt: string;
   updatedAt: string;
 }
@@ -107,20 +85,22 @@ export interface PractitionerCreateRequest {
   username: string;
   password: string;
   fullName: string;
-  role: 'DOKTER' | 'PERAWAT';
+  role: 'DOKTER' | 'PERAWAT' | 'PETUGAS_PENDAFTARAN';
   nik?: string | null;
   birthDate?: string | null;
   gender?: 'MALE' | 'FEMALE' | null;
   sipNumber?: string | null;
   strNumber?: string | null;
   organizationId?: string | null;
+  /** Complete location assignment set. An empty array clears all assignments. */
+  locationIds?: string[] | null;
+  /** @deprecated Use locationIds for new clients. */
   locationId?: string | null;
   active?: boolean;
 }
 
 export interface MasterFaskesData {
   organizations: OrganizationSummary[];
-  serviceUnits: ServiceUnitSummary[];
   locations: LocationSummary[];
 }
 
@@ -134,7 +114,8 @@ export interface MasterDataListQuery {
   type?: string;
   status?: string;
   organizationId?: string;
-  serviceUnitId?: string;
+  locationId?: string;
+  role?: 'DOKTER' | 'PERAWAT' | 'PETUGAS_PENDAFTARAN';
   page?: number;
   pageSize?: number;
   sort?: MasterDataListSort;
@@ -147,7 +128,13 @@ export interface MasterDataListMeta {
   total: number;
 }
 
+export interface MasterDataStatusCounts {
+  active: number;
+  inactive: number;
+}
+
 export interface MasterDataListResponse<T> {
   items: T[];
   meta: MasterDataListMeta;
+  statusCounts?: MasterDataStatusCounts;
 }

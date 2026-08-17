@@ -14,6 +14,7 @@ export type PractitionerCreateDialogProps = {
 };
 
 export type PractitionerFormState = Omit<PractitionerCreateRequest, 'active'> & {
+  satusehatId: string;
   active: string;
 };
 
@@ -26,6 +27,7 @@ export const initialPractitionerForm: PractitionerFormState = {
   username: '',
   password: '',
   fullName: '',
+  satusehatId: '',
   role: 'DOKTER',
   nik: '',
   birthDate: '',
@@ -33,6 +35,7 @@ export const initialPractitionerForm: PractitionerFormState = {
   sipNumber: '',
   strNumber: '',
   organizationId: null,
+  locationIds: [],
   locationId: null,
   active: 'true',
 };

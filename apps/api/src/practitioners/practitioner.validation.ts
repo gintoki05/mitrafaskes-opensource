@@ -15,7 +15,7 @@ export interface ValidatedPractitionerUpdate {
   birthDate?: Date | null;
   gender?: Gender | null;
   organizationId?: string | null;
-  locationId?: string | null;
+  locationIds?: string[];
   active?: boolean;
 }
 
@@ -30,7 +30,7 @@ export interface ValidatedPractitionerCreate {
   sipNumber?: string | null;
   strNumber?: string | null;
   organizationId?: string | null;
-  locationId?: string | null;
+  locationIds: string[];
   active: boolean;
 }
 
@@ -43,19 +43,22 @@ export function validatePractitionerCreate(
   const password = readRequiredText(body.password, 'password', 128, issues);
   const fullName = readRequiredText(body.fullName, 'fullName', 150, issues);
   const role =
-    body.role === Role.DOKTER || body.role === Role.PERAWAT
+    body.role === Role.DOKTER ||
+    body.role === Role.PERAWAT ||
+    body.role === Role.PETUGAS_PENDAFTARAN
       ? body.role
       : undefined;
   if (!role) {
     issues.push({
       field: 'role',
-      message: 'Role harus DOKTER atau PERAWAT.',
+      message: 'Role harus DOKTER, PERAWAT, atau PETUGAS_PENDAFTARAN.',
     });
   }
   if (username && !/^[a-zA-Z0-9._-]+$/.test(username)) {
     issues.push({
       field: 'username',
-      message: 'Username hanya boleh berisi huruf, angka, titik, garis bawah, atau tanda hubung.',
+      message:
+        'Username hanya boleh berisi huruf, angka, titik, garis bawah, atau tanda hubung.',
     });
   }
   if (password && password.length < 8) {
@@ -74,8 +77,18 @@ export function validatePractitionerCreate(
   const gender = readGender(body.gender, issues);
   const sipNumber = readOptionalField(body.sipNumber, 'sipNumber', 64, issues);
   const strNumber = readOptionalField(body.strNumber, 'strNumber', 64, issues);
-  const organizationId = readOptionalId(body.organizationId, 'organizationId', issues);
-  const locationId = readOptionalId(body.locationId, 'locationId', issues);
+  const organizationId = readOptionalId(
+    body.organizationId,
+    'organizationId',
+    issues,
+  );
+  const legacyLocationId = Object.prototype.hasOwnProperty.call(
+    body,
+    'locationIds',
+  )
+    ? undefined
+    : readOptionalId(body.locationId, 'locationId', issues);
+  const locationIds = readLocationIds(body, legacyLocationId, issues);
   const active = readActive(body.active, issues);
 
   if (issues.length > 0) {
@@ -96,7 +109,7 @@ export function validatePractitionerCreate(
     sipNumber,
     strNumber,
     organizationId: organizationId ?? null,
-    locationId: locationId ?? null,
+    locationIds,
     active,
   };
 }
@@ -111,7 +124,10 @@ export function validatePractitionerUpdate(
   if (Object.prototype.hasOwnProperty.call(body, 'nik')) {
     const value = optionalText(body.nik);
     if (value && !/^\d{16}$/.test(value)) {
-      issues.push({ field: 'nik', message: 'NIK harus terdiri dari 16 digit.' });
+      issues.push({
+        field: 'nik',
+        message: 'NIK harus terdiri dari 16 digit.',
+      });
     } else {
       result.nik = value ?? null;
     }
@@ -128,8 +144,14 @@ export function validatePractitionerUpdate(
       });
     } else {
       const parsed = new Date(`${value}T00:00:00.000Z`);
-      if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
-        issues.push({ field: 'birthDate', message: 'Tanggal lahir tidak valid.' });
+      if (
+        Number.isNaN(parsed.getTime()) ||
+        parsed.toISOString().slice(0, 10) !== value
+      ) {
+        issues.push({
+          field: 'birthDate',
+          message: 'Tanggal lahir tidak valid.',
+        });
       } else {
         result.birthDate = parsed;
       }
@@ -140,7 +162,7 @@ export function validatePractitionerUpdate(
     if (body.gender === null || body.gender === '') {
       result.gender = null;
     } else if (body.gender === Gender.MALE || body.gender === Gender.FEMALE) {
-      result.gender = body.gender;
+      result.gender = body.gender === Gender.MALE ? Gender.MALE : Gender.FEMALE;
     } else {
       issues.push({
         field: 'gender',
@@ -150,23 +172,38 @@ export function validatePractitionerUpdate(
   }
 
   if (Object.prototype.hasOwnProperty.call(body, 'organizationId')) {
-    result.organizationId = readOptionalId(body.organizationId, 'organizationId', issues);
+    result.organizationId = readOptionalId(
+      body.organizationId,
+      'organizationId',
+      issues,
+    );
   }
 
-  if (Object.prototype.hasOwnProperty.call(body, 'locationId')) {
-    result.locationId = readOptionalId(body.locationId, 'locationId', issues);
+  const hasLocationIds = 'locationIds' in body;
+  const hasLegacyLocationId = 'locationId' in body;
+  if (hasLocationIds || hasLegacyLocationId) {
+    const legacyLocationId = hasLocationIds
+      ? undefined
+      : readOptionalId(body.locationId, 'locationId', issues);
+    result.locationIds = readLocationIds(body, legacyLocationId, issues);
   }
 
   if (Object.prototype.hasOwnProperty.call(body, 'active')) {
     if (typeof body.active !== 'boolean') {
-      issues.push({ field: 'active', message: 'Status aktif harus berupa boolean.' });
+      issues.push({
+        field: 'active',
+        message: 'Status aktif harus berupa boolean.',
+      });
     } else {
       result.active = body.active;
     }
   }
 
   if (Object.keys(result).length === 0 && issues.length === 0) {
-    issues.push({ field: 'body', message: 'Tidak ada perubahan Practitioner.' });
+    issues.push({
+      field: 'body',
+      message: 'Tidak ada perubahan Practitioner.',
+    });
   }
 
   if (issues.length > 0) {
@@ -231,6 +268,54 @@ function readOptionalId(
   return text;
 }
 
+function readLocationIds(
+  body: Record<string, unknown>,
+  legacyLocationId: string | null | undefined,
+  issues: { field: string; message: string }[],
+): string[] {
+  if (!Object.prototype.hasOwnProperty.call(body, 'locationIds')) {
+    return legacyLocationId ? [legacyLocationId] : [];
+  }
+
+  const value = body.locationIds;
+  if (value === undefined || value === null || value === '') return [];
+  if (!Array.isArray(value)) {
+    issues.push({
+      field: 'locationIds',
+      message: 'locationIds harus berupa daftar ID location.',
+    });
+    return [];
+  }
+  if (value.length > 100) {
+    issues.push({
+      field: 'locationIds',
+      message: 'Maksimal 100 location dapat ditugaskan sekaligus.',
+    });
+  }
+
+  const ids: string[] = [];
+  for (const item of value.slice(0, 100)) {
+    if (typeof item !== 'string') {
+      issues.push({
+        field: 'locationIds',
+        message: 'Setiap locationId harus berupa ID teks.',
+      });
+      continue;
+    }
+    const id = item.trim();
+    if (!id) continue;
+    if (id.length > 64) {
+      issues.push({
+        field: 'locationIds',
+        message: 'ID location maksimal 64 karakter.',
+      });
+      continue;
+    }
+    if (!ids.includes(id)) ids.push(id);
+  }
+  return ids;
+}
+
 function readBirthDate(
   value: unknown,
   issues: { field: string; message: string }[],
@@ -245,7 +330,10 @@ function readBirthDate(
     return undefined;
   }
   const parsed = new Date(`${text}T00:00:00.000Z`);
-  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== text) {
+  if (
+    Number.isNaN(parsed.getTime()) ||
+    parsed.toISOString().slice(0, 10) !== text
+  ) {
     issues.push({ field: 'birthDate', message: 'Tanggal lahir tidak valid.' });
     return undefined;
   }
@@ -271,7 +359,10 @@ function readActive(
 ): boolean {
   if (value === undefined) return true;
   if (typeof value !== 'boolean') {
-    issues.push({ field: 'active', message: 'Status aktif harus berupa boolean.' });
+    issues.push({
+      field: 'active',
+      message: 'Status aktif harus berupa boolean.',
+    });
     return true;
   }
   return value;

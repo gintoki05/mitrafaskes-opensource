@@ -4,10 +4,11 @@ import { Navbar } from '../components/Navbar';
 import { RoutePersistence } from '../components/RoutePersistence';
 import { SidebarProvider } from '../components/ui/sidebar';
 import { Toaster } from '../components/ui/sonner';
+import { IntegrationCapabilitiesProvider } from '@/hooks/useIntegrationCapabilities';
 
 export const metadata = {
-  title: 'Mitra Faskes - Rekam Medis Elektronik (RME) & SATUSEHAT',
-  description: 'Aplikasi Rekam Medis Elektronik (RME) Open Source Terintegrasi SATUSEHAT Kemenkes RI',
+  title: 'Mitra Faskes - Rekam Medis Elektronik (RME)',
+  description: 'Aplikasi Rekam Medis Elektronik (RME) Open Source dengan integrasi SATUSEHAT opsional',
 };
 
 export default function RootLayout({
@@ -31,17 +32,19 @@ export default function RootLayout({
         >
           Lewati ke konten utama
         </a>
-        <SidebarProvider>
-          <RoutePersistence />
-          <Navbar />
-          <main
-            id="konten-utama"
-            className="app-content flex-1"
-            tabIndex={-1}
-          >
-            {children}
-          </main>
-        </SidebarProvider>
+        <IntegrationCapabilitiesProvider>
+          <SidebarProvider>
+            <RoutePersistence />
+            <Navbar />
+            <main
+              id="konten-utama"
+              className="app-content flex-1"
+              tabIndex={-1}
+            >
+              {children}
+            </main>
+          </SidebarProvider>
+        </IntegrationCapabilitiesProvider>
         <Toaster position="top-right" closeButton />
       </body>
     </html>

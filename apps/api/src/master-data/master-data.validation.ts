@@ -3,7 +3,6 @@ import {
   LocationMode,
   LocationStatus,
   OrganizationType,
-  ServiceUnitType,
 } from '@prisma/client';
 
 export interface MasterDataValidationIssue {
@@ -30,18 +29,8 @@ export interface ValidatedOrganizationInput {
   active: boolean;
 }
 
-export interface ValidatedServiceUnitInput {
-  organizationId: string;
-  parentId?: string;
-  code: string;
-  name: string;
-  type: ServiceUnitType;
-  active: boolean;
-}
-
 export interface ValidatedLocationInput {
   organizationId: string;
-  serviceUnitId?: string;
   parentId?: string;
   code: string;
   name: string;
@@ -316,41 +305,6 @@ export const validateOrganizationInput = (
   });
 };
 
-export const validateServiceUnitInput = (
-  input: unknown,
-): ValidatedServiceUnitInput => {
-  const body = asRecord(input);
-  const issues: MasterDataValidationIssue[] = [];
-  const organizationId = optionalId(body.organizationId);
-  if (!organizationId) {
-    issues.push({
-      field: 'organizationId',
-      code: 'REQUIRED',
-      message: 'Organisasi induk wajib dipilih',
-    });
-  }
-  const parentId = optionalId(body.parentId);
-  const code = readCode(body, issues);
-  const name = readText(body, 'name', issues, 150, 'Nama unit layanan');
-  const type = readEnum(
-    body,
-    'type',
-    ServiceUnitType,
-    ServiceUnitType.POLYCLINIC,
-    issues,
-  );
-  const active = readActive(body, issues);
-
-  return finish(issues, {
-    organizationId: organizationId!,
-    parentId,
-    code: code!,
-    name: name!,
-    type: type!,
-    active,
-  });
-};
-
 export const validateLocationInput = (
   input: unknown,
 ): ValidatedLocationInput => {
@@ -364,7 +318,6 @@ export const validateLocationInput = (
       message: 'Organisasi induk wajib dipilih',
     });
   }
-  const serviceUnitId = optionalId(body.serviceUnitId);
   const parentId = optionalId(body.parentId);
   const code = readCode(body, issues);
   const name = readText(body, 'name', issues, 150, 'Nama lokasi');
@@ -419,7 +372,6 @@ export const validateLocationInput = (
 
   return finish(issues, {
     organizationId: organizationId!,
-    serviceUnitId,
     parentId,
     code: code!,
     name: name!,

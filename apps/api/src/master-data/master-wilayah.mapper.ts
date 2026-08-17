@@ -2,7 +2,6 @@ import type { Prisma } from '@prisma/client';
 import type {
   MasterDataDomain,
   MasterDataImportRunSummary,
-  RegionLevel,
   RegionSummary,
 } from '@mitrafaskes/shared';
 
@@ -13,7 +12,7 @@ export function toRegionSummary(
     code: record.code,
     parentCode: record.parentCode ?? undefined,
     name: record.name,
-    level: record.level as RegionLevel,
+    level: record.level,
     bpsCode: record.bpsCode ?? undefined,
     active: record.active,
     source: record.source,

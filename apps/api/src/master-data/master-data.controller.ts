@@ -6,7 +6,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import {
@@ -15,19 +14,10 @@ import {
   MasterDataListSort,
   MasterDataSortDirection,
 } from '@mitrafaskes/shared';
-import { SessionPermissionGuard } from '../auth/session-permission.guard';
 import { RequirePermission } from '../auth/access-control.decorator';
 import { MasterDataService } from './master-data.service';
-import { SatusehatOrganizationImportService } from './satusehat-organization-import.service';
-import { SatusehatOrganizationLinkService } from './satusehat-organization-link.service';
-import { SatusehatOrganizationService } from './satusehat-organization.service';
-import { SatusehatLocationImportService } from './satusehat-location-import.service';
-import { SatusehatLocationLinkService } from './satusehat-location-link.service';
-import { SatusehatLocationService } from './satusehat-location.service';
 
 type MasterDataListHttpQuery = Record<string, string | undefined>;
-type SatusehatOrganizationHttpQuery = Record<string, string | undefined>;
-type SatusehatLocationHttpQuery = Record<string, string | undefined>;
 
 const listSorts: MasterDataListSort[] = ['code', 'name', 'active', 'createdAt'];
 
@@ -59,7 +49,6 @@ const parseListQuery = (
     type: query.type,
     status: query.status,
     organizationId: query.organizationId,
-    serviceUnitId: query.serviceUnitId,
     page: parsePositiveInteger(query.page),
     pageSize: parsePositiveInteger(query.pageSize),
     sort,
@@ -68,18 +57,9 @@ const parseListQuery = (
 };
 
 @Controller('api/master')
-@UseGuards(SessionPermissionGuard)
 @ApiTags('Master Faskes')
 export class MasterDataController {
-  constructor(
-    private readonly masterData: MasterDataService,
-    private readonly satusehatOrganizations: SatusehatOrganizationService,
-    private readonly satusehatOrganizationImport: SatusehatOrganizationImportService,
-    private readonly satusehatOrganizationLink: SatusehatOrganizationLinkService,
-    private readonly satusehatLocationImport: SatusehatLocationImportService,
-    private readonly satusehatLocationLink: SatusehatLocationLinkService,
-    private readonly satusehatLocation: SatusehatLocationService,
-  ) {}
+  constructor(private readonly masterData: MasterDataService) {}
 
   @Get('faskes')
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
@@ -93,52 +73,10 @@ export class MasterDataController {
     return this.masterData.findOrganizations(parseListQuery(query));
   }
 
-  @Get('service-units')
-  @RequirePermission(AccessPermission.MASTER_DATA_READ)
-  findServiceUnits(@Query() query: MasterDataListHttpQuery) {
-    return this.masterData.findServiceUnits(parseListQuery(query));
-  }
-
   @Get('locations')
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
   findLocations(@Query() query: MasterDataListHttpQuery) {
     return this.masterData.findLocations(parseListQuery(query));
-  }
-
-  @Get('locations/satusehat/search')
-  @RequirePermission(AccessPermission.MASTER_DATA_READ)
-  searchSatusehatLocations(@Query() query: SatusehatLocationHttpQuery) {
-    return this.satusehatLocationImport.searchLocations({
-      id: query.id,
-      identifier: query.identifier,
-      name: query.name,
-      organization: query.organization,
-      organizationLocalId: query.organizationLocalId,
-    });
-  }
-
-  @Post('locations/satusehat/import')
-  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
-  importSatusehatLocation(@Body() body: unknown) {
-    return this.satusehatLocationImport.importLocation(body);
-  }
-
-  @Get('locations/:id/satusehat/preview')
-  @RequirePermission(AccessPermission.MASTER_DATA_READ)
-  previewSatusehatLocation(@Param('id') id: string) {
-    return this.satusehatLocation.previewLocation(id);
-  }
-
-  @Post('locations/:id/satusehat/sync')
-  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
-  syncSatusehatLocation(@Param('id') id: string) {
-    return this.satusehatLocation.syncLocation(id);
-  }
-
-  @Post('locations/:id/satusehat/link')
-  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
-  linkSatusehatLocation(@Param('id') id: string, @Body() body: unknown) {
-    return this.satusehatLocationLink.linkExistingLocation(id, body);
   }
 
   @Post('organizations')
@@ -151,53 +89,6 @@ export class MasterDataController {
   @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
   updateOrganization(@Param('id') id: string, @Body() body: unknown) {
     return this.masterData.updateOrganization(id, body);
-  }
-
-  @Get('organizations/satusehat/search')
-  @RequirePermission(AccessPermission.MASTER_DATA_READ)
-  searchSatusehatOrganizations(@Query() query: SatusehatOrganizationHttpQuery) {
-    return this.satusehatOrganizationImport.searchOrganizations({
-      id: query.id,
-      name: query.name,
-      partOf: query.partOf ?? query.partof,
-      parentLocalId: query.parentLocalId,
-    });
-  }
-
-  @Post('organizations/satusehat/import')
-  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
-  importSatusehatOrganization(@Body() body: unknown) {
-    return this.satusehatOrganizationImport.importOrganization(body);
-  }
-
-  @Get('organizations/:id/satusehat/preview')
-  @RequirePermission(AccessPermission.MASTER_DATA_READ)
-  previewSatusehatOrganization(@Param('id') id: string) {
-    return this.satusehatOrganizations.previewOrganization(id);
-  }
-
-  @Post('organizations/:id/satusehat/sync')
-  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
-  syncSatusehatOrganization(@Param('id') id: string) {
-    return this.satusehatOrganizations.syncOrganization(id);
-  }
-
-  @Post('organizations/:id/satusehat/link')
-  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
-  linkSatusehatOrganization(@Param('id') id: string, @Body() body: unknown) {
-    return this.satusehatOrganizationLink.linkExistingOrganization(id, body);
-  }
-
-  @Post('service-units')
-  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
-  createServiceUnit(@Body() body: unknown) {
-    return this.masterData.createServiceUnit(body);
-  }
-
-  @Patch('service-units/:id')
-  @RequirePermission(AccessPermission.MASTER_DATA_WRITE)
-  updateServiceUnit(@Param('id') id: string, @Body() body: unknown) {
-    return this.masterData.updateServiceUnit(id, body);
   }
 
   @Post('locations')

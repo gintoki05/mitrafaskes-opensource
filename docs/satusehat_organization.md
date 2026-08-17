@@ -15,28 +15,28 @@ Tahap pertama dimulai dari struktur organisasi/faskes. Implementasi mengikuti [k
 Preview payload tanpa memanggil SATUSEHAT:
 
 ```text
-GET /api/master/organizations/:id/satusehat/preview
+GET /api/integrations/SATUSEHAT/resources/Organization/:id/preview
 ```
 
 Sinkronisasi ke sandbox:
 
 ```text
-POST /api/master/organizations/:id/satusehat/sync
+POST /api/integrations/SATUSEHAT/resources/Organization/:id/sync
 ```
 
 Pencarian Organization yang sudah ada di SATUSEHAT:
 
 ```text
-GET /api/master/organizations/satusehat/search?id={satusehat-id}
-GET /api/master/organizations/satusehat/search?name={nama}
-GET /api/master/organizations/satusehat/search?partof={parent-satusehat-id}
-GET /api/master/organizations/satusehat/search?parentLocalId={parent-local-id}
+GET /api/integrations/SATUSEHAT/resources/Organization/search?id={satusehat-id}
+GET /api/integrations/SATUSEHAT/resources/Organization/search?name={nama}
+GET /api/integrations/SATUSEHAT/resources/Organization/search?partof={parent-satusehat-id}
+GET /api/integrations/SATUSEHAT/resources/Organization/search?parentLocalId={parent-local-id}
 ```
 
 Hubungkan resource SATUSEHAT ke Organization lokal tanpa membuat resource baru:
 
 ```text
-POST /api/master/organizations/:id/satusehat/link
+POST /api/integrations/SATUSEHAT/resources/Organization/:id/link
 {
   "externalResourceId": "{satusehat-id}"
 }
@@ -45,7 +45,7 @@ POST /api/master/organizations/:id/satusehat/link
 Impor resource SATUSEHAT menjadi Organization lokal sekaligus membuat link:
 
 ```text
-POST /api/master/organizations/satusehat/import
+POST /api/integrations/SATUSEHAT/resources/Organization/import
 {
   "externalResourceId": "{satusehat-id}",
   "code": "POLI-UMUM",
@@ -53,7 +53,8 @@ POST /api/master/organizations/satusehat/import
 }
 ```
 
-Keduanya menggunakan sesi API lokal. Preview membutuhkan `master-data.read`, sedangkan sinkronisasi membutuhkan `master-data.write`.
+Keduanya menggunakan sesi API lokal. Preview dan search membutuhkan
+`sync.status-read`, sedangkan sync, link, dan import membutuhkan `sync.retry`.
 
 Pencarian membutuhkan `master-data.read`. Link dan import membutuhkan
 `master-data.write`.
@@ -81,7 +82,8 @@ dikonfigurasi.
 
 ## Urutan penggunaan
 
-1. Isi `SATUSEHAT_ORGANIZATION_ID` dan kredensial sandbox di `apps/api/.env`.
+1. Isi `INTEGRATION_SATUSEHAT_ENABLED=true`, `SATUSEHAT_ORGANIZATION_ID`, dan
+   kredensial sandbox di `apps/api/.env`.
 2. Buat satu organisasi lokal bertipe `HEALTHCARE_FACILITY` tanpa parent, atau
    gunakan link jika data lokalnya sudah ada.
 3. Jika Organization induk sudah ada di SATUSEHAT, buka pencarian lalu link
@@ -92,4 +94,4 @@ dikonfigurasi.
 5. Buat atau import `SUB_ORGANIZATION` di bawah organisasi induk. Parent
    SATUSEHAT akan diisi atau diverifikasi melalui `Organization.partOf`.
 
-Unit layanan dan `Location` akan mengikuti setelah struktur Organization ini tervalidasi di sandbox.
+`Location` mengikuti setelah struktur Organization ini tervalidasi di sandbox.

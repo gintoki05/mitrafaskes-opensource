@@ -5,6 +5,7 @@ import { RefreshCw, CheckCircle2, AlertTriangle, Clock, Code } from 'lucide-reac
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { PaginationControl } from '@/components/ui/pagination';
 import { AccessPermission } from '@mitrafaskes/shared';
 import { RouteGuard } from '@/components/RouteGuard';
 import { can } from '@/lib/auth';
@@ -12,14 +13,25 @@ import { PageHeader } from '@/components/PageHeader';
 import { ScreenState } from '@/components/ScreenState';
 import { useSession } from '@/hooks/useSession';
 import { useSyncLogs } from '@/hooks/useSyncLogs';
+import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 import { toast } from 'sonner';
+import { SatusehatReconciliationPanel } from './satusehat/SatusehatReconciliationPanel';
+import {
+  backoffLabel,
+  failureCategoryLabel,
+  operatorActionLabel,
+  retryAfterLabel,
+  retryAvailable,
+} from './satusehat/satusehat-log-display';
 
 export default function SatusehatPage() {
   const session = useSession();
+  const satusehat = useIntegrationCapability('SATUSEHAT');
   const canReadPayload = can(session?.user ?? null, AccessPermission.SYNC_PAYLOAD_READ);
   const canRetry = can(session?.user ?? null, AccessPermission.SYNC_RETRY);
   const {
     logs,
+    logsMeta,
     selectedLog,
     logsLoading,
     retryingId,
@@ -28,8 +40,13 @@ export default function SatusehatPage() {
     successMessage,
     refresh,
     retry,
+    reconcile,
     selectLog,
-  } = useSyncLogs();
+    reconciliation,
+    reconciliationLoading,
+    reconciliationError,
+  } = useSyncLogs(satusehat.available);
+  const totalPages = Math.max(1, Math.ceil(logsMeta.total / logsMeta.pageSize));
 
   useEffect(() => {
     if (successMessage) {
@@ -47,7 +64,10 @@ export default function SatusehatPage() {
   }, [retryError]);
 
   return (
-    <RouteGuard permission={AccessPermission.SYNC_STATUS_READ}>
+    <RouteGuard
+      permission={AccessPermission.SYNC_STATUS_READ}
+      integrationProvider="SATUSEHAT"
+    >
     <div className="min-w-0 space-y-6 sm:space-y-8">
       <PageHeader
         icon={<RefreshCw className="h-6 w-6" />}
@@ -55,7 +75,7 @@ export default function SatusehatPage() {
         description="Status pengiriman resource HL7 FHIR dan tindakan retry yang tersedia sesuai izin pengguna."
         action={
           <Button
-            onClick={() => void refresh()}
+            onClick={() => void refresh(logsMeta.page)}
             variant="secondary"
             disabled={logsLoading}
             aria-busy={logsLoading}
@@ -69,6 +89,13 @@ export default function SatusehatPage() {
 
       {error ? <ScreenState kind="error" title="Sinkronisasi tidak tersedia" description={error} compact /> : null}
 
+      <SatusehatReconciliationPanel
+        report={reconciliation}
+        loading={reconciliationLoading}
+        error={reconciliationError}
+        onReconcile={() => void reconcile()}
+      />
+
       <div className={`grid min-w-0 grid-cols-1 gap-6 lg:gap-8 ${canReadPayload ? 'lg:grid-cols-3' : ''}`}>
         {/* Left Column: Log List */}
         <div className={`min-w-0 space-y-4 ${canReadPayload ? 'lg:col-span-2' : ''}`}>
@@ -76,7 +103,7 @@ export default function SatusehatPage() {
             <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 border-b border-border px-4 py-4 sm:px-6">
               <CardTitle className="text-sm font-bold text-foreground">Daftar Log Riwayat Sinkronisasi</CardTitle>
               <Badge className="border-primary/30 bg-primary/10 font-mono text-xs font-bold text-primary">
-                {logs.length} Log Total
+                {logsMeta.total} Log Total
               </Badge>
             </CardHeader>
 
@@ -116,10 +143,35 @@ export default function SatusehatPage() {
                     <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                       <Clock className="w-3 h-3" />
                       <span>{new Date(log.updatedAt).toLocaleString('id-ID')}</span>
-                      {log.satusehatId && (
-                        <span className="font-mono text-success">SATUSEHAT ID: {log.satusehatId}</span>
+                      {log.externalResourceId && (
+                        <span className="font-mono text-success">ID eksternal: {log.externalResourceId}</span>
                       )}
                     </div>
+                    {log.status === 'FAILED' ? (
+                      <div className="flex min-w-0 flex-wrap items-center gap-2 text-[11px]">
+                        <Badge variant="outline" className="text-[10px]">
+                          {failureCategoryLabel(log.errorCategory)}
+                        </Badge>
+                        <span className="text-muted-foreground">
+                          Tindakan: {operatorActionLabel(log.operatorAction)}
+                        </span>
+                        {log.retryable ? (
+                          <Badge className="border-primary/30 bg-primary/10 text-[10px] text-primary">
+                            Retryable
+                          </Badge>
+                        ) : null}
+                        {retryAfterLabel(log.retryAfterAt) ? (
+                          <span className="text-warning">
+                            {retryAfterLabel(log.retryAfterAt)}
+                          </span>
+                        ) : null}
+                        {backoffLabel(log.backoffMs) ? (
+                          <span className="text-muted-foreground">
+                            {backoffLabel(log.backoffMs)}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                   </button>
 
@@ -148,24 +200,50 @@ export default function SatusehatPage() {
                       )}
                     </Badge>
 
-                    {canRetry && log.status !== 'SUCCESS' && (
-                      <Button
-                        size="sm"
+                      {canRetry && log.status === 'FAILED' && log.retryable ? (
+                        <Button
+                          size="sm"
                         onClick={(e: MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
-                          void retry(log.id);
+                          void retry(log.id, logsMeta.page);
                         }}
-                        disabled={retryingId !== null}
-                        aria-busy={retryingId === log.id}
+                          disabled={
+                            retryingId !== null ||
+                            !satusehat.configured ||
+                            !retryAvailable(log)
+                          }
+                          aria-busy={retryingId === log.id}
+                          title={
+                            !satusehat.configured
+                              ? 'Kredensial SATUSEHAT belum dikonfigurasi'
+                              : retryAfterLabel(log.retryAfterAt) ??
+                                'Retry sinkronisasi'
+                          }
                         className="border-primary/30 bg-primary/10 text-[11px] font-semibold text-primary hover:bg-primary/15"
                       >
                         {retryingId === log.id ? 'Mencoba ulang...' : 'Retry'}
-                      </Button>
-                    )}
+                        </Button>
+                      ) : null}
                   </div>
                 </div>
               ))}
             </div>
+            {totalPages > 1 ? (
+              <div className="flex flex-col gap-2 border-t border-border bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <span>
+                  Halaman {logsMeta.page} dari {totalPages} · {logsMeta.total} log
+                </span>
+                <PaginationControl
+                  page={logsMeta.page}
+                  totalPages={totalPages}
+                  onPageChange={(page) => void refresh(page)}
+                  disabled={logsLoading}
+                  showLabels={false}
+                  aria-label="Navigasi halaman log sinkronisasi"
+                  className="mx-0 w-auto"
+                />
+              </div>
+            ) : null}
           </Card>
         </div>
 

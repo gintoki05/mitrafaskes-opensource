@@ -200,6 +200,33 @@ describe('patient validation', () => {
     ]);
   });
 
+  it('accepts related-person details alongside an existing related-person id for edits', () => {
+    const patient = validatePatientInput({
+      fullName: 'Pasien dengan wali tersimpan',
+      birthDate: '1990-04-23',
+      gender: Gender.FEMALE,
+      relationships: [
+        {
+          relationshipCode: PatientRelationshipCode.GUARDIAN,
+          relatedPersonId: 'related-person-guardian-001',
+          relatedPerson: {
+            fullName: 'Rina Wulandari Baru',
+            phone: '081355566677',
+          },
+        },
+      ],
+    });
+
+    expect(patient.relationships).toEqual([
+      expect.objectContaining({
+        relatedPersonId: 'related-person-guardian-001',
+        relatedPerson: expect.objectContaining({
+          fullName: 'Rina Wulandari Baru',
+        }),
+      }),
+    ]);
+  });
+
   it('rejects multiple active NIKs, duplicate primary identifiers, and invalid periods explicitly', () => {
     expect.assertions(2);
     try {

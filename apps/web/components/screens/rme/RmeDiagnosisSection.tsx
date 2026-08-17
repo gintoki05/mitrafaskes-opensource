@@ -5,7 +5,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
+import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import type { Icd10Entry } from '@/lib/clinical-types';
+import {
+  getIntegrationLinkage,
+  getLatestIntegrationSync,
+} from '@/lib/integrations';
 import type { RmeDiagnosis } from './types';
 
 type RmeDiagnosisSectionProps = {
@@ -15,6 +21,12 @@ type RmeDiagnosisSectionProps = {
   onSearchChange: (value: string) => void;
   onAddDiagnosis: (icd: Icd10Entry) => void;
   onRemoveDiagnosis: (code: string) => void;
+  disabled: boolean;
+  syncDisabled: boolean;
+  syncDisabledReason?: string;
+  canSyncDiagnosis: boolean;
+  syncingDiagnosisId: string | null;
+  onSyncDiagnosis: (id: string) => void;
 };
 
 export function RmeDiagnosisSection({
@@ -24,9 +36,19 @@ export function RmeDiagnosisSection({
   onSearchChange,
   onAddDiagnosis,
   onRemoveDiagnosis,
+  disabled,
+  syncDisabled,
+  syncDisabledReason,
+  canSyncDiagnosis,
+  syncingDiagnosisId,
+  onSyncDiagnosis,
 }: RmeDiagnosisSectionProps) {
   return (
-    <Card>
+    <Card
+      id="rme-section-diagnosis"
+      className="scroll-mt-24"
+      tabIndex={-1}
+    >
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
           <Heart className="h-4 w-4 text-destructive" />
@@ -44,6 +66,7 @@ export function RmeDiagnosisSection({
             onChange={(event) => onSearchChange(event.target.value)}
             placeholder="Cari Kode atau Nama Penyakit ICD-10 (Contoh: J00, Diare, Hipertensi)..."
             className="pl-9 text-xs"
+            disabled={disabled}
           />
         </div>
 
@@ -54,6 +77,7 @@ export function RmeDiagnosisSection({
                 key={icd.code}
                 type="button"
                 onClick={() => onAddDiagnosis(icd)}
+                disabled={disabled}
                 className="flex w-full items-center justify-between p-2.5 text-left text-xs transition-colors hover:bg-muted"
               >
                 <div>
@@ -73,24 +97,93 @@ export function RmeDiagnosisSection({
             Diagnosis Terpilih:
           </label>
           {selectedDiagnoses.map((diagnosis) => (
-            <div key={diagnosis.icd10Code} className="flex items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-background p-3">
-              <div className="flex items-center gap-2">
-                <Badge className="bg-primary/10 font-mono text-xs font-bold text-primary">{diagnosis.icd10Code}</Badge>
-                <span className="text-xs font-medium text-foreground">{diagnosis.nameIndo}</span>
-                {diagnosis.isPrimary && <Badge className="clinical-status-success border text-[10px] font-bold">UTAMA</Badge>}
+            <div
+              key={diagnosis.id ?? diagnosis.icd10Code}
+              className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border border-border bg-background p-3"
+            >
+              <div className="min-w-0 space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge className="bg-primary/10 font-mono text-xs font-bold text-primary">
+                    {diagnosis.icd10Code}
+                  </Badge>
+                  <span className="text-xs font-medium text-foreground">
+                    {diagnosis.nameIndo}
+                  </span>
+                  {diagnosis.isPrimary && (
+                    <Badge className="clinical-status-success border text-[10px] font-bold">
+                      UTAMA
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <SatusehatLinkageBadge
+                    linkage={getIntegrationLinkage(
+                      diagnosis.integrations,
+                      'SATUSEHAT',
+                    )}
+                    resourceName={diagnosis.icd10Code}
+                  />
+                  {getLatestIntegrationSync(diagnosis.integrations, 'SATUSEHAT')
+                    ?.status === 'FAILED' ? (
+                    <span
+                      className="text-[11px] font-semibold text-destructive"
+                      title={
+                        getLatestIntegrationSync(
+                          diagnosis.integrations,
+                          'SATUSEHAT',
+                        )?.errorMessage
+                      }
+                    >
+                      Sync terakhir gagal
+                    </span>
+                  ) : null}
+                </div>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => onRemoveDiagnosis(diagnosis.icd10Code)}
-                className="p-1 text-muted-foreground hover:text-destructive"
-                aria-label={`Hapus diagnosis ${diagnosis.icd10Code}`}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-1">
+                {diagnosis.id ? (
+                  <SatusehatActionGroup
+                    resourceName={diagnosis.icd10Code}
+                    onSync={() => onSyncDiagnosis(diagnosis.id!)}
+                    syncDisabled={
+                      syncDisabled ||
+                      !canSyncDiagnosis ||
+                      syncingDiagnosisId === diagnosis.id
+                    }
+                    syncDisabledReason={
+                      syncingDiagnosisId === diagnosis.id
+                        ? 'Sinkronisasi diagnosis sedang berjalan.'
+                        : syncDisabled
+                          ? (syncDisabledReason ??
+                            'Simpan perubahan lokal sebelum sinkronisasi.')
+                          : !canSyncDiagnosis
+                            ? 'Anda tidak memiliki izin sync.retry.'
+                            : undefined
+                    }
+                  />
+                ) : (
+                  <span className="text-[11px] text-muted-foreground">
+                    Simpan draft untuk sinkronisasi
+                  </span>
+                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onRemoveDiagnosis(diagnosis.icd10Code)}
+                  disabled={disabled}
+                  className="p-1 text-muted-foreground hover:text-destructive"
+                  aria-label={`Hapus diagnosis ${diagnosis.icd10Code}`}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ))}
+          {selectedDiagnoses.length === 0 ? (
+            <p className="rounded-[var(--radius-control)] border border-dashed border-border p-3 text-xs text-muted-foreground">
+              Belum ada diagnosis. Cari ICD-10 untuk menambahkan diagnosis saat data klinis tersedia.
+            </p>
+          ) : null}
         </div>
       </CardContent>
     </Card>

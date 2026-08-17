@@ -23,7 +23,6 @@ const structuredRecord = {
   address: null,
   phone: null,
   medicalRecNo: 'RM-2026-000004',
-  satusehatId: null,
   active: true,
   birthPlaceText: null,
   multipleBirthOrder: null,
@@ -73,6 +72,37 @@ const structuredRecord = {
 };
 
 describe('PatientRepository', () => {
+  it('filters by active status and returns status counts for the search scope', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest
+      .fn()
+      .mockResolvedValueOnce(2)
+      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(1);
+    const repository = new PatientRepository(
+      { patient: { findMany, count } } as unknown as PrismaService,
+      {} as MedicalRecordNumberGenerator,
+    );
+
+    const response = await repository.findMany({
+      active: true,
+      page: 2,
+      pageSize: 10,
+    });
+
+    expect(response).toEqual({
+      items: [],
+      meta: { page: 2, pageSize: 10, total: 2 },
+      statusCounts: { active: 3, inactive: 1 },
+    });
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { active: true }, skip: 10, take: 10 }),
+    );
+    expect(count).toHaveBeenNthCalledWith(1, { where: { active: true } });
+    expect(count).toHaveBeenNthCalledWith(2, { where: { active: true } });
+    expect(count).toHaveBeenNthCalledWith(3, { where: { active: false } });
+  });
+
   it('retries with a fresh sequence value after a legacy RM collision', async () => {
     const uniqueConflict = new Prisma.PrismaClientKnownRequestError(
       'Unique constraint failed on medicalRecNo',

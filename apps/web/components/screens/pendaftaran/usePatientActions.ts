@@ -86,7 +86,7 @@ export function usePatientActions() {
   const previewSatusehat = useCallback(
     async (id: string): Promise<SatusehatPatientPreview> => {
       const response = await apiFetch(
-        `/api/patients/${id}/satusehat/preview`,
+        `/api/integrations/SATUSEHAT/resources/Patient/${id}/preview`,
       );
       if (!response.ok) {
         throw await readPatientApiError(
@@ -101,7 +101,7 @@ export function usePatientActions() {
 
   const syncSatusehat = useCallback(
     async (id: string): Promise<SatusehatPatientSyncResult> => {
-      const response = await apiFetch(`/api/patients/${id}/satusehat/sync`, {
+      const response = await apiFetch(`/api/integrations/SATUSEHAT/resources/Patient/${id}/sync`, {
         method: 'POST',
       });
       if (!response.ok) {
@@ -124,7 +124,7 @@ export function usePatientActions() {
         identifier: query.identifier,
       });
       const response = await apiFetch(
-        `/api/patients/satusehat/lookup?${params.toString()}`,
+        `/api/integrations/SATUSEHAT/resources/Patient/lookup?${params.toString()}`,
       );
       if (!response.ok) {
         throw await readPatientApiError(
@@ -142,7 +142,7 @@ export function usePatientActions() {
       id: string,
       input: SatusehatPatientLinkRequest,
     ): Promise<SatusehatPatientMutationResponse> => {
-      const response = await apiFetch(`/api/patients/${id}/satusehat/link`, {
+      const response = await apiFetch(`/api/integrations/SATUSEHAT/resources/Patient/${id}/link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),

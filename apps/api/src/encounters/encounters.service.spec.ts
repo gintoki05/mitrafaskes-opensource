@@ -1,0 +1,430 @@
+import { Role, LocationStatus } from '@prisma/client';
+import { EncounterStatus } from '@mitrafaskes/shared';
+import type { PrismaService } from '../database/prisma.service';
+import { EncountersService } from './encounters.service';
+import { EncounterRepository } from './encounter.repository';
+
+const now = new Date('2026-08-10T02:00:00.000Z');
+
+function encounterRecord(status = EncounterStatus.WAITING) {
+  return {
+    id: 'enc-local-1',
+    encounterNumber: 'ENC-2026-000001',
+    patientId: 'patient-1',
+    doctorId: 'doctor-1',
+    organizationId: 'organization-1',
+    locationId: 'location-1',
+    queueDate: new Date('2026-08-10T00:00:00.000Z'),
+    queueNumber: 1,
+    status,
+    arrivedAt: now,
+    startedAt: status === EncounterStatus.IN_PROGRESS ? now : null,
+    completedAt: status === EncounterStatus.COMPLETED ? now : null,
+    cancelledAt: status === EncounterStatus.CANCELLED ? now : null,
+    version: 1,
+    createdAt: now,
+    updatedAt: now,
+    patient: {
+      id: 'patient-1',
+      nik: '3171012304900001',
+      fullName: 'Ahmad Supardi',
+      medicalRecNo: 'RM-2026-000001',
+      birthDate: new Date('1990-04-23T00:00:00.000Z'),
+      gender: 'MALE',
+      address: 'Jl. Merdeka 10',
+      phone: '08123456789',
+      birthPlaceText: 'Jakarta',
+    },
+    doctor: {
+      id: 'doctor-1',
+      fullName: 'dr. Budi Santoso',
+      sipNumber: 'SIP-1',
+    },
+    organization: {
+      id: 'organization-1',
+      code: 'FASKES-1',
+      name: 'Klinik Demo',
+    },
+    location: {
+      id: 'location-1',
+      code: 'POLI-UMUM',
+      name: 'Poli Umum',
+    },
+    statusHistory: [
+      {
+        id: 'history-1',
+        status,
+        periodStart: now,
+        periodEnd: null,
+        actorUserId: 'user-1',
+        actorUsername: 'perawat_ani',
+        actorRole: Role.PERAWAT,
+        createdAt: now,
+      },
+    ],
+  };
+}
+
+function createService() {
+  const record = encounterRecord();
+  const transaction = {
+    patient: {
+      findUnique: jest
+        .fn()
+        .mockResolvedValue({ id: 'patient-1', active: true }),
+    },
+    location: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'location-1',
+        organizationId: 'organization-1',
+        active: true,
+        status: LocationStatus.ACTIVE,
+        organization: { id: 'organization-1', active: true },
+      }),
+    },
+    user: {
+      findUnique: jest.fn().mockResolvedValue({
+        id: 'doctor-1',
+        organizationId: 'organization-1',
+        locationId: 'location-1',
+        active: true,
+        role: Role.DOKTER,
+      }),
+    },
+    encounter: {
+      findFirst: jest.fn().mockResolvedValue(null),
+      create: jest.fn().mockResolvedValue(record),
+      findUnique: jest.fn().mockResolvedValue(record),
+    },
+    $queryRaw: jest
+      .fn()
+      .mockResolvedValueOnce([{ lastIssuedNumber: 1 }])
+      .mockResolvedValueOnce([{ value: 1n }]),
+  };
+  const prisma = {
+    user: { findUnique: jest.fn().mockResolvedValue({ id: 'user-1' }) },
+    encounter: { findUnique: jest.fn().mockResolvedValue(record) },
+    $transaction: jest.fn(
+      async (callback: (tx: typeof transaction) => unknown) =>
+        callback(transaction),
+    ),
+  } as unknown as PrismaService;
+  const service = new EncountersService(prisma);
+  return { service, prisma, transaction, record };
+}
+
+describe('EncountersService', () => {
+  it('creates the local Encounter atomically without SATUSEHAT calls or logs', async () => {
+    const { service, transaction } = createService();
+
+    const result = await service.create(
+      {
+        patientId: 'patient-1',
+        locationId: 'location-1',
+        doctorId: 'doctor-1',
+      },
+      { id: 'user-1', username: 'perawat_ani', role: 'PERAWAT' },
+    );
+
+    expect(result.encounterNumber).toBe('ENC-2026-000001');
+    expect(result.queueNumber).toBe(1);
+    expect(result.status).toBe(EncounterStatus.WAITING);
+    expect(result.patient).toEqual(
+      expect.objectContaining({
+        birthDate: '1990-04-23',
+        gender: 'MALE',
+        address: 'Jl. Merdeka 10',
+      }),
+    );
+    expect(transaction.encounter.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          encounterNumber: 'ENC-2026-000001',
+          queueNumber: 1,
+          status: EncounterStatus.WAITING,
+        }),
+      }),
+    );
+  });
+
+  it('closes history, snapshots the actor, and increments lifecycle version atomically', async () => {
+    const current = encounterRecord(EncounterStatus.WAITING);
+    const updated = {
+      ...encounterRecord(EncounterStatus.IN_PROGRESS),
+      version: 2,
+    };
+    const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([
+        {
+          id: current.id,
+          status: EncounterStatus.WAITING,
+          version: 1,
+          doctorId: current.doctorId,
+        },
+      ]),
+      encounter: {
+        update: jest.fn(),
+        findUnique: jest.fn().mockResolvedValue(updated),
+      },
+      encounterStatusHistory: {
+        findFirst: jest.fn().mockResolvedValue(current.statusHistory[0]),
+        update: jest.fn(),
+        create: jest.fn(),
+      },
+    };
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'user-db-1' }) },
+      $transaction: jest.fn(
+        async (callback: (tx: typeof transaction) => unknown) =>
+          callback(transaction),
+      ),
+    } as unknown as PrismaService;
+    const service = new EncountersService(prisma, {
+      findForList: jest.fn(),
+      findDependencyLink: jest.fn(),
+      toLinkage: jest.fn(),
+      toSyncSummary: jest.fn(),
+    } as never);
+
+    const result = await service.updateStatus(
+      current.id,
+      { status: EncounterStatus.IN_PROGRESS, expectedVersion: 1 },
+      { id: 'session-user-1', username: 'perawat_ani', role: 'PERAWAT' },
+    );
+
+    expect(result.version).toBe(2);
+    expect(result.status).toBe(EncounterStatus.IN_PROGRESS);
+    expect(transaction.encounterStatusHistory.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 'history-1' },
+        data: { periodEnd: expect.any(Date) },
+      }),
+    );
+    expect(transaction.encounter.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: EncounterStatus.IN_PROGRESS,
+          version: { increment: 1 },
+          startedAt: expect.any(Date),
+        }),
+      }),
+    );
+    expect(transaction.encounterStatusHistory.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: EncounterStatus.IN_PROGRESS,
+          actorUserId: 'user-db-1',
+          actorUsername: 'perawat_ani',
+          actorRole: Role.PERAWAT,
+          periodStart: expect.any(Date),
+        }),
+      }),
+    );
+  });
+
+  it('rejects a stale version before mutating status or history', async () => {
+    const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([
+        {
+          id: 'enc-local-1',
+          status: EncounterStatus.WAITING,
+          version: 2,
+          doctorId: 'doctor-1',
+        },
+      ]),
+      encounter: { update: jest.fn() },
+      encounterStatusHistory: {
+        findFirst: jest.fn(),
+        update: jest.fn(),
+        create: jest.fn(),
+      },
+    };
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'user-db-1' }) },
+      $transaction: jest.fn(
+        async (callback: (tx: typeof transaction) => unknown) =>
+          callback(transaction),
+      ),
+    } as unknown as PrismaService;
+    const service = new EncountersService(prisma, {
+      findForList: jest.fn(),
+    } as never);
+
+    await expect(
+      service.updateStatus(
+        'enc-local-1',
+        { status: EncounterStatus.IN_PROGRESS, expectedVersion: 1 },
+        { id: 'session-user-1', username: 'perawat_ani', role: 'PERAWAT' },
+      ),
+    ).rejects.toMatchObject({ code: 'ENCOUNTER_VERSION_CONFLICT' });
+    expect(transaction.encounter.update).not.toHaveBeenCalled();
+    expect(transaction.encounterStatusHistory.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects generic completion because only RME finalization may complete an Encounter', async () => {
+    const { service, prisma } = createService();
+
+    await expect(
+      service.updateStatus(
+        'enc-local-1',
+        { status: EncounterStatus.COMPLETED, expectedVersion: 1 },
+        { id: 'doctor-1', username: 'dr_budi', role: 'DOKTER' },
+      ),
+    ).rejects.toMatchObject({
+      code: 'ENCOUNTER_COMPLETION_REQUIRES_RME_FINALIZATION',
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects a doctor from transitioning an Encounter assigned to another doctor', async () => {
+    const transaction = {
+      $queryRaw: jest.fn().mockResolvedValue([
+        {
+          id: 'enc-local-1',
+          status: EncounterStatus.WAITING,
+          version: 1,
+          doctorId: 'doctor-other',
+        },
+      ]),
+      encounter: { update: jest.fn() },
+      encounterStatusHistory: {
+        findFirst: jest.fn(),
+        update: jest.fn(),
+        create: jest.fn(),
+      },
+    };
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'doctor-1' }) },
+      $transaction: jest.fn(
+        async (callback: (tx: typeof transaction) => unknown) =>
+          callback(transaction),
+      ),
+    } as unknown as PrismaService;
+    const service = new EncountersService(prisma, {
+      findForList: jest.fn(),
+    } as never);
+
+    await expect(
+      service.updateStatus(
+        'enc-local-1',
+        { status: EncounterStatus.IN_PROGRESS, expectedVersion: 1 },
+        { id: 'session-user-1', username: 'dr_budi', role: 'DOKTER' },
+      ),
+    ).rejects.toMatchObject({
+      response: { code: 'ENCOUNTER_NOT_ASSIGNED_TO_DOCTOR' },
+    });
+    expect(transaction.encounter.update).not.toHaveBeenCalled();
+    expect(transaction.encounterStatusHistory.create).not.toHaveBeenCalled();
+  });
+
+  it('limits the doctor queue to Encounters assigned to the logged-in doctor', async () => {
+    const findMany = jest
+      .spyOn(EncounterRepository.prototype, 'findMany')
+      .mockResolvedValue({
+        records: [],
+        total: 0,
+        statusCounts: {
+          WAITING: 0,
+          IN_PROGRESS: 0,
+          COMPLETED: 0,
+          CANCELLED: 0,
+        },
+      });
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'doctor-1' }) },
+    } as unknown as PrismaService;
+    const service = new EncountersService(prisma);
+
+    try {
+      await service.findMany(
+        { queueDate: '2026-08-13', status: EncounterStatus.WAITING },
+        { id: 'session-user-1', username: 'dr_budi', role: 'DOKTER' },
+      );
+      expect(findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ doctorId: 'doctor-1' }),
+        1,
+        25,
+      );
+    } finally {
+      findMany.mockRestore();
+    }
+  });
+
+  it('limits the doctor history to Encounters assigned to the logged-in doctor', async () => {
+    const findHistory = jest
+      .spyOn(EncounterRepository.prototype, 'findHistory')
+      .mockResolvedValue({ records: [], total: 0 });
+    const prisma = {
+      user: { findUnique: jest.fn().mockResolvedValue({ id: 'doctor-1' }) },
+    } as unknown as PrismaService;
+    const service = new EncountersService(prisma);
+
+    try {
+      await service.findHistory(
+        {
+          fromDate: '2026-08-01',
+          toDate: '2026-08-13',
+          search: 'RM-2026',
+          status: EncounterStatus.COMPLETED,
+        },
+        { id: 'session-user-1', username: 'dr_budi', role: 'DOKTER' },
+      );
+      expect(findHistory).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fromDate: new Date('2026-08-01T00:00:00.000Z'),
+          toDate: new Date('2026-08-13T00:00:00.000Z'),
+          search: 'RM-2026',
+          status: EncounterStatus.COMPLETED,
+          doctorId: 'doctor-1',
+        }),
+        1,
+        25,
+      );
+    } finally {
+      findHistory.mockRestore();
+    }
+  });
+
+  it('returns history relations and provider-neutral integration summaries', async () => {
+    const record = encounterRecord();
+    const findHistory = jest
+      .spyOn(EncounterRepository.prototype, 'findHistory')
+      .mockResolvedValue({ records: [record], total: 1 });
+    const integrationSummary = {
+      provider: 'SATUSEHAT',
+      environment: 'SANDBOX',
+      linkage: { externalResourceId: 'satusehat-enc-1' },
+    };
+    const findResourceSummaries = jest
+      .fn()
+      .mockResolvedValue(new Map([[record.id, [integrationSummary]]]));
+    const service = new EncountersService(
+      {} as PrismaService,
+      { findResourceSummaries } as never,
+    );
+
+    try {
+      const result = await service.findHistory({
+        fromDate: '2026-08-01',
+        toDate: '2026-08-13',
+      });
+
+      expect(result.items[0]).toEqual(
+        expect.objectContaining({
+          patient: expect.objectContaining({
+            fullName: 'Ahmad Supardi',
+            medicalRecNo: 'RM-2026-000001',
+          }),
+          doctor: expect.objectContaining({ fullName: 'dr. Budi Santoso' }),
+          location: expect.objectContaining({ name: 'Poli Umum' }),
+          integrations: [integrationSummary],
+        }),
+      );
+      expect(findResourceSummaries).toHaveBeenCalledWith('Encounter', [
+        record.id,
+      ]);
+    } finally {
+      findHistory.mockRestore();
+    }
+  });
+});

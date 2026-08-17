@@ -15,9 +15,11 @@ import { useMasterFaskesData } from "@/hooks/useMasterFaskesData";
 import { useMasterFaskesList } from "@/hooks/useMasterFaskesList";
 import { can } from "@/lib/auth";
 import { useSession } from "@/hooks/useSession";
+import { useIntegrationCapability } from "@/hooks/useIntegrationCapabilities";
 import { MasterFaskesDialog } from "./master-faskes/MasterFaskesDialog";
 import { MasterFaskesSubnav } from "./master-faskes/MasterFaskesSubnav";
 import { MasterFaskesTable } from "./master-faskes/MasterFaskesTable";
+import { MasterFaskesStatusFilter } from "./master-faskes/MasterFaskesStatusFilter";
 import { OrganizationForm } from "./master-faskes/OrganizationForm";
 import { OrganizationSyncDialog } from "./master-faskes/OrganizationSyncDialog";
 import { OrganizationImportDialog } from "./master-faskes/OrganizationImportDialog";
@@ -39,20 +41,21 @@ const initialQuery: MasterDataListQuery = {
   pageSize: 25,
   sort: "name",
   direction: "asc",
+  active: true,
 };
 
-type StatusFilter = "all" | "active" | "inactive";
 type TypeFilter = "ALL" | OrganizationSummary["type"];
 
 export default function OrganizationListScreen() {
   const session = useSession();
+  const satusehat = useIntegrationCapability("SATUSEHAT");
   const canWrite = can(
     session?.user ?? null,
     AccessPermission.MASTER_DATA_WRITE,
   );
   const [query, setQuery] = useState(initialQuery);
   const [searchDraft, setSearchDraft] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<boolean | undefined>(true);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("ALL");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<OrganizationSummary | null>(null);
@@ -76,6 +79,7 @@ export default function OrganizationListScreen() {
     loading: listLoading,
     error: listError,
     refresh: refreshList,
+    statusCounts,
   } = list;
   const {
     organizations,
@@ -98,10 +102,9 @@ export default function OrganizationListScreen() {
     setFilters({ search: searchDraft.trim() || undefined });
   };
 
-  const handleStatusFilter = (value: string) => {
-    const next = value as StatusFilter;
-    setStatusFilter(next);
-    setFilters({ active: next === "all" ? undefined : next === "active" });
+  const handleStatusFilter = (active: boolean | undefined) => {
+    setStatusFilter(active);
+    setFilters({ active });
   };
 
   const handleTypeFilter = (value: string) => {
@@ -112,7 +115,7 @@ export default function OrganizationListScreen() {
 
   const clearFilters = () => {
     setSearchDraft("");
-    setStatusFilter("all");
+    setStatusFilter(true);
     setTypeFilter("ALL");
     setQuery(initialQuery);
   };
@@ -219,13 +222,14 @@ export default function OrganizationListScreen() {
     () =>
       getOrganizationColumns({
         canWrite,
+        integrationEnabled: satusehat.available,
         organizations,
         onPreview: setSyncOrganization,
         onLink: openLink,
         onEdit: openEdit,
         onToggleStatus: openStatusConfirmation,
       }),
-    [canWrite, openEdit, openLink, openStatusConfirmation, organizations],
+    [canWrite, openEdit, openLink, openStatusConfirmation, organizations, satusehat.available],
   );
 
   return (
@@ -238,23 +242,26 @@ export default function OrganizationListScreen() {
           action={
             canWrite ? (
               <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={openImport}
-                  title="Ambil organisasi dari SATUSEHAT"
-                >
-                  <span className="flex h-5 w-5 overflow-hidden rounded bg-white" aria-hidden="true">
-                    <Image
-                      src="/satusehat.png"
-                      alt=""
-                      width={40}
-                      height={40}
-                      className="h-full w-full object-cover"
-                    />
-                  </span>
-                  Ambil dari SATUSEHAT
-                </Button>
+                  {satusehat.available ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={openImport}
+                      disabled={!satusehat.configured}
+                      title={satusehat.configured ? "Ambil organisasi dari SATUSEHAT" : "Kredensial SATUSEHAT belum dikonfigurasi"}
+                  >
+                    <span className="flex h-5 w-5 overflow-hidden rounded bg-white" aria-hidden="true">
+                      <Image
+                        src="/satusehat.png"
+                        alt=""
+                        width={40}
+                        height={40}
+                        className="h-full w-full object-cover"
+                      />
+                    </span>
+                    Ambil dari SATUSEHAT
+                  </Button>
+                ) : null}
                 <Button type="button" onClick={openCreate}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   Tambah organisasi
@@ -279,18 +286,13 @@ export default function OrganizationListScreen() {
           onSearchSubmit={handleSearchSubmit}
           filters={
             <>
-              <SelectField
-                id="organization-filter-status"
-                aria-label="Filter status organisasi"
-                size="sm"
+              <MasterFaskesStatusFilter
+                ariaLabel="Filter status organisasi"
+                counts={statusCounts}
                 value={statusFilter}
                 onChange={handleStatusFilter}
-                className="w-auto min-w-32 text-xs"
-              >
-                <option value="all">Semua status</option>
-                <option value="active">Aktif</option>
-                <option value="inactive">Nonaktif</option>
-              </SelectField>
+                disabled={listLoading}
+              />
               <SelectField
                 id="organization-filter-type"
                 aria-label="Filter jenis organisasi"
@@ -309,7 +311,7 @@ export default function OrganizationListScreen() {
             </>
           }
           hasActiveFilters={Boolean(
-            query.search || query.active !== undefined || query.type,
+            query.search || query.active !== true || query.type,
           )}
           onClearFilters={clearFilters}
           onRefresh={() => void refreshList()}
@@ -338,8 +340,8 @@ export default function OrganizationListScreen() {
           onCancel={closeForm}
         />
       </MasterFaskesDialog>
-      <OrganizationSyncDialog
-        open={syncOrganization !== null}
+        <OrganizationSyncDialog
+          open={satusehat.configured && syncOrganization !== null}
         organization={syncOrganization}
         canSync={canWrite}
         onClose={() => setSyncOrganization(null)}
@@ -348,8 +350,8 @@ export default function OrganizationListScreen() {
           void refreshOptions();
         }}
       />
-      <OrganizationLinkDialog
-        open={linkOrganization !== null}
+        <OrganizationLinkDialog
+          open={satusehat.configured && linkOrganization !== null}
         organization={linkOrganization}
         canWrite={canWrite}
         onClose={() => setLinkOrganization(null)}
@@ -358,8 +360,8 @@ export default function OrganizationListScreen() {
           await refreshOptions();
         }}
       />
-      <OrganizationImportDialog
-        open={importDialogOpen}
+        <OrganizationImportDialog
+          open={satusehat.configured && importDialogOpen}
         organizations={organizations}
         canWrite={canWrite}
         onClose={() => setImportDialogOpen(false)}

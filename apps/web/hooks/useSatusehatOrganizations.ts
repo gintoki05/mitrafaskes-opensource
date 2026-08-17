@@ -48,7 +48,7 @@ export function useSatusehatOrganizations() {
     ): Promise<SatusehatOrganizationSearchResponse> => {
       const query = searchQuery(input);
       const response = await apiFetch(
-        `/api/master/organizations/satusehat/search?${query}`,
+        `/api/integrations/SATUSEHAT/resources/Organization/search?${query}`,
       );
       if (!response.ok) {
         throw await readApiError(
@@ -67,7 +67,7 @@ export function useSatusehatOrganizations() {
       input: SatusehatOrganizationLinkRequest,
     ): Promise<SatusehatOrganizationMutationResponse> => {
       const response = await apiFetch(
-        `/api/master/organizations/${localResourceId}/satusehat/link`,
+        `/api/integrations/SATUSEHAT/resources/Organization/${localResourceId}/link`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -89,7 +89,7 @@ export function useSatusehatOrganizations() {
     async (
       input: SatusehatOrganizationImportRequest,
     ): Promise<SatusehatOrganizationMutationResponse> => {
-      const response = await apiFetch('/api/master/organizations/satusehat/import', {
+      const response = await apiFetch('/api/integrations/SATUSEHAT/resources/Organization/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),

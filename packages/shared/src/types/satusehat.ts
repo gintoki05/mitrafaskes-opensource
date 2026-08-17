@@ -4,12 +4,6 @@ import type {
   PractitionerSummary,
 } from './master-data';
 
-export enum SyncStatus {
-  PENDING = 'PENDING',
-  SUCCESS = 'SUCCESS',
-  FAILED = 'FAILED',
-}
-
 export type SatusehatAuthConnectionState =
   | 'NOT_CONFIGURED'
   | 'CONNECTED'
@@ -79,25 +73,6 @@ export interface SatusehatOrganizationMutationResponse {
   localResourceId: string;
   externalResourceId: string;
   organization: OrganizationSummary;
-}
-
-export interface SatusehatSyncLog {
-  id: string;
-  resourceType:
-    | 'Organization'
-    | 'Location'
-    | 'Practitioner'
-    | 'Patient'
-    | 'Encounter'
-    | 'Condition'
-    | 'Observation'
-    | 'MedicationRequest';
-  resourceId: string;
-  status: SyncStatus;
-  payload: any;
-  satusehatId?: string;
-  errorMessage?: string;
-  updatedAt: string;
 }
 
 export interface SatusehatPatientIdentifier {
@@ -409,7 +384,6 @@ export interface SatusehatLocationLinkRequest {
 export interface SatusehatLocationImportRequest {
   externalResourceId: string;
   organizationId?: string;
-  serviceUnitId?: string;
   parentId?: string;
   code?: string;
 }
@@ -430,63 +404,74 @@ export interface SatusehatLocationContext {
   externalResourceId?: string;
 }
 
-export interface SatusehatEncounterPayload {
-  resourceType: 'Encounter';
-  status: 'arrived' | 'in-progress' | 'finished';
-  class: {
-    system: string;
-    code: string;
-    display: string;
-  };
-  subject: {
-    reference: string; // Patient/SATUSEHAT_ID
-    display: string;
-  };
-  participant: {
-    individual: {
-      reference: string; // Practitioner/SIP_ID
-      display: string;
-    };
-  }[];
-  period: {
-    start: string;
-    end?: string;
-  };
-  location?: {
-    location: {
-      reference: string;
-      display: string;
-    };
-  }[];
+export type SatusehatEncounterStatus =
+  'arrived' | 'in-progress' | 'finished' | 'cancelled';
+
+export interface SatusehatEncounterPeriod {
+  start: string;
+  end?: string;
 }
 
-export interface SatusehatConditionPayload {
-  resourceType: 'Condition';
-  clinicalStatus: {
-    coding: {
-      system: string;
-      code: string;
-    }[];
-  };
-  category: {
-    coding: {
-      system: string;
-      code: string;
-      display: string;
-    }[];
+export interface SatusehatEncounterCoding {
+  system: string;
+  code: string;
+  display: string;
+}
+
+export interface SatusehatEncounterReference {
+  reference: string;
+  display?: string;
+}
+
+export interface SatusehatEncounterDiagnosis {
+  condition: SatusehatEncounterReference;
+  use: { coding: SatusehatEncounterCoding[] };
+  rank: number;
+}
+
+export interface SatusehatEncounterPayload {
+  resourceType: 'Encounter';
+  id?: string;
+  identifier: {
+    use: 'official';
+    system: string;
+    value: string;
   }[];
-  code: {
-    coding: {
-      system: string; // http://hl7.org/fhir/sid/icd-10
-      code: string;
-      display: string;
-    }[];
-  };
-  subject: {
-    reference: string;
-    display: string;
-  };
-  encounter: {
-    reference: string;
-  };
+  status: SatusehatEncounterStatus;
+  statusHistory: {
+    status: SatusehatEncounterStatus;
+    period: SatusehatEncounterPeriod;
+  }[];
+  class: SatusehatEncounterCoding;
+  classHistory: {
+    class: SatusehatEncounterCoding;
+    period: SatusehatEncounterPeriod;
+  }[];
+  subject: SatusehatEncounterReference;
+  participant: {
+    type: { coding: SatusehatEncounterCoding[] }[];
+    individual: SatusehatEncounterReference;
+  }[];
+  period: SatusehatEncounterPeriod;
+  location: {
+    location: SatusehatEncounterReference;
+  }[];
+  diagnosis?: SatusehatEncounterDiagnosis[];
+  serviceProvider: SatusehatEncounterReference;
+}
+
+export type SatusehatEncounterOperation = 'CREATE' | 'UPDATE';
+
+export interface SatusehatEncounterPreview {
+  localResourceId: string;
+  operation: SatusehatEncounterOperation;
+  externalResourceId?: string;
+  payload: SatusehatEncounterPayload;
+}
+
+export interface SatusehatEncounterSyncResult
+  extends SatusehatEncounterPreview {
+  syncedRemotely: boolean;
+  syncLogId: string;
+  response?: unknown;
 }
