@@ -27,6 +27,9 @@ type RmeVitalSignsProps = {
   ) => void;
 };
 
+const vitalLabelClassName =
+  "mb-2 flex min-h-10 items-start text-sm font-medium leading-5 text-foreground";
+
 export function RmeVitalSigns({
   systolic,
   diastolic,
@@ -39,19 +42,19 @@ export function RmeVitalSigns({
   onChange,
 }: RmeVitalSignsProps) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
-          <Activity className="h-4 w-4 text-success" />
+    <Card className="gap-7 py-6">
+      <CardHeader className="px-5 pb-0">
+        <CardTitle className="flex items-center gap-2 text-lg font-bold text-foreground">
+          <Activity className="h-5 w-5 shrink-0 text-success" />
           2. Tanda Vital
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-8">
+      <CardContent className="px-5">
+        <div className="grid grid-cols-2 gap-x-5 gap-y-5 sm:grid-cols-3 lg:grid-cols-8">
           <div>
             <label
               htmlFor="systolic"
-              className="mb-1 block text-[11px] font-medium text-muted-foreground"
+              className={vitalLabelClassName}
             >
               Sistolik (mmHg)
             </label>
@@ -60,13 +63,13 @@ export function RmeVitalSigns({
               type="number"
               value={systolic}
               onChange={(event) => onChange("systolic", event.target.value)}
-              className="text-xs font-mono"
+              className="h-12 text-sm font-medical-mono"
             />
           </div>
           <div>
             <label
               htmlFor="diastolic"
-              className="mb-1 block text-[11px] font-medium text-muted-foreground"
+              className={vitalLabelClassName}
             >
               Diastolik (mmHg)
             </label>
@@ -75,13 +78,13 @@ export function RmeVitalSigns({
               type="number"
               value={diastolic}
               onChange={(event) => onChange("diastolic", event.target.value)}
-              className="text-xs font-mono"
+              className="h-12 text-sm font-medical-mono"
             />
           </div>
           <div>
             <label
               htmlFor="temperature"
-              className="mb-1 block text-[11px] font-medium text-muted-foreground"
+              className={vitalLabelClassName}
             >
               Suhu Tubuh (&deg;C)
             </label>
@@ -91,13 +94,13 @@ export function RmeVitalSigns({
               step="0.1"
               value={temperature}
               onChange={(event) => onChange("temperature", event.target.value)}
-              className="text-xs font-mono"
+              className="h-12 text-sm font-medical-mono"
             />
           </div>
           <div>
             <label
               htmlFor="heart-rate"
-              className="mb-1 block text-[11px] font-medium text-muted-foreground"
+              className={vitalLabelClassName}
             >
               Denyut Nadi (bpm)
             </label>
@@ -106,13 +109,13 @@ export function RmeVitalSigns({
               type="number"
               value={heartRate}
               onChange={(event) => onChange("heartRate", event.target.value)}
-              className="text-xs font-mono"
+              className="h-12 text-sm font-medical-mono"
             />
           </div>
           <div>
             <label
               htmlFor="weight"
-              className="mb-1 block text-[11px] font-medium text-muted-foreground"
+              className={vitalLabelClassName}
             >
               Berat (kg)
             </label>
@@ -122,13 +125,13 @@ export function RmeVitalSigns({
               step="0.01"
               value={weight}
               onChange={(event) => onChange("weight", event.target.value)}
-              className="text-xs font-mono"
+              className="h-12 text-sm font-medical-mono"
             />
           </div>
           <div>
             <label
               htmlFor="height"
-              className="mb-1 block text-[11px] font-medium text-muted-foreground"
+              className={vitalLabelClassName}
             >
               Tinggi (cm)
             </label>
@@ -138,13 +141,13 @@ export function RmeVitalSigns({
               step="0.1"
               value={height}
               onChange={(event) => onChange("height", event.target.value)}
-              className="text-xs font-mono"
+              className="h-12 text-sm font-medical-mono"
             />
           </div>
           <div>
             <label
               htmlFor="respiratory-rate"
-              className="mb-1 block text-[11px] font-medium text-muted-foreground"
+              className={vitalLabelClassName}
             >
               Laju napas (/menit)
             </label>
@@ -157,13 +160,13 @@ export function RmeVitalSigns({
               onChange={(event) =>
                 onChange("respiratoryRate", event.target.value)
               }
-              className="text-xs font-mono"
+              className="h-12 text-sm font-medical-mono"
             />
           </div>
           <div>
             <label
               htmlFor="oxygen-saturation"
-              className="mb-1 block text-[11px] font-medium text-muted-foreground"
+              className={vitalLabelClassName}
             >
               SpO₂ (%)
             </label>
@@ -177,7 +180,7 @@ export function RmeVitalSigns({
               onChange={(event) =>
                 onChange("oxygenSaturation", event.target.value)
               }
-              className="text-xs font-mono"
+              className="h-12 text-sm font-medical-mono"
             />
           </div>
         </div>

@@ -1,5 +1,6 @@
 import type { User } from '@prisma/client';
 import type {
+  AccessRoleSummary,
   PractitionerSummary,
   ResourceIntegrationSummary,
 } from '@mitrafaskes/shared';
@@ -38,6 +39,15 @@ type PractitionerUser = Pick<
       name: string;
     };
   }>;
+  accessRole?: {
+    id: string;
+    code: string;
+    name: string;
+    description: string | null;
+    defaultRoute: string;
+    active: boolean;
+    systemKind: 'STANDARD' | 'SUPER_ADMIN';
+  } | null;
 };
 
 function toLocationReference(location: {
@@ -67,6 +77,9 @@ export function toPractitionerSummary(
     id: record.id,
     username: record.username,
     fullName: record.fullName,
+    accessRole: record.accessRole
+      ? toAccessRoleSummary(record.accessRole)
+      : undefined,
     role:
       record.role === 'DOKTER'
         ? 'DOKTER'
@@ -93,5 +106,19 @@ export function toPractitionerSummary(
     integrations,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
+  };
+}
+
+function toAccessRoleSummary(
+  role: NonNullable<PractitionerUser['accessRole']>,
+): AccessRoleSummary {
+  return {
+    id: role.id,
+    code: role.code,
+    name: role.name,
+    description: role.description ?? undefined,
+    defaultRoute: role.defaultRoute,
+    active: role.active,
+    system: role.systemKind,
   };
 }

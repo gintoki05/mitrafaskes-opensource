@@ -18,7 +18,6 @@ function Checkbox({
       {...props}
     >
       <CheckboxPrimitive.Indicator
-        keepMounted
         className="flex items-center justify-center"
       >
         {indeterminate ? (

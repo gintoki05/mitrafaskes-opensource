@@ -24,6 +24,7 @@ export interface ValidatedPractitionerCreate {
   password: string;
   fullName: string;
   role: Role;
+  accessRoleId?: string | null;
   nik?: string | null;
   birthDate?: Date | null;
   gender?: Gender | null;
@@ -54,6 +55,12 @@ export function validatePractitionerCreate(
       message: 'Role harus DOKTER, PERAWAT, atau PETUGAS_PENDAFTARAN.',
     });
   }
+  const accessRoleId = Object.prototype.hasOwnProperty.call(
+    body,
+    'accessRoleId',
+  )
+    ? readOptionalId(body.accessRoleId, 'accessRoleId', issues)
+    : undefined;
   if (username && !/^[a-zA-Z0-9._-]+$/.test(username)) {
     issues.push({
       field: 'username',
@@ -103,6 +110,7 @@ export function validatePractitionerCreate(
     password: password!,
     fullName: fullName!,
     role: role!,
+    ...(accessRoleId === undefined ? {} : { accessRoleId }),
     nik: nik ?? null,
     ...(birthDate === undefined ? {} : { birthDate }),
     ...(gender === undefined ? {} : { gender }),

@@ -38,6 +38,12 @@ export class PractitionersController {
     return this.practitioners.findMany(this.parseListQuery(query));
   }
 
+  @Get('roles')
+  @RequirePermission(AccessPermission.MASTER_DATA_READ)
+  listRoleOptions() {
+    return this.practitioners.listRoleOptions();
+  }
+
   @Get(':id')
   @RequirePermission(AccessPermission.MASTER_DATA_READ)
   findById(@Param('id') id: string) {

@@ -323,20 +323,7 @@ export function Navbar() {
               Bantuan sistem
             </div>
           )}
-          {user ? (
-            <button
-              type="button"
-              onClick={handleLogout}
-              className={`flex min-h-10 w-full items-center rounded-[var(--radius-control)] text-sm font-semibold text-white/90 transition-colors hover:bg-white/12 hover:text-white ${
-                collapsed ? 'justify-center px-0' : 'gap-3 px-3'
-              }`}
-              aria-label={`Keluar dari akun ${user.fullName}`}
-              title={collapsed ? 'Keluar' : undefined}
-            >
-              <LogOut className="h-4 w-4" aria-hidden="true" />
-              <span className={collapsed ? 'sr-only' : ''}>Keluar</span>
-            </button>
-          ) : (
+          {!user ? (
             <Link
               href="/login"
               className={`flex min-h-10 w-full items-center rounded-[var(--radius-control)] text-sm font-semibold text-white/90 transition-colors hover:bg-white/12 hover:text-white ${
@@ -348,7 +335,7 @@ export function Navbar() {
               <LogIn className="h-4 w-4" aria-hidden="true" />
               <span className={collapsed ? 'sr-only' : ''}>Masuk</span>
             </Link>
-          )}
+          ) : null}
         </div>
       </aside>
 

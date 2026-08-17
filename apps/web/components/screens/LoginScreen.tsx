@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -32,10 +32,9 @@ function getSessionEntryRoute(user: Parameters<typeof defaultRoute>[0]): string 
 }
 export default function LoginPage() {
   const router = useRouter();
-  const [loading, setLoading] = useState(false);
   const session = useSession();
   const {
-    formState: { errors },
+    formState: { errors, isSubmitting },
     handleSubmit,
     register,
     setValue,
@@ -52,8 +51,6 @@ export default function LoginPage() {
   }, [router, session]);
 
   const handleLogin: SubmitHandler<LoginFormValues> = async ({ username, password }) => {
-    setLoading(true);
-
     try {
       const res = await apiFetch('/api/auth/login', {
         method: 'POST',
@@ -90,8 +87,6 @@ export default function LoginPage() {
           err instanceof Error ? err.message : 'Login gagal. Silakan coba lagi.',
         duration: 7000,
       });
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -172,10 +167,10 @@ export default function LoginPage() {
               <FieldError id="password-error" errors={[errors.password]} />
             </Field>
 
-            <Button type="submit" size="lg" disabled={loading} aria-busy={loading} className="w-full">
+            <Button type="submit" size="lg" disabled={isSubmitting} aria-busy={isSubmitting} className="w-full">
               <LockKeyhole className="h-4 w-4" aria-hidden="true" />
-              {loading ? 'Memproses...' : 'Masuk ke sistem'}
-              {!loading ? <ArrowRight className="ml-auto h-4 w-4" aria-hidden="true" /> : null}
+              {isSubmitting ? 'Memproses...' : 'Masuk ke sistem'}
+              {!isSubmitting ? <ArrowRight className="ml-auto h-4 w-4" aria-hidden="true" /> : null}
             </Button>
           </form>
 

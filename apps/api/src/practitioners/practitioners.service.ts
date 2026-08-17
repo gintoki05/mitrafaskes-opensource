@@ -5,10 +5,12 @@ import {
   NotFoundException,
   Optional,
 } from '@nestjs/common';
-import { Prisma, Role } from '@prisma/client';
+import { Prisma, Role, WorkProfileType } from '@prisma/client';
 import type {
   MasterDataListQuery,
   MasterDataListResponse,
+  PractitionerRoleCode,
+  PractitionerRoleListResponse,
   PractitionerSummary,
   ResourceIntegrationSummary,
 } from '@mitrafaskes/shared';
@@ -27,6 +29,11 @@ const PRACTITIONER_ROLES = [
   Role.PERAWAT,
   Role.PETUGAS_PENDAFTARAN,
 ];
+const PRACTITIONER_ROLE_CODES = [
+  'DOKTER',
+  'PERAWAT',
+  'PETUGAS_PENDAFTARAN',
+] as const;
 const DEFAULT_PAGE = 1;
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -45,6 +52,17 @@ const practitionerRelationInclude = {
       },
     },
   },
+  accessRole: {
+    select: {
+      id: true,
+      code: true,
+      name: true,
+      description: true,
+      defaultRoute: true,
+      active: true,
+      systemKind: true,
+    },
+  },
 };
 
 @Injectable()
@@ -53,6 +71,26 @@ export class PractitionersService {
     private readonly prisma: PrismaService,
     @Optional() private readonly integrations?: IntegrationRegistry,
   ) {}
+
+  async listRoleOptions(): Promise<PractitionerRoleListResponse> {
+    const roles = await this.prisma.accessRole.findMany({
+      where: {
+        active: true,
+        code: { in: [...PRACTITIONER_ROLE_CODES] },
+      },
+      orderBy: [{ name: 'asc' }, { code: 'asc' }],
+      select: { id: true, code: true, name: true, active: true },
+    });
+
+    return {
+      items: roles.map((role) => ({
+        id: role.id,
+        code: role.code as PractitionerRoleCode,
+        name: role.name,
+        active: role.active,
+      })),
+    };
+  }
 
   async create(input: unknown): Promise<PractitionerSummary> {
     let validated: ReturnType<typeof validatePractitionerCreate>;
@@ -70,7 +108,11 @@ export class PractitionersService {
     }
 
     try {
-      const { password, locationIds, ...profile } = validated;
+      const { password, locationIds, accessRoleId, ...profile } = validated;
+      const accessRole = await this.resolvePractitionerAccessRole(
+        profile.role,
+        accessRoleId,
+      );
       await this.validatePractitionerContext(
         profile.organizationId,
         locationIds,
@@ -78,6 +120,8 @@ export class PractitionersService {
       const record = await this.prisma.user.create({
         data: {
           ...profile,
+          accessRoleId: accessRole?.id ?? null,
+          workProfileType: this.workProfileForRole(profile.role),
           locationId: locationIds[0] ?? null,
           passwordHash: await hashPassword(password),
           locationAssignments: locationIds.length
@@ -280,6 +324,51 @@ export class PractitionersService {
       throw new NotFoundException('Tenaga kesehatan tidak ditemukan');
     }
     return record;
+  }
+
+  private async resolvePractitionerAccessRole(
+    role: Role,
+    accessRoleId?: string | null,
+  ) {
+    const accessRole = accessRoleId
+      ? await this.prisma.accessRole.findUnique({
+          where: { id: accessRoleId },
+        })
+      : await this.prisma.accessRole.findUnique({
+          where: { code: role },
+        });
+
+    if (!accessRole) {
+      if (accessRoleId) {
+        throw new BadRequestException({
+          code: 'PRACTITIONER_ACCESS_ROLE_NOT_FOUND',
+          message: 'Role akses Practitioner tidak ditemukan.',
+          field: 'accessRoleId',
+        });
+      }
+      return null;
+    }
+    if (!accessRole.active) {
+      throw new BadRequestException({
+        code: 'PRACTITIONER_ACCESS_ROLE_INACTIVE',
+        message: 'Role akses Practitioner sudah tidak aktif.',
+        field: 'accessRoleId',
+      });
+    }
+    if (accessRole.code !== role) {
+      throw new BadRequestException({
+        code: 'PRACTITIONER_ACCESS_ROLE_MISMATCH',
+        message: 'Role akses tidak sesuai dengan role Practitioner.',
+        field: 'accessRoleId',
+      });
+    }
+    return accessRole;
+  }
+
+  private workProfileForRole(role: Role): WorkProfileType {
+    if (role === Role.DOKTER) return WorkProfileType.DOKTER;
+    if (role === Role.PERAWAT) return WorkProfileType.PERAWAT;
+    return WorkProfileType.NON_CLINICAL;
   }
 
   private async validatePractitionerContext(

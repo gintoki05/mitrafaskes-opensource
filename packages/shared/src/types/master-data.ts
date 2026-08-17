@@ -7,6 +7,21 @@ export type LocationStatus = 'ACTIVE' | 'SUSPENDED' | 'INACTIVE';
 export type LocationMode = 'INSTANCE' | 'KIND';
 
 import type { ResourceIntegrationSummary } from './integrations';
+import type { AccessRoleSummary } from './auth';
+
+export type PractitionerRoleCode =
+  | 'DOKTER'
+  | 'PERAWAT'
+  | 'PETUGAS_PENDAFTARAN';
+
+export interface PractitionerRoleOption
+  extends Pick<AccessRoleSummary, 'id' | 'code' | 'name' | 'active'> {
+  code: PractitionerRoleCode;
+}
+
+export interface PractitionerRoleListResponse {
+  items: PractitionerRoleOption[];
+}
 
 export interface OrganizationSummary {
   id: string;
@@ -64,7 +79,8 @@ export interface PractitionerSummary {
   id: string;
   username: string;
   fullName: string;
-  role: 'DOKTER' | 'PERAWAT' | 'PETUGAS_PENDAFTARAN';
+  role: PractitionerRoleCode;
+  accessRole?: AccessRoleSummary;
   nik?: string;
   birthDate?: string;
   gender?: 'MALE' | 'FEMALE';
@@ -85,7 +101,8 @@ export interface PractitionerCreateRequest {
   username: string;
   password: string;
   fullName: string;
-  role: 'DOKTER' | 'PERAWAT' | 'PETUGAS_PENDAFTARAN';
+  role: PractitionerRoleCode;
+  accessRoleId?: string | null;
   nik?: string | null;
   birthDate?: string | null;
   gender?: 'MALE' | 'FEMALE' | null;
@@ -115,7 +132,7 @@ export interface MasterDataListQuery {
   status?: string;
   organizationId?: string;
   locationId?: string;
-  role?: 'DOKTER' | 'PERAWAT' | 'PETUGAS_PENDAFTARAN';
+  role?: PractitionerRoleCode;
   page?: number;
   pageSize?: number;
   sort?: MasterDataListSort;
