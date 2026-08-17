@@ -37,8 +37,8 @@ const prisma = new PrismaClient();
 
 const accessRoleSeeds = [
   { id: 'access-role-super-admin', code: 'SUPER_ADMIN', name: 'Super Admin', defaultRoute: '/administrasi/akun', systemKind: AccessRoleSystemKind.SUPER_ADMIN, permissions: [] as string[] },
-  { id: 'access-role-admin', code: 'ADMIN', name: 'Admin', defaultRoute: '/master-faskes', systemKind: AccessRoleSystemKind.STANDARD, permissions: ['patient.read','patient.write','queue.read','queue.create','queue.cancel','sync.status-read','sync.retry','sync.payload-read','master-data.read','master-data.write'] },
-  { id: 'access-role-dokter', code: 'DOKTER', name: 'Dokter', defaultRoute: '/rme', systemKind: AccessRoleSystemKind.STANDARD, permissions: ['patient.read','queue.read','queue.start','rme.read','rme.write-draft','rme.finalize','master-data.read'] },
+  { id: 'access-role-admin', code: 'ADMIN', name: 'Admin', defaultRoute: '/master-faskes', systemKind: AccessRoleSystemKind.STANDARD, permissions: ['patient.read','patient.write','queue.read','queue.create','queue.cancel','encounter.correct','sync.status-read','sync.retry','sync.payload-read','master-data.read','master-data.write'] },
+  { id: 'access-role-dokter', code: 'DOKTER', name: 'Dokter', defaultRoute: '/rme', systemKind: AccessRoleSystemKind.STANDARD, permissions: ['patient.read','queue.read','queue.start','queue.pause','rme.read','rme.write-draft','rme.finalize','master-data.read'] },
   { id: 'access-role-perawat', code: 'PERAWAT', name: 'Perawat klinis', defaultRoute: '/triase', systemKind: AccessRoleSystemKind.STANDARD, permissions: ['patient.read','queue.read','rme.triage-read','rme.triage-write','rme.triage-complete','master-data.read'] },
   { id: 'access-role-pendaftaran', code: 'PETUGAS_PENDAFTARAN', name: 'Petugas pendaftaran', defaultRoute: '/pendaftaran', systemKind: AccessRoleSystemKind.STANDARD, permissions: ['patient.read','patient.write','queue.read','queue.create','queue.cancel','sync.status-read','sync.retry','master-data.read'] },
 ] as const;
@@ -51,6 +51,8 @@ const permissionSeeds = [
   ['queue.create','Tambah antrean','Antrean','Menambahkan pasien ke antrean.',false],
   ['queue.cancel','Batalkan antrean','Antrean','Membatalkan antrean.',false],
   ['queue.start','Mulai pemeriksaan','Antrean','Memulai pemeriksaan.',false],
+  ['queue.pause','Tunda sementara pemeriksaan','Antrean','Mengubah Encounter menjadi onleave atau melanjutkan pemeriksaan.',false],
+  ['encounter.correct','Koreksi Encounter salah input','Encounter','Menandai Encounter yang belum final sebagai entered-in-error dengan alasan wajib.',true],
   ['rme.read','Lihat RME','RME','Melihat isi rekam medis elektronik.',false],
   ['rme.write-draft','Simpan draft RME','RME','Membuat dan mengubah draft RME.',false],
   ['rme.finalize','Finalisasi RME','RME','Memfinalisasi RME dan encounter.',false],

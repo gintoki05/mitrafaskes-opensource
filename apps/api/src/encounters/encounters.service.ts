@@ -1,5 +1,6 @@
-import { ForbiddenException, Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, Optional } from '@nestjs/common';
 import {
+  IntegrationOutboxDispatchScope,
   Prisma,
   Role,
   LocationStatus,
@@ -16,6 +17,7 @@ import { randomUUID } from 'node:crypto';
 import type { AuthenticatedUser } from '../auth/session-permission.guard';
 import { PrismaService } from '../database/prisma.service';
 import { IntegrationRegistry } from '../integrations/integration-registry';
+import { IntegrationOutboxService } from '../integrations/outbox/integration-outbox.service';
 import {
   formatFacilityDate,
   parseFacilityDate,
@@ -36,6 +38,10 @@ import {
 } from './encounter.repository';
 import { assertEncounterTransition } from './encounter.status-policy';
 import {
+  fromPrismaEncounterStatus,
+  toPrismaEncounterStatus,
+} from './encounter.status-map';
+import {
   validateCreateEncounter,
   validateEncounterHistoryDateRange,
   validateStatusUpdate,
@@ -47,8 +53,7 @@ type EncounterActor = Pick<AuthenticatedUser, 'username' | 'role'> & {
   id?: string;
 };
 
-const mapStatusToPrisma = (status: EncounterStatus): PrismaEncounterStatus =>
-  status;
+const mapStatusToPrisma = toPrismaEncounterStatus;
 
 const isUniqueError = (error: unknown): boolean =>
   error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -60,7 +65,8 @@ export class EncountersService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly integrations?: IntegrationRegistry,
+    @Optional() private readonly integrations?: IntegrationRegistry,
+    @Optional() private readonly outbox?: IntegrationOutboxService,
   ) {
     this.repository = new EncounterRepository(prisma);
   }
@@ -171,8 +177,10 @@ export class EncountersService {
             queueDate,
             status: {
               in: [
-                PrismaEncounterStatus.WAITING,
+                PrismaEncounterStatus.ARRIVED,
+                PrismaEncounterStatus.TRIAGED,
                 PrismaEncounterStatus.IN_PROGRESS,
+                PrismaEncounterStatus.ONLEAVE,
               ],
             },
           },
@@ -195,7 +203,7 @@ export class EncountersService {
           yearFromFacilityDate(queueDateValue),
         );
         const now = new Date();
-        return transaction.encounter.create({
+        const created = await transaction.encounter.create({
           data: {
             id: randomUUID(),
             encounterNumber,
@@ -205,11 +213,11 @@ export class EncountersService {
             location: { connect: { id: context.location.id } },
             queueDate,
             queueNumber,
-            status: PrismaEncounterStatus.WAITING,
+            status: PrismaEncounterStatus.ARRIVED,
             arrivedAt: now,
             statusHistory: {
               create: {
-                status: PrismaEncounterStatus.WAITING,
+                status: PrismaEncounterStatus.ARRIVED,
                 periodStart: now,
                 actorUserId,
                 actorUsername: actor.username,
@@ -219,6 +227,12 @@ export class EncountersService {
           },
           include: encounterInclude,
         });
+        await this.outbox?.enqueueEncounter(
+          transaction,
+          created.id,
+          created.version,
+        );
+        return created;
       });
       return toEncounter(record);
     } catch (error) {
@@ -239,7 +253,7 @@ export class EncountersService {
     actor: EncounterActor,
   ): Promise<SharedEncounter> {
     const validated = validateStatusUpdate(input);
-    if (validated.status === ('COMPLETED' as EncounterStatus)) {
+    if (validated.status === EncounterStatus.FINISHED) {
       throw new EncounterTransitionError(
         'Encounter hanya dapat diselesaikan melalui finalisasi RME.',
         'ENCOUNTER_COMPLETION_REQUIRES_RME_FINALIZATION',
@@ -294,7 +308,7 @@ export class EncountersService {
     return this.transitionInTransaction(
       transaction,
       id,
-      { status: 'COMPLETED' as EncounterStatus, expectedVersion },
+      { status: EncounterStatus.FINISHED, expectedVersion },
       actor,
       actorUserId,
     );
@@ -400,8 +414,20 @@ export class EncountersService {
       );
     }
 
-    const currentStatus = current.status as unknown as EncounterStatus;
+    const currentStatus = fromPrismaEncounterStatus(current.status);
     assertEncounterTransition(currentStatus, input.status);
+    if (input.status === EncounterStatus.ENTERED_IN_ERROR) {
+      const medicalRecord = await transaction.medicalRecord.findUnique({
+        where: { encounterId: id },
+        select: { status: true },
+      });
+      if (medicalRecord?.status === 'FINAL') {
+        throw new EncounterTransitionError(
+          'Encounter dengan RME final memerlukan alur koreksi klinis terpisah.',
+          'ENCOUNTER_FINAL_CANNOT_BE_ENTERED_IN_ERROR',
+        );
+      }
+    }
     const now = new Date();
     const latestHistory = await transaction.encounterStatusHistory.findFirst({
       where: { encounterId: id },
@@ -421,7 +447,7 @@ export class EncountersService {
     if (input.status === EncounterStatus.IN_PROGRESS) {
       lifecycleData.startedAt = now;
     }
-    if (input.status === EncounterStatus.COMPLETED) {
+    if (input.status === EncounterStatus.FINISHED) {
       lifecycleData.completedAt = now;
     }
     if (input.status === EncounterStatus.CANCELLED) {
@@ -437,8 +463,17 @@ export class EncountersService {
         actorUserId,
         actorUsername: actor.username,
         actorRole: actor.role,
+        ...(input.reason ? { reason: input.reason } : {}),
       },
     });
+    await this.outbox?.enqueueEncounter(
+      transaction,
+      id,
+      current.version + 1,
+      input.status === EncounterStatus.ENTERED_IN_ERROR
+        ? IntegrationOutboxDispatchScope.LINKED_ONLY
+        : IntegrationOutboxDispatchScope.ALL_ENABLED,
+    );
     const updated = await this.repository.findByIdInTransaction(
       transaction,
       id,

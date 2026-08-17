@@ -30,12 +30,12 @@ test('history query serializes the date range, search, and status filters', () =
     fromDate: '2026-08-01',
     toDate: '2026-08-13',
     search: 'Siti Aminah',
-    status: EncounterStatus.COMPLETED,
+    status: EncounterStatus.FINISHED,
   });
 
   assert.equal(
     serializeVisitHistoryQuery(query),
-    'page=2&pageSize=25&fromDate=2026-08-01&toDate=2026-08-13&search=Siti+Aminah&status=COMPLETED',
+    'page=2&pageSize=25&fromDate=2026-08-01&toDate=2026-08-13&search=Siti+Aminah&status=finished',
   );
 });
 

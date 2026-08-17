@@ -152,9 +152,9 @@ export function EncounterRegistrationDialog({
                 <span className="font-mono text-muted-foreground">RM {patient.medicalRecNo}</span>
                 <Badge
                   className="clinical-status-warning border text-[10px] font-bold"
-                  title={getSatusehatEncounterStatusTooltip(EncounterStatus.WAITING)}
+                  title={getSatusehatEncounterStatusTooltip(EncounterStatus.ARRIVED)}
                 >
-                  {getSatusehatEncounterStatus(EncounterStatus.WAITING)}
+                  {getSatusehatEncounterStatus(EncounterStatus.ARRIVED)}
                 </Badge>
               </div>
             </div>

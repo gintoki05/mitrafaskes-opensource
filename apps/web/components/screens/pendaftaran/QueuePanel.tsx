@@ -7,26 +7,18 @@ import type {
   EncounterStatusCounts,
   ListMeta,
 } from '@mitrafaskes/shared';
-import {
-  Clock3,
-  Play,
-  RefreshCw,
-  X,
-} from 'lucide-react';
-import { toast } from 'sonner';
+import { Clock3, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
-import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import {
   getSatusehatEncounterStatus,
   getSatusehatEncounterStatusTooltip,
 } from '@/components/satusehat/satusehat-status';
 import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
-import type { EncounterApiError } from '@/hooks/useEncounterActions';
-import { EncounterCancellationDialog } from './EncounterCancellationDialog';
+import { EncounterQueueActions } from './EncounterQueueActions';
 import {
   getQueueCountLabel,
   getQueueStatusLabel,
@@ -43,34 +35,33 @@ type QueuePanelProps = {
   statusFilter: QueueStatusFilterValue;
   onStatusFilterChange: (filter: QueueStatusFilterValue) => void;
   onPageChange: (page: number) => void;
-  onStatusChange: (encounter: Encounter, status: EncounterStatus) => Promise<void>;
+  onStatusChange: (
+    encounter: Encounter,
+    status: EncounterStatus,
+    reason?: string,
+  ) => Promise<void>;
   onSyncEncounter: (encounter: Encounter) => void;
   canStart: boolean;
   canCancel: boolean;
+  canPause: boolean;
+  canCorrect: boolean;
   canSync: boolean;
 };
 
 function statusClass(status: EncounterStatus): string {
-  if (status === 'WAITING') {
+  if (status === EncounterStatus.ARRIVED || status === EncounterStatus.ONLEAVE) {
     return 'clinical-status-warning border text-xs font-semibold';
   }
-  if (status === 'IN_PROGRESS') {
+  if (status === EncounterStatus.IN_PROGRESS) {
     return 'border-primary/20 bg-primary/10 text-xs font-semibold text-primary';
   }
-  if (status === 'CANCELLED') {
+  if (
+    status === EncounterStatus.CANCELLED ||
+    status === EncounterStatus.ENTERED_IN_ERROR
+  ) {
     return 'clinical-status-error border text-xs font-semibold';
   }
   return 'clinical-status-success border text-xs font-semibold';
-}
-
-function transitionErrorMessage(error: unknown): string {
-  const typedError = error as EncounterApiError;
-  if (typedError.code === 'ENCOUNTER_VERSION_CONFLICT') {
-    return 'Data antrean sudah berubah oleh pengguna lain. Daftar antrean sudah dimuat ulang; coba aksi lagi.';
-  }
-  return error instanceof Error
-    ? error.message
-    : 'Status kunjungan belum dapat diperbarui.';
 }
 
 export function QueuePanel({
@@ -86,33 +77,26 @@ export function QueuePanel({
   onSyncEncounter,
   canStart,
   canCancel,
+  canPause,
+  canCorrect,
   canSync,
 }: QueuePanelProps) {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [cancellationTarget, setCancellationTarget] = useState<Encounter | null>(null);
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
   const firstItem = meta.total === 0 ? 0 : (meta.page - 1) * meta.pageSize + 1;
   const lastItem = Math.min(meta.total, meta.page * meta.pageSize);
 
-  const transition = async (encounter: Encounter, status: EncounterStatus) => {
+  const transition = async (
+    encounter: Encounter,
+    status: EncounterStatus,
+    reason?: string,
+  ) => {
     setUpdatingId(encounter.id);
     try {
-      await onStatusChange(encounter, status);
-    } catch (error) {
-      toast.error('Status kunjungan belum berubah', {
-        description: transitionErrorMessage(error),
-        duration: 7000,
-      });
+      await onStatusChange(encounter, status, reason);
     } finally {
       setUpdatingId(null);
     }
-  };
-
-  const confirmCancellation = async () => {
-    if (!cancellationTarget) return;
-
-    await transition(cancellationTarget, EncounterStatus.CANCELLED);
-    setCancellationTarget(null);
   };
 
   return (
@@ -178,8 +162,6 @@ export function QueuePanel({
           </div>
         ) : encounters.map((encounter) => {
           const isUpdating = updatingId === encounter.id;
-          const canCancelThis = canCancel && (encounter.status === 'WAITING' || encounter.status === 'IN_PROGRESS');
-          const canStartThis = canStart && encounter.status === 'WAITING';
           const satusehatLinkage = getIntegrationLinkage(
             encounter.integrations,
             'SATUSEHAT',
@@ -222,41 +204,17 @@ export function QueuePanel({
                   latestSync={latestSync}
                   resourceName={encounter.encounterNumber}
                 />
-                <div className="flex items-center gap-1" role="group" aria-label={`Aksi kunjungan ${encounter.encounterNumber}`}>
-                  {canStartThis ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon-xs"
-                      disabled={isUpdating}
-                      onClick={() => void transition(encounter, EncounterStatus.IN_PROGRESS)}
-                      aria-label={`Mulai pemeriksaan ${encounter.encounterNumber}`}
-                      title={isUpdating ? 'Memperbarui status...' : 'Mulai pemeriksaan'}
-                    >
-                      <Play className="h-3.5 w-3.5" aria-hidden="true" />
-                    </Button>
-                  ) : null}
-                  {canCancelThis ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      disabled={isUpdating}
-                      onClick={() => setCancellationTarget(encounter)}
-                      aria-label={`Batalkan antrean ${encounter.encounterNumber}`}
-                      title={isUpdating ? 'Memperbarui status...' : 'Batalkan antrean'}
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <X className="h-3.5 w-3.5" aria-hidden="true" />
-                    </Button>
-                  ) : null}
-                  <SatusehatActionGroup
-                    resourceName={encounter.encounterNumber}
-                    onSync={() => onSyncEncounter(encounter)}
-                    syncDisabled={!canSync}
-                    syncDisabledReason="Peran Anda tidak memiliki izin sinkronisasi Encounter."
-                  />
-                </div>
+                <EncounterQueueActions
+                  encounter={encounter}
+                  updating={isUpdating}
+                  canStart={canStart}
+                  canCancel={canCancel}
+                  canPause={canPause}
+                  canCorrect={canCorrect}
+                  canSync={canSync}
+                  onStatusChange={transition}
+                  onSync={() => onSyncEncounter(encounter)}
+                />
                 {latestSync?.status === 'FAILED' ? (
                   <p
                     className="basis-full text-left text-[11px] text-destructive sm:text-right"
@@ -289,17 +247,6 @@ export function QueuePanel({
           />
         ) : null}
       </div>
-      <EncounterCancellationDialog
-        encounter={cancellationTarget}
-        open={Boolean(cancellationTarget)}
-        pending={Boolean(cancellationTarget && updatingId === cancellationTarget.id)}
-        onOpenChange={(open) => {
-          if (!open && !(cancellationTarget && updatingId === cancellationTarget.id)) {
-            setCancellationTarget(null);
-          }
-        }}
-        onConfirm={() => void confirmCancellation()}
-      />
     </section>
   );
 }

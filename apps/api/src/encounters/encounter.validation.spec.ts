@@ -48,13 +48,13 @@ describe('Encounter validation', () => {
       }),
     ).toEqual({ status: EncounterStatus.IN_PROGRESS, expectedVersion: 2 });
     expect(() =>
-      validateStatusUpdate({ status: 'WAITING', expectedVersion: 0 }),
+      validateStatusUpdate({ status: 'not-a-status', expectedVersion: 0 }),
     ).toThrow(EncounterValidationError);
   });
 
   it('validates query status and clamps page values', () => {
-    expect(parseEncounterStatus('CANCELLED')).toBe(EncounterStatus.CANCELLED);
-    expect(() => parseEncounterStatus('UNKNOWN')).toThrow(
+    expect(parseEncounterStatus('cancelled')).toBe(EncounterStatus.CANCELLED);
+    expect(() => parseEncounterStatus('CANCELLED')).toThrow(
       EncounterValidationError,
     );
     expect(parsePositiveInteger('3', 1)).toBe(3);
@@ -70,6 +70,26 @@ describe('Encounter validation', () => {
     expect(() => parseTriageStatuses('COMPLETED,UNKNOWN')).toThrow(
       EncounterValidationError,
     );
+  });
+
+  it('requires and trims a reason when correcting an Encounter', () => {
+    expect(
+      validateStatusUpdate({
+        status: EncounterStatus.ENTERED_IN_ERROR,
+        expectedVersion: 3,
+        reason: '  Duplikasi pendaftaran  ',
+      }),
+    ).toEqual({
+      status: EncounterStatus.ENTERED_IN_ERROR,
+      expectedVersion: 3,
+      reason: 'Duplikasi pendaftaran',
+    });
+    expect(() =>
+      validateStatusUpdate({
+        status: EncounterStatus.ENTERED_IN_ERROR,
+        expectedVersion: 3,
+      }),
+    ).toThrow(EncounterValidationError);
   });
 
   it('validates an inclusive history date range', () => {

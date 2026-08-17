@@ -68,14 +68,14 @@ const requiredText =
 
 const contextRules: ProfileRule[] = [
   (record) =>
-    record.encounter.status === 'IN_PROGRESS'
+    record.encounter.status === 'in-progress'
       ? []
       : [
           issue(
             'encounter',
             'status',
             'ENCOUNTER_NOT_IN_PROGRESS',
-            'Encounter harus berstatus IN_PROGRESS.',
+            'Encounter harus berstatus in-progress.',
           ),
         ],
   ...(

@@ -4,16 +4,29 @@ import { EncounterTransitionError } from './encounter.errors';
 export const ENCOUNTER_TRANSITIONS: Readonly<
   Record<EncounterStatus, readonly EncounterStatus[]>
 > = {
-  [EncounterStatus.WAITING]: [
+  [EncounterStatus.PLANNED]: [EncounterStatus.ARRIVED],
+  [EncounterStatus.ARRIVED]: [
     EncounterStatus.IN_PROGRESS,
     EncounterStatus.CANCELLED,
+    EncounterStatus.ENTERED_IN_ERROR,
   ],
   [EncounterStatus.IN_PROGRESS]: [
-    EncounterStatus.COMPLETED,
-    EncounterStatus.CANCELLED,
+    EncounterStatus.ONLEAVE,
+    EncounterStatus.FINISHED,
+    EncounterStatus.ENTERED_IN_ERROR,
   ],
-  [EncounterStatus.COMPLETED]: [],
-  [EncounterStatus.CANCELLED]: [],
+  [EncounterStatus.TRIAGED]: [
+    EncounterStatus.IN_PROGRESS,
+    EncounterStatus.ENTERED_IN_ERROR,
+  ],
+  [EncounterStatus.ONLEAVE]: [
+    EncounterStatus.IN_PROGRESS,
+    EncounterStatus.ENTERED_IN_ERROR,
+  ],
+  [EncounterStatus.FINISHED]: [EncounterStatus.ENTERED_IN_ERROR],
+  [EncounterStatus.CANCELLED]: [EncounterStatus.ENTERED_IN_ERROR],
+  [EncounterStatus.ENTERED_IN_ERROR]: [],
+  [EncounterStatus.UNKNOWN]: [EncounterStatus.ENTERED_IN_ERROR],
 };
 
 export function assertEncounterTransition(

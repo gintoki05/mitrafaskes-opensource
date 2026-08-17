@@ -74,8 +74,17 @@ export function useEncounterActions() {
   }, []);
 
   const updateStatus = useCallback(
-    (id: string, status: EncounterStatus, expectedVersion: number) => {
-      const input: UpdateEncounterStatusDto = { status, expectedVersion };
+    (
+      id: string,
+      status: EncounterStatus,
+      expectedVersion: number,
+      reason?: string,
+    ) => {
+      const input: UpdateEncounterStatusDto = {
+        status,
+        expectedVersion,
+        ...(reason ? { reason } : {}),
+      };
       return requestJson<Encounter>(
         `/api/encounters/${id}/status`,
         {

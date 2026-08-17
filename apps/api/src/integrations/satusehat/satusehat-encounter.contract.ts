@@ -103,7 +103,9 @@ export function validateSatusehatEncounterPayload(
 
   const encounterPeriod = readPeriod(payload.period, 'period', issues);
   if (
-    (status === 'finished' || status === 'cancelled') &&
+    (status === 'finished' ||
+      status === 'cancelled' ||
+      status === 'entered-in-error') &&
     !encounterPeriod?.end
   ) {
     addIssue(

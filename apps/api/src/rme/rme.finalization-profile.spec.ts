@@ -1,5 +1,6 @@
 import {
   AllergyReviewStatus,
+  EncounterStatus,
   OutpatientDisposition,
 } from '@mitrafaskes/shared';
 import {
@@ -26,7 +27,7 @@ function completeRecord(): FinalizationValidationInput {
     diagnoses: [{ icd10Code: 'J00', isPrimary: true }],
     prescriptions: [],
     encounter: {
-      status: 'IN_PROGRESS',
+      status: EncounterStatus.IN_PROGRESS,
       patientId: 'patient-1',
       doctorId: 'doctor-1',
       organizationId: 'organization-1',

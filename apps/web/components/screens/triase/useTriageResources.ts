@@ -38,7 +38,7 @@ export function useTriageResources() {
       const params = new URLSearchParams({
         page: String(page),
         pageSize: '25',
-        statuses: 'WAITING,IN_PROGRESS',
+        statuses: 'arrived,in-progress,onleave',
         triageStatuses: TRIAGE_QUEUE_STATUSES,
       });
       const response = await apiFetch(`/api/encounters?${params.toString()}`);

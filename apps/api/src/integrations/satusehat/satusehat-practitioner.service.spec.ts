@@ -359,6 +359,9 @@ function createPrismaMock() {
     user: {
       create: jest.fn(),
     },
+    accessRole: {
+      findUnique: jest.fn().mockResolvedValue(null),
+    },
     healthcareOrganization: {
       findUnique: jest.fn(),
     },

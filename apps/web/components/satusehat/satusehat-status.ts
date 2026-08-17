@@ -29,10 +29,15 @@ const encounterStatusDescriptions: Readonly<
 const localEncounterStatusMap: Readonly<
   Record<EncounterStatus, SatusehatEncounterStatusCode>
 > = {
-  WAITING: 'arrived',
-  IN_PROGRESS: 'in-progress',
-  COMPLETED: 'finished',
-  CANCELLED: 'cancelled',
+  planned: 'planned',
+  arrived: 'arrived',
+  triaged: 'triaged',
+  'in-progress': 'in-progress',
+  onleave: 'onleave',
+  finished: 'finished',
+  cancelled: 'cancelled',
+  'entered-in-error': 'entered-in-error',
+  unknown: 'unknown',
 };
 
 function normalizeStatus(status?: string): string | undefined {

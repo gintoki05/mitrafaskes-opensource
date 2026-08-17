@@ -2,6 +2,10 @@ import { ClipboardList, Clock3, MapPin, Stethoscope, UserRound } from 'lucide-re
 import type { ReactNode } from 'react';
 import type { Encounter, MedicalRecord } from '@mitrafaskes/shared';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
+import {
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+} from '@/components/satusehat/satusehat-status';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
@@ -46,6 +50,12 @@ export function RmeWorkspaceContext({
         <div className="flex shrink-0 flex-wrap items-center gap-2 sm:justify-end">
           <Badge variant="secondary" className="border-transparent bg-secondary/70">
             {context.serviceProfileLabel}
+          </Badge>
+          <Badge
+            variant="outline"
+            title={getSatusehatEncounterStatusTooltip(encounter.status)}
+          >
+            {getSatusehatEncounterStatus(encounter.status)}
           </Badge>
           <SatusehatLinkageBadge
             linkage={getIntegrationLinkage(encounter.integrations, 'SATUSEHAT')}

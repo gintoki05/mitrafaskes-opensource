@@ -6,7 +6,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, TriageStatus as PrismaTriageStatus } from '@prisma/client';
-import { UserRole, type MedicalRecord } from '@mitrafaskes/shared';
+import {
+  EncounterStatus,
+  UserRole,
+  type MedicalRecord,
+} from '@mitrafaskes/shared';
 import type { AuthenticatedUser } from '../auth/session-permission.guard';
 import { PrismaService } from '../database/prisma.service';
 import {
@@ -36,12 +40,13 @@ export type TriageRequestMetadata = {
 };
 
 export function isTriageEditable(
-  encounterStatus: string,
+  encounterStatus: EncounterStatus,
   triageStatus?: string,
 ): boolean {
   return (
-    encounterStatus === 'WAITING' ||
-    (encounterStatus === 'IN_PROGRESS' && triageStatus !== 'COMPLETED')
+    encounterStatus === EncounterStatus.ARRIVED ||
+    (encounterStatus === EncounterStatus.IN_PROGRESS &&
+      triageStatus !== 'COMPLETED')
   );
 }
 
@@ -284,7 +289,7 @@ export class TriageService {
   }
 
   private assertTriageEditable(
-    encounterStatus: string,
+    encounterStatus: EncounterStatus,
     triageStatus?: string,
   ): void {
     if (!isTriageEditable(encounterStatus, triageStatus)) {

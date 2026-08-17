@@ -56,6 +56,7 @@ export default function RmePage() {
   const observationActions = useObservationActions();
   const encounterActions = useEncounterActions();
   const [startingEncounterId, setStartingEncounterId] = useState<string | null>(null);
+  const [transitioningEncounterId, setTransitioningEncounterId] = useState<string | null>(null);
   const [queueOpen, setQueueOpen] = useState(false);
   const canSyncDiagnosis = can(
     session?.user ?? null,
@@ -68,6 +69,10 @@ export default function RmePage() {
   const canStartEncounter = can(
     session?.user ?? null,
     AccessPermission.QUEUE_START,
+  );
+  const canPauseEncounter = can(
+    session?.user ?? null,
+    AccessPermission.QUEUE_PAUSE,
   );
   const workspaceState = resolveRmeWorkspaceViewState({
     encountersLoading,
@@ -204,6 +209,28 @@ export default function RmePage() {
     }
   };
 
+  const handleResumeEncounter = async (encounter: (typeof encounters)[number]) => {
+    if (transitioningEncounterId) return;
+    setTransitioningEncounterId(encounter.id);
+    try {
+      await encounterActions.updateStatus(
+        encounter.id,
+        EncounterStatus.IN_PROGRESS,
+        encounter.version,
+      );
+      await refreshEncounters(encountersMeta.page, { retainMissingSelection: true });
+      toast.success('Pemeriksaan dilanjutkan', {
+        description: 'Encounter kembali ke status in-progress dan RME dapat diisi.',
+      });
+    } catch (error) {
+      toast.error('Pemeriksaan belum dapat dilanjutkan', {
+        description: error instanceof Error ? error.message : 'Status Encounter tidak dapat diperbarui.',
+      });
+    } finally {
+      setTransitioningEncounterId(null);
+    }
+  };
+
   return (
     <RouteGuard permission={AccessPermission.RME_READ}>
       <div className="min-w-0 space-y-6 sm:space-y-8">
@@ -244,6 +271,9 @@ export default function RmePage() {
             canStart={canStartEncounter}
             startingEncounterId={startingEncounterId}
             onStartEncounter={(encounter) => void handleStartEncounter(encounter)}
+            canPause={canPauseEncounter}
+            transitioningEncounterId={transitioningEncounterId}
+            onResumeEncounter={(encounter) => void handleResumeEncounter(encounter)}
           />
 
           <div className="min-w-0 space-y-6">
@@ -268,12 +298,19 @@ export default function RmePage() {
                   </Button>
                 }
               />
-            ) : workspaceState === 'ready' && selectedEncounter && selectedEncounter.status === EncounterStatus.WAITING ? (
+            ) : workspaceState === 'ready' && selectedEncounter && selectedEncounter.status === EncounterStatus.ARRIVED ? (
               <ScreenState
                 kind="empty"
                 title="Pasien menunggu pemeriksaan"
                 description="Mulai pemeriksaan untuk membuka dan mengisi RME dokter. Jika triase belum selesai, perawat tetap dapat melanjutkannya dari antrean triase."
                 action={canStartEncounter ? <Button type="button" onClick={() => void handleStartEncounter(selectedEncounter)} disabled={Boolean(startingEncounterId)}>Mulai pemeriksaan</Button> : undefined}
+              />
+            ) : workspaceState === 'ready' && selectedEncounter && selectedEncounter.status === EncounterStatus.ONLEAVE ? (
+              <ScreenState
+                kind="empty"
+                title="Pemeriksaan ditunda sementara"
+                description="RME dalam status read-only sampai pemeriksaan dilanjutkan. Lanjutkan saat pasien atau dokter siap kembali ke layanan."
+                action={canPauseEncounter ? <Button type="button" onClick={() => void handleResumeEncounter(selectedEncounter)} disabled={Boolean(transitioningEncounterId)}>Lanjutkan pemeriksaan</Button> : undefined}
               />
             ) : workspaceState === 'ready' && selectedEncounter ? (
               <RmeForm

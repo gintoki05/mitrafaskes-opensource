@@ -1,12 +1,13 @@
+import { EncounterStatus } from '@mitrafaskes/shared';
 import { isTriageEditable } from './triage.service';
 
 describe('triage lifecycle', () => {
   it.each([
-    ['WAITING', undefined],
-    ['WAITING', 'DRAFT'],
-    ['IN_PROGRESS', undefined],
-    ['IN_PROGRESS', 'NOT_STARTED'],
-    ['IN_PROGRESS', 'DRAFT'],
+    [EncounterStatus.ARRIVED, undefined],
+    [EncounterStatus.ARRIVED, 'DRAFT'],
+    [EncounterStatus.IN_PROGRESS, undefined],
+    [EncounterStatus.IN_PROGRESS, 'NOT_STARTED'],
+    [EncounterStatus.IN_PROGRESS, 'DRAFT'],
   ])(
     'allows an incomplete triage to be edited for %s',
     (encounterStatus, triageStatus) => {
@@ -15,9 +16,9 @@ describe('triage lifecycle', () => {
   );
 
   it.each([
-    ['IN_PROGRESS', 'COMPLETED'],
-    ['COMPLETED', 'DRAFT'],
-    ['CANCELLED', undefined],
+    [EncounterStatus.IN_PROGRESS, 'COMPLETED'],
+    [EncounterStatus.FINISHED, 'DRAFT'],
+    [EncounterStatus.CANCELLED, undefined],
   ])(
     'does not allow triage edits for %s/%s',
     (encounterStatus, triageStatus) => {

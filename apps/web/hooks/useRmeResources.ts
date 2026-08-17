@@ -71,7 +71,7 @@ async function requestEncounters(page = 1): Promise<EncounterListResponse> {
   const params = new URLSearchParams({
     page: String(page),
     pageSize: '25',
-    statuses: 'WAITING,IN_PROGRESS',
+    statuses: 'arrived,in-progress,onleave',
   });
   const response = await apiFetch(`/api/encounters?${params.toString()}`);
   if (!response.ok) throw new Error('Antrean pasien tidak dapat dimuat.');

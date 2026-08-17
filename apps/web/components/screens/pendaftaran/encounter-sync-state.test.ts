@@ -17,12 +17,12 @@ test('SATUSEHAT remote Encounter statuses are shown as provider codes', () => {
 });
 
 test('local Encounter statuses expose their SATUSEHAT code and tooltip', () => {
-  assert.equal(getSatusehatEncounterStatus(EncounterStatus.WAITING), 'arrived');
+  assert.equal(getSatusehatEncounterStatus(EncounterStatus.ARRIVED), 'arrived');
   assert.equal(getSatusehatEncounterStatus(EncounterStatus.IN_PROGRESS), 'in-progress');
-  assert.equal(getSatusehatEncounterStatus(EncounterStatus.COMPLETED), 'finished');
+  assert.equal(getSatusehatEncounterStatus(EncounterStatus.FINISHED), 'finished');
   assert.equal(getSatusehatEncounterStatus(EncounterStatus.CANCELLED), 'cancelled');
   assert.match(
-    getSatusehatEncounterStatusTooltip(EncounterStatus.WAITING),
+    getSatusehatEncounterStatusTooltip(EncounterStatus.ARRIVED),
     /^arrived: /,
   );
 });
