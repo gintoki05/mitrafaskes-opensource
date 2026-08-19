@@ -1,5 +1,6 @@
 import { BadGatewayException, ConflictException } from '@nestjs/common';
 import type { SatusehatConditionPreview } from './satusehat-condition.contract';
+import { SatusehatConditionEncounterLifecycleService } from './satusehat-condition-encounter-lifecycle.service';
 import { SatusehatConditionService } from './satusehat-condition.service';
 import { SatusehatFhirError } from './satusehat-fhir.client';
 
@@ -26,7 +27,12 @@ function preview(
 
 function buildService(
   prepared = preview(),
-  options: { encounters?: { syncEncounter: jest.Mock } } = {},
+  options: {
+    encounters?: {
+      syncEncounter: jest.Mock;
+      syncHistoricalInProgressEncounter: jest.Mock;
+    };
+  } = {},
 ) {
   const syncLogCreate = jest.fn().mockResolvedValue({ id: 'condition-sync-1' });
   const syncLogUpdate = jest.fn().mockResolvedValue({});
@@ -58,13 +64,19 @@ function buildService(
       id: remoteResourceId,
     }),
   };
+  const encounterLifecycle = options.encounters
+    ? new SatusehatConditionEncounterLifecycleService(
+        preflight as never,
+        options.encounters as never,
+      )
+    : undefined;
 
   return {
     service: new SatusehatConditionService(
       prisma as never,
       preflight as never,
       fhir as never,
-      options.encounters as never,
+      encounterLifecycle,
     ),
     fhir,
     linkUpsert,
@@ -169,6 +181,115 @@ describe('SatusehatConditionService sync', () => {
     expect(context.linkUpsert).not.toHaveBeenCalled();
   });
 
+  it('recovers a completed unlinked Encounter before creating Condition, then projects finished', async () => {
+    const dependencyError = new ConflictException({
+      code: 'SATUSEHAT_CONDITION_DEPENDENCY_MISSING',
+      message: 'Encounter belum terhubung.',
+      dependencies: ['Encounter'],
+      issues: [
+        {
+          resourceType: 'Encounter',
+          localResourceId: 'encounter-local-1',
+        },
+      ],
+    });
+    const encounters = {
+      syncHistoricalInProgressEncounter: jest.fn().mockResolvedValue({
+        syncLogId: 'encounter-bootstrap-log-1',
+      }),
+      syncEncounter: jest.fn().mockResolvedValue({
+        syncLogId: 'encounter-finished-log-1',
+      }),
+    };
+    const context = buildService(preview(), { encounters });
+    context.preflight.preparePreview
+      .mockRejectedValueOnce(dependencyError)
+      .mockResolvedValueOnce(preview());
+
+    const result = await context.service.syncCondition(localResourceId);
+
+    expect(encounters.syncHistoricalInProgressEncounter).toHaveBeenCalledWith(
+      'encounter-local-1',
+    );
+    expect(context.preflight.preparePreview).toHaveBeenCalledTimes(2);
+    expect(context.fhir.createCondition).toHaveBeenCalledTimes(1);
+    expect(encounters.syncEncounter).toHaveBeenCalledWith('encounter-local-1');
+    expect(result).toEqual(
+      expect.objectContaining({
+        encounterBootstrapSyncLogId: 'encounter-bootstrap-log-1',
+        encounterSyncLogId: 'encounter-finished-log-1',
+      }),
+    );
+  });
+
+  it('does not bootstrap Encounter while another Condition dependency is missing', async () => {
+    const encounters = {
+      syncHistoricalInProgressEncounter: jest.fn(),
+      syncEncounter: jest.fn(),
+    };
+    const context = buildService(preview(), { encounters });
+    context.preflight.preparePreview.mockRejectedValue(
+      new ConflictException({
+        code: 'SATUSEHAT_CONDITION_DEPENDENCY_MISSING',
+        message: 'Patient dan Encounter belum terhubung.',
+        dependencies: ['Patient', 'Encounter'],
+        issues: [
+          { resourceType: 'Patient', localResourceId: 'patient-local-1' },
+          { resourceType: 'Encounter', localResourceId: 'encounter-local-1' },
+        ],
+      }),
+    );
+
+    await expect(
+      context.service.syncCondition(localResourceId),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(encounters.syncHistoricalInProgressEncounter).not.toHaveBeenCalled();
+    expect(encounters.syncEncounter).not.toHaveBeenCalled();
+    expect(context.fhir.createCondition).not.toHaveBeenCalled();
+  });
+
+  it('keeps recovery linkage separate and does not project finished when Condition create fails', async () => {
+    const encounters = {
+      syncHistoricalInProgressEncounter: jest.fn().mockResolvedValue({
+        syncLogId: 'encounter-bootstrap-log-1',
+      }),
+      syncEncounter: jest.fn(),
+    };
+    const context = buildService(preview(), { encounters });
+    context.preflight.preparePreview
+      .mockRejectedValueOnce(
+        new ConflictException({
+          code: 'SATUSEHAT_CONDITION_DEPENDENCY_MISSING',
+          message: 'Encounter belum terhubung.',
+          dependencies: ['Encounter'],
+          issues: [
+            {
+              resourceType: 'Encounter',
+              localResourceId: 'encounter-local-1',
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(preview());
+    context.fhir.createCondition.mockRejectedValue(new Error('remote failure'));
+
+    await expect(
+      context.service.syncCondition(localResourceId),
+    ).rejects.toBeInstanceOf(BadGatewayException);
+
+    expect(encounters.syncHistoricalInProgressEncounter).toHaveBeenCalledTimes(
+      1,
+    );
+    expect(encounters.syncEncounter).not.toHaveBeenCalled();
+    expect(context.linkUpsert).not.toHaveBeenCalled();
+    expect(context.syncLogUpdate).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: 'FAILED' }),
+      }),
+    );
+  });
+
   it('records mapping-required without presenting a false sync success', async () => {
     const context = buildService();
     context.preflight.preparePreview.mockRejectedValue(
@@ -266,6 +387,7 @@ describe('SatusehatConditionService sync', () => {
 
   it('refreshes Encounter.diagnosis after Condition linkage and keeps Condition success if projection fails', async () => {
     const encounters = {
+      syncHistoricalInProgressEncounter: jest.fn(),
       syncEncounter: jest
         .fn()
         .mockRejectedValue(new Error('encounter projection failed')),

@@ -16,7 +16,7 @@ import {
   LOCAL_CONDITION_RESOURCE_TYPE,
 } from './satusehat-condition.constants';
 import { SatusehatConditionPreflightService } from './satusehat-condition-preflight.service';
-import { SatusehatEncounterService } from './satusehat-encounter.service';
+import { SatusehatConditionEncounterLifecycleService } from './satusehat-condition-encounter-lifecycle.service';
 import {
   SatusehatFhirClient,
   SatusehatFhirError,
@@ -32,7 +32,7 @@ export class SatusehatConditionService {
     private readonly prisma: PrismaService,
     private readonly preflight: SatusehatConditionPreflightService,
     private readonly fhir: SatusehatFhirClient,
-    private readonly encounters?: SatusehatEncounterService,
+    private readonly encounterLifecycle?: SatusehatConditionEncounterLifecycleService,
   ) {}
 
   previewCondition(
@@ -62,11 +62,21 @@ export class SatusehatConditionService {
     });
 
     let preview: SatusehatConditionPreview | undefined;
+    let encounterBootstrapSyncLogId: string | undefined;
     try {
-      preview = await this.preflight.preparePreview(
-        localResourceId,
-        environment,
-      );
+      const prepared = this.encounterLifecycle
+        ? await this.encounterLifecycle.preparePreview(
+            localResourceId,
+            environment,
+          )
+        : {
+            preview: await this.preflight.preparePreview(
+              localResourceId,
+              environment,
+            ),
+          };
+      preview = prepared.preview;
+      encounterBootstrapSyncLogId = prepared.encounterBootstrapSyncLogId;
       await this.prisma.satusehatSyncLog.update({
         where: { id: syncLog.id },
         data: {
@@ -143,17 +153,10 @@ export class SatusehatConditionService {
       ]);
 
       let encounterSyncLogId: string | undefined;
-      if (this.encounters) {
-        try {
-          const encounterSync = await this.encounters.syncEncounter(
-            preview.encounterLocalResourceId,
-          );
-          encounterSyncLogId = encounterSync.syncLogId;
-        } catch {
-          // The Condition linkage remains successful. EncounterService owns
-          // the separate failed audit entry for a projection retry/operator
-          // action.
-        }
+      if (this.encounterLifecycle) {
+        encounterSyncLogId = await this.encounterLifecycle.projectFinished(
+          preview.encounterLocalResourceId,
+        );
       }
 
       const { payload: rawPayload, ...safePreview } = preview;
@@ -169,6 +172,7 @@ export class SatusehatConditionService {
           resourceType: CONDITION_RESOURCE_TYPE,
           id: externalResourceId,
         },
+        ...(encounterBootstrapSyncLogId ? { encounterBootstrapSyncLogId } : {}),
         ...(encounterSyncLogId ? { encounterSyncLogId } : {}),
       };
     } catch (error) {

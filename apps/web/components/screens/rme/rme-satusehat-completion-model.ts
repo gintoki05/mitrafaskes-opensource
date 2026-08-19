@@ -14,6 +14,7 @@ export type RmeSatusehatStepState =
 
 export type RmeSatusehatCompletionModel = {
   encounterConnected: boolean;
+  encounterRecoveryAvailable: boolean;
   encounterFinishedRemotely: boolean;
   primaryDiagnosisConnected: boolean;
   linkedObservationCount: number;
@@ -73,6 +74,11 @@ export function resolveRmeSatusehatCompletion(input: {
   const allObservationsConnected =
     observations.length > 0 && linkedObservationCount === observations.length;
   const recordFinal = record?.status === MedicalRecordStatus.FINAL;
+  const encounterRecoveryAvailable =
+    recordFinal &&
+    encounter.status === EncounterStatus.COMPLETED &&
+    !encounterConnected &&
+    Boolean(primaryDiagnosis);
   const encounterActive =
     encounter.status === EncounterStatus.WAITING ||
     encounter.status === EncounterStatus.IN_PROGRESS;
@@ -97,7 +103,9 @@ export function resolveRmeSatusehatCompletion(input: {
           disabledReason:
             pendingReason ??
             permissionReason ??
-            'Encounter awal tidak dapat dibuat setelah lifecycle lokal selesai.',
+            (encounterRecoveryAvailable
+              ? 'Encounter awal terlewat; sinkronisasi diagnosis utama akan memulihkan linkage historis.'
+              : 'Encounter awal tidak dapat dibuat setelah lifecycle lokal selesai.'),
         };
 
   const diagnosis = primaryDiagnosisConnected
@@ -107,7 +115,7 @@ export function resolveRmeSatusehatCompletion(input: {
           state: 'empty' as const,
           disabledReason: 'Simpan diagnosis utama ICD-10 terlebih dahulu.',
         }
-      : !encounterConnected
+      : !encounterConnected && !encounterRecoveryAvailable
         ? {
             state: 'blocked' as const,
             disabledReason: 'Sinkronkan Encounter awal sebelum Condition.',
@@ -149,15 +157,17 @@ export function resolveRmeSatusehatCompletion(input: {
           state: 'blocked' as const,
           disabledReason: 'Finalisasi RME lokal sebelum memperbarui Encounter menjadi finished.',
         }
-      : !encounterConnected
-        ? {
-            state: 'blocked' as const,
-            disabledReason: 'Encounter awal belum terhubung ke SATUSEHAT.',
-          }
-        : !primaryDiagnosisConnected
+      : !primaryDiagnosisConnected
           ? {
               state: 'blocked' as const,
-              disabledReason: 'Sinkronkan diagnosis utama Condition terlebih dahulu.',
+              disabledReason: encounterRecoveryAvailable
+                ? 'Sinkronkan diagnosis utama untuk memulihkan Encounter, membuat Condition, dan memproyeksikan status finished.'
+                : 'Sinkronkan diagnosis utama Condition terlebih dahulu.',
+            }
+        : !encounterConnected
+          ? {
+              state: 'blocked' as const,
+              disabledReason: 'Encounter awal belum terhubung ke SATUSEHAT.',
             }
           : pendingReason || permissionReason
             ? {
@@ -168,6 +178,7 @@ export function resolveRmeSatusehatCompletion(input: {
 
   return {
     encounterConnected,
+    encounterRecoveryAvailable,
     encounterFinishedRemotely,
     primaryDiagnosisConnected,
     linkedObservationCount,

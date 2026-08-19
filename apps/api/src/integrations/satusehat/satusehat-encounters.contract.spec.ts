@@ -370,6 +370,9 @@ describe('SatusehatEncounterService preview', () => {
       );
     });
     const syncLogCreate = jest.fn();
+    const medicalRecordFindUnique = jest
+      .fn()
+      .mockResolvedValue({ status: 'FINAL' });
     const locationFindUnique = jest.fn().mockResolvedValue({
       organizationId: 'organization-local-1',
     });
@@ -389,6 +392,9 @@ describe('SatusehatEncounterService preview', () => {
         findMany: findConditionLinks,
       },
       satusehatSyncLog: { create: syncLogCreate },
+      medicalRecord: {
+        findUnique: medicalRecordFindUnique,
+      },
       location: {
         findUnique: locationFindUnique,
       },
@@ -404,6 +410,7 @@ describe('SatusehatEncounterService preview', () => {
       findUnique,
       syncLogCreate,
       locationFindUnique,
+      medicalRecordFindUnique,
     };
   };
 
@@ -452,6 +459,67 @@ describe('SatusehatEncounterService preview', () => {
 
     expect(preview.payload.status).toBe('in-progress');
     expect(preview.payload.diagnosis).toBeUndefined();
+  });
+
+  it('projects an unlinked completed Encounter as historical in-progress for recovery', async () => {
+    const { service } = buildService(
+      undefined,
+      undefined,
+      completedEncounter(),
+      [{ id: 'diagnosis-primary', isPrimary: true, icd10Code: 'I10' }],
+      [],
+    );
+
+    const preview = await service.prepareHistoricalInProgressPreview(
+      'enc-local-42',
+      'sandbox',
+    );
+
+    expect(preview.operation).toBe('CREATE');
+    expect(preview.payload.status).toBe('in-progress');
+    expect(preview.payload.period.end).toBeUndefined();
+    expect(preview.payload.diagnosis).toBeUndefined();
+    expect(preview.payload.statusHistory.map((entry) => entry.status)).toEqual([
+      'arrived',
+      'in-progress',
+    ]);
+    expect(preview.payload.statusHistory.at(-1)?.period.end).toBeUndefined();
+    expect(validateSatusehatEncounterPayload(preview.payload)).toEqual([]);
+  });
+
+  it('refuses historical recovery when an Encounter linkage already exists', async () => {
+    const { service } = buildService(
+      undefined,
+      'encounter-remote-42',
+      completedEncounter(),
+    );
+
+    await expect(
+      service.prepareHistoricalInProgressPreview('enc-local-42', 'sandbox'),
+    ).rejects.toMatchObject({
+      constructor: ConflictException,
+      response: expect.objectContaining({
+        code: 'SATUSEHAT_ENCOUNTER_RECOVERY_ALREADY_LINKED',
+      }),
+    });
+  });
+
+  it('refuses historical recovery while the local RME is not final', async () => {
+    const { service, medicalRecordFindUnique } = buildService(
+      undefined,
+      undefined,
+      completedEncounter(),
+    );
+    medicalRecordFindUnique.mockResolvedValue({ status: 'DRAFT' });
+
+    await expect(
+      service.prepareHistoricalInProgressPreview('enc-local-42', 'sandbox'),
+    ).rejects.toMatchObject({
+      constructor: ConflictException,
+      response: expect.objectContaining({
+        code: 'SATUSEHAT_ENCOUNTER_RECOVERY_FINAL_RME_REQUIRED',
+      }),
+    });
   });
 
   it('blocks a finished Encounter when the primary Condition is not linked', async () => {

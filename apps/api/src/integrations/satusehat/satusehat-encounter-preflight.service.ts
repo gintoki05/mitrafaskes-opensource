@@ -21,6 +21,10 @@ import {
 } from './satusehat-encounter.constants';
 import { SatusehatEncounterContractError } from './satusehat-encounter.contract';
 import { toSatusehatEncounterPayload } from './satusehat-encounter.mapper';
+import {
+  assertHistoricalEncounterProjectionAllowed,
+  toHistoricalInProgressEncounter,
+} from './satusehat-encounter-recovery-projection';
 
 interface DependencyScope {
   name: 'Organization' | 'Location' | 'Patient' | 'Practitioner';
@@ -36,6 +40,8 @@ interface EncounterDiagnosisProjection {
   display: string;
   rank: number;
 }
+
+type EncounterPreviewProjection = 'CURRENT' | 'HISTORICAL_IN_PROGRESS';
 
 @Injectable()
 export class SatusehatEncounterPreflightService {
@@ -53,6 +59,29 @@ export class SatusehatEncounterPreflightService {
   async preparePreview(
     localResourceId: string,
     environment: string,
+  ): Promise<SatusehatEncounterPreview> {
+    return this.prepareProjectedPreview(
+      localResourceId,
+      environment,
+      'CURRENT',
+    );
+  }
+
+  async prepareHistoricalInProgressPreview(
+    localResourceId: string,
+    environment: string,
+  ): Promise<SatusehatEncounterPreview> {
+    return this.prepareProjectedPreview(
+      localResourceId,
+      environment,
+      'HISTORICAL_IN_PROGRESS',
+    );
+  }
+
+  private async prepareProjectedPreview(
+    localResourceId: string,
+    environment: string,
+    projection: EncounterPreviewProjection,
   ): Promise<SatusehatEncounterPreview> {
     const encounter = await this.encounters.findById(localResourceId);
     if (!encounter) {
@@ -146,7 +175,17 @@ export class SatusehatEncounterPreflightService {
         ],
       });
     }
-    if (encounter.status === EncounterStatus.COMPLETED) {
+    if (projection === 'HISTORICAL_IN_PROGRESS') {
+      const medicalRecord = await this.prisma.medicalRecord.findUnique({
+        where: { encounterId: encounter.id },
+        select: { status: true },
+      });
+      assertHistoricalEncounterProjectionAllowed(
+        encounter,
+        encounterLink,
+        medicalRecord?.status,
+      );
+    } else if (encounter.status === EncounterStatus.COMPLETED) {
       this.assertCompletedDiagnosisLinkage(
         encounter.id,
         diagnoses,
@@ -157,6 +196,10 @@ export class SatusehatEncounterPreflightService {
     const [organizationLink, locationLink, patientLink, practitionerLink] =
       dependencyLinks;
     const externalResourceId = encounterLink?.externalResourceId;
+    const projectedEncounter =
+      projection === 'HISTORICAL_IN_PROGRESS'
+        ? toHistoricalInProgressEncounter(encounter)
+        : encounter;
     const linkedDiagnoses = diagnoses.flatMap((diagnosis) =>
       diagnosis.externalResourceId
         ? [
@@ -173,7 +216,7 @@ export class SatusehatEncounterPreflightService {
         localResourceId,
         operation: externalResourceId ? 'UPDATE' : 'CREATE',
         ...(externalResourceId ? { externalResourceId } : {}),
-        payload: toSatusehatEncounterPayload(encounter, {
+        payload: toSatusehatEncounterPayload(projectedEncounter, {
           organizationExternalId: organizationLink!.externalResourceId,
           locationExternalId: locationLink!.externalResourceId,
           patientExternalId: patientLink!.externalResourceId,

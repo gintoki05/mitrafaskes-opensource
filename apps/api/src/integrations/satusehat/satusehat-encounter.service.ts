@@ -25,6 +25,8 @@ import {
   retryAttemptFromContext,
 } from './satusehat-sync-log';
 
+type EncounterSyncProjection = 'CURRENT' | 'HISTORICAL_IN_PROGRESS';
+
 @Injectable()
 export class SatusehatEncounterService {
   constructor(
@@ -43,6 +45,25 @@ export class SatusehatEncounterService {
     localResourceId: string,
     context?: IntegrationSyncContext,
   ): Promise<SatusehatEncounterSyncResult> {
+    return this.syncProjectedEncounter(localResourceId, 'CURRENT', context);
+  }
+
+  async syncHistoricalInProgressEncounter(
+    localResourceId: string,
+    context?: IntegrationSyncContext,
+  ): Promise<SatusehatEncounterSyncResult> {
+    return this.syncProjectedEncounter(
+      localResourceId,
+      'HISTORICAL_IN_PROGRESS',
+      context,
+    );
+  }
+
+  private async syncProjectedEncounter(
+    localResourceId: string,
+    projection: EncounterSyncProjection,
+    context?: IntegrationSyncContext,
+  ): Promise<SatusehatEncounterSyncResult> {
     const environment = this.readEnvironment();
     const retryAttempt = retryAttemptFromContext(context);
     const syncLog = await this.prisma.satusehatSyncLog.create({
@@ -52,6 +73,7 @@ export class SatusehatEncounterService {
         status: 'PENDING',
         payload: this.buildLogPayload(localResourceId, environment, undefined, {
           retryAttempt,
+          projection,
           ...(context?.retryOfLogId
             ? { retryOfLogId: context.retryOfLogId }
             : {}),
@@ -61,15 +83,19 @@ export class SatusehatEncounterService {
 
     let preview: SatusehatEncounterPreview | undefined;
     try {
-      preview = await this.preflight.preparePreview(
-        localResourceId,
-        environment,
-      );
+      preview =
+        projection === 'HISTORICAL_IN_PROGRESS'
+          ? await this.preflight.prepareHistoricalInProgressPreview(
+              localResourceId,
+              environment,
+            )
+          : await this.preflight.preparePreview(localResourceId, environment);
       await this.prisma.satusehatSyncLog.update({
         where: { id: syncLog.id },
         data: {
           payload: this.buildLogPayload(localResourceId, environment, preview, {
             retryAttempt,
+            projection,
             ...(context?.retryOfLogId
               ? { retryOfLogId: context.retryOfLogId }
               : {}),
@@ -148,6 +174,7 @@ export class SatusehatEncounterService {
               preview,
               {
                 retryAttempt,
+                projection,
                 ...(context?.retryOfLogId
                   ? { retryOfLogId: context.retryOfLogId }
                   : {}),
@@ -171,6 +198,7 @@ export class SatusehatEncounterService {
         syncLog.id,
         error,
         this.buildLogPayload(localResourceId, environment, preview, {
+          projection,
           ...(context?.retryOfLogId
             ? { retryOfLogId: context.retryOfLogId }
             : {}),

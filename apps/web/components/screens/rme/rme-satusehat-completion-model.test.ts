@@ -102,6 +102,35 @@ test('final Encounter is blocked until the primary Condition is linked', () => {
   );
 });
 
+test('a final local RME can recover a missed initial Encounter through primary Condition sync', () => {
+  const model = resolveRmeSatusehatCompletion({
+    encounter: encounter({
+      status: EncounterStatus.COMPLETED,
+      completedAt: '2026-08-19T02:00:00.000Z',
+      integrations: [],
+    }),
+    record: record({
+      status: MedicalRecordStatus.FINAL,
+      diagnoses: [
+        {
+          id: 'diagnosis-1',
+          icd10Code: 'J00',
+          isPrimary: true,
+          integrations: [],
+        },
+      ],
+    }),
+    canSync: true,
+  });
+
+  assert.equal(model.encounterRecoveryAvailable, true);
+  assert.equal(model.diagnosis.state, 'ready');
+  assert.match(
+    model.finalEncounter.disabledReason ?? '',
+    /memulihkan Encounter/,
+  );
+});
+
 test('linked primary diagnosis makes the finished update ready', () => {
   const model = resolveRmeSatusehatCompletion({
     encounter: encounter({

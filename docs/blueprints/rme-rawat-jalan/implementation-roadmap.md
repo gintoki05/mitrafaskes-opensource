@@ -31,7 +31,7 @@ klinis yang belum menjadi resource aktif.
 
 ## Snapshot status delivery
 
-Pada 15 Agustus 2026, fase lokal inti sudah memiliki fondasi `DRAFT`/`FINAL`,
+Pada 19 Agustus 2026, fase lokal inti sudah memiliki fondasi `DRAFT`/`FINAL`,
 versioning, preflight, finalisasi atomik, audit event, typed history/Observation,
 serta adapter Condition dan Observation. Status remote tetap mengikuti bukti
 sandbox, bukan hanya keberadaan adapter atau unit test:
@@ -39,6 +39,11 @@ sandbox, bukan hanya keberadaan adapter atau unit test:
 - Encounter: create dan repeat update pernah **PASS** pada run manual sebelumnya;
 - Condition: adapter/test **tersedia**, manual rerun **BLOCKED** pada laporan terakhir;
 - Observation: adapter/test **tersedia**, manual rerun **BLOCKED** pada laporan terakhir;
+- vertical flow otomatis: **PASS**, termasuk recovery untuk RME `FINAL` ketika
+  Encounter awal belum linked, repeat update dengan remote ID tetap, final
+  immutable, optimistic concurrency, dependency failure, dan plugin disabled;
+- sandbox Condition/Observation/Encounter finished: **belum diverifikasi ulang**;
+  status remote tidak dinaikkan hanya berdasarkan automated test;
 - amendment, outbox klinis, Procedure, MedicationOrder, FollowUpPlan, odontogram,
   dan evidence center masih merupakan pekerjaan target.
 
@@ -114,6 +119,11 @@ perluasan terminology dan validasi sandbox tetap terbuka**.
   Condition adapter dengan preflight setelah dependency Encounter linked,
   Observation adapter dengan preflight setelah dependency Encounter linked, dan
   UI RME untuk sync per diagnosis serta per Observation;
+- **Sudah tersedia:** recovery terkontrol untuk RME `FINAL` yang melewatkan sync
+  Encounter awal. Plugin membuat proyeksi historis `in-progress`, menyimpan
+  linkage, membuat Condition utama, lalu mencoba `PUT Encounter finished` dengan
+  remote ID yang sama. Setiap operasi memiliki sync log terpisah dan kegagalan
+  remote tidak mengubah RME lokal;
 - terminology registry/version dan migrate/read compatibility untuk kolom
   vital/diagnosis lama masih perlu dirapikan sebagai pekerjaan lanjutan.
 

@@ -157,6 +157,12 @@ remote ID, operasi create/update, status setelah refresh, dan error terakhir.
 
 - `POST Condition` bila linkage belum ada;
 - `PUT Condition/{remoteId}` untuk repeat sync yang diizinkan;
+- bila RME lokal sudah `FINAL` tetapi Encounter awal belum pernah linked, hanya
+  sync diagnosis utama yang boleh menjalankan recovery: `POST Encounter`
+  historis berstatus `in-progress`, `POST Condition`, lalu `PUT Encounter`
+  berstatus `finished` dengan Encounter remote ID yang sama;
+- recovery ditolak bila Encounter sudah linked, RME belum `FINAL`, atau masih
+  ada dependency Patient/Practitioner lain yang belum linked;
 - adapter membedakan category keluhan dan encounter diagnosis;
 - `subject` menunjuk Patient remote, `encounter` menunjuk Encounter remote, dan
   recorder/asserter menggunakan Practitioner remote sesuai provenance lokal.

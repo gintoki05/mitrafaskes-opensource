@@ -47,6 +47,7 @@ function buildService(prepared = preview()) {
   const preflight = {
     previewEncounter: jest.fn().mockResolvedValue(prepared),
     preparePreview: jest.fn().mockResolvedValue(prepared),
+    prepareHistoricalInProgressPreview: jest.fn().mockResolvedValue(prepared),
   };
   const fhir = {
     createEncounter: jest.fn().mockResolvedValue({
@@ -142,6 +143,38 @@ describe('SatusehatEncounterService sync', () => {
       data: { payload: { metadata: Record<string, unknown> } };
     };
     expect(successUpdate.data.payload.metadata.remoteStatus).toBe('cancelled');
+  });
+
+  it('creates the historical in-progress projection for finalization recovery', async () => {
+    const historicalPreview = {
+      ...preview(),
+      payload: {
+        ...preview().payload,
+        status: 'in-progress' as const,
+      },
+    };
+    const context = buildService(historicalPreview);
+
+    const result =
+      await context.service.syncHistoricalInProgressEncounter(localResourceId);
+
+    expect(
+      context.preflight.prepareHistoricalInProgressPreview,
+    ).toHaveBeenCalledWith(localResourceId, 'sandbox');
+    expect(context.preflight.preparePreview).not.toHaveBeenCalled();
+    expect(context.fhir.createEncounter).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'in-progress' }),
+    );
+    expect(result.externalResourceId).toBe(remoteResourceId);
+    const successUpdate = context.syncLogUpdate.mock.calls.at(-1)?.[0] as {
+      data: { payload: { metadata: Record<string, unknown> } };
+    };
+    expect(successUpdate.data.payload.metadata).toEqual(
+      expect.objectContaining({
+        projection: 'HISTORICAL_IN_PROGRESS',
+        remoteStatus: 'in-progress',
+      }),
+    );
   });
 
   it('logs a dependency failure and never calls the FHIR client', async () => {

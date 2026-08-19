@@ -19,6 +19,7 @@ import { SatusehatEncounterService } from './satusehat-encounter.service';
 import { SatusehatEncounterPreflightService } from './satusehat-encounter-preflight.service';
 import { SatusehatConditionService } from './satusehat-condition.service';
 import { SatusehatConditionPreflightService } from './satusehat-condition-preflight.service';
+import { SatusehatConditionEncounterLifecycleService } from './satusehat-condition-encounter-lifecycle.service';
 import { SatusehatObservationService } from './satusehat-observation.service';
 import { SatusehatObservationPreflightService } from './satusehat-observation-preflight.service';
 import { SatusehatReconciliationService } from './satusehat-reconciliation.service';
@@ -46,6 +47,7 @@ import { SatusehatTerminologyRegistry } from './satusehat-terminology.registry';
     SatusehatEncounterPreflightService,
     SatusehatEncounterService,
     SatusehatConditionPreflightService,
+    SatusehatConditionEncounterLifecycleService,
     SatusehatConditionService,
     SatusehatObservationPreflightService,
     SatusehatObservationService,

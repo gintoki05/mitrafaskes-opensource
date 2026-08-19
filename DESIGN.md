@@ -43,6 +43,13 @@ scattering them through clinical form sections. Observation progress covers
 every saved item, but it does not block Encounter `finished` unless an official
 profile later requires that dependency.
 
+If an operator finalized the local RME before the initial Encounter was ever
+linked, the primary Condition action becomes the recovery path. The UI explains
+that the plugin will create a historical `in-progress` Encounter projection,
+sync the Condition, and then project the same Encounter as `finished`. This
+recovery is available only for a local `FINAL` RME and never replaces persistent
+linkage state with temporary UI state.
+
 ## Interaction rules
 
 1. Keep status text explicit; never rely on color alone.

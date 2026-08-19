@@ -159,7 +159,7 @@ export function RmeSatusehatCompletionPanel({
           <RmeSatusehatCompletionStep
             icon={<HeartPulse className="h-4 w-4" />}
             title="Diagnosis Condition"
-            description="Diagnosis utama wajib terhubung sebelum Encounter finished; diagnosis tambahan dapat dikirim per item."
+            description="Diagnosis utama wajib terhubung sebelum Encounter finished. Bila sinkronisasi awal terlewat dan RME sudah FINAL, aksi diagnosis utama memulihkan Encounter historis terlebih dahulu."
             state={model.diagnosis.state}
             blocker={model.diagnosis.disabledReason}
             resourceName={primaryDiagnosis?.icd10Code ?? 'Diagnosis utama'}
@@ -172,9 +172,11 @@ export function RmeSatusehatCompletionPanel({
                     'SATUSEHAT',
                   );
                   const syncing = syncingDiagnosisId === diagnosis.id;
+                  const canRecoverEncounter =
+                    diagnosis.isPrimary && model.encounterRecoveryAvailable;
                   const disabledReason = localChangesPending
                     ? sharedSyncReason
-                    : !model.encounterConnected
+                    : !model.encounterConnected && !canRecoverEncounter
                       ? 'Sinkronkan Encounter awal sebelum Condition.'
                       : !canSync
                         ? 'Peran Anda tidak memiliki izin sinkronisasi SATUSEHAT.'

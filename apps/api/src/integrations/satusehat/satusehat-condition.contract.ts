@@ -54,6 +54,7 @@ export interface SatusehatConditionSyncResult extends Omit<
   syncedRemotely: boolean;
   syncLogId: string;
   response?: { resourceType: 'Condition'; id: string };
+  encounterBootstrapSyncLogId?: string;
   encounterSyncLogId?: string;
 }
 
