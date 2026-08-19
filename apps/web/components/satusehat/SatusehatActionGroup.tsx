@@ -11,6 +11,7 @@ type SatusehatActionGroupProps = {
   onLink?: () => void;
   syncDisabled?: boolean;
   syncDisabledReason?: string;
+  syncing?: boolean;
   linkDisabled?: boolean;
   linkDisabledReason?: string;
   showLabels?: boolean;
@@ -23,6 +24,7 @@ export function SatusehatActionGroup({
   onLink,
   syncDisabled = false,
   syncDisabledReason,
+  syncing = false,
   linkDisabled = false,
   linkDisabledReason,
   showLabels = false,
@@ -47,11 +49,19 @@ export function SatusehatActionGroup({
           size={size}
           onClick={onSync}
           disabled={effectiveSyncDisabled}
+          aria-busy={syncing}
           aria-label={`Sinkronkan SATUSEHAT untuk ${resourceName}`}
           title={effectiveSyncDisabled ? syncDisabledReason ?? 'Kredensial SATUSEHAT belum dikonfigurasi' : 'Sinkronkan SATUSEHAT'}
         >
-          <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-          {showLabels ? 'Sinkronkan SATUSEHAT' : null}
+          <RefreshCw
+            className={cn('h-3.5 w-3.5', syncing && 'motion-safe:animate-spin')}
+            aria-hidden="true"
+          />
+          {showLabels
+            ? syncing
+              ? 'Menyinkronkan...'
+              : 'Sinkronkan SATUSEHAT'
+            : null}
         </Button>
       ) : null}
       {onLink ? (

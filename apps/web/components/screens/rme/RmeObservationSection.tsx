@@ -4,7 +4,6 @@ import { Activity } from 'lucide-react';
 import type { ClinicalObservation } from '@mitrafaskes/shared';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import {
   getIntegrationLinkage,
@@ -13,20 +12,10 @@ import {
 
 type RmeObservationSectionProps = {
   observations: ClinicalObservation[];
-  syncDisabled: boolean;
-  syncDisabledReason?: string;
-  canSyncObservation: boolean;
-  syncingObservationId: string | null;
-  onSyncObservation: (id: string) => void;
 };
 
 export function RmeObservationSection({
   observations,
-  syncDisabled,
-  syncDisabledReason,
-  canSyncObservation,
-  syncingObservationId,
-  onSyncObservation,
 }: RmeObservationSectionProps) {
   return (
     <Card>
@@ -83,25 +72,6 @@ export function RmeObservationSection({
                   ) : null}
                 </div>
               </div>
-              <SatusehatActionGroup
-                resourceName={resourceName}
-                onSync={() => onSyncObservation(observation.id)}
-                syncDisabled={
-                  syncDisabled ||
-                  !canSyncObservation ||
-                  syncingObservationId === observation.id
-                }
-                syncDisabledReason={
-                  syncingObservationId === observation.id
-                    ? 'Sinkronisasi Observation sedang berjalan.'
-                    : syncDisabled
-                      ? (syncDisabledReason ??
-                        'Simpan perubahan lokal sebelum sinkronisasi.')
-                      : !canSyncObservation
-                        ? 'Anda tidak memiliki izin sync.retry.'
-                        : undefined
-                }
-              />
             </div>
           );
         })}

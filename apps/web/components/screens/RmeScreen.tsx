@@ -20,9 +20,9 @@ import { RmeForm, RmeFormPlaceholder } from './rme/RmeForm';
 import { RmeWorkspaceContext } from './rme/RmeWorkspaceContext';
 import { resolveRmeWorkspaceViewState } from './rme/rme-workspace-model';
 import type { RmeFormValues } from './rme/rme-form-schema';
-import { useConditionActions } from './rme/useConditionActions';
-import { useObservationActions } from './rme/useObservationActions';
 import { useEncounterActions } from '@/hooks/useEncounterActions';
+import { RmeSatusehatCompletionPanel } from './rme/RmeSatusehatCompletionPanel';
+import { useRmeSatusehatActions } from './rme/useRmeSatusehatActions';
 
 function errorDescription(error: unknown): string {
   if (error instanceof RmeApiError && error.issues.length > 0) {
@@ -33,12 +33,10 @@ function errorDescription(error: unknown): string {
 
 export default function RmePage() {
   const [icdSearch, setIcdSearch] = useState('');
-  const [syncingDiagnosisId, setSyncingDiagnosisId] = useState<string | null>(
-    null,
-  );
-  const [syncingObservationId, setSyncingObservationId] = useState<string | null>(
-    null,
-  );
+  const [localSyncState, setLocalSyncState] = useState<{
+    pending: boolean;
+    reason?: string;
+  }>({ pending: false });
   const session = useSession();
   const {
     encounters,
@@ -48,20 +46,19 @@ export default function RmePage() {
     loadError,
     icdResults,
     refreshEncounters,
+    refreshSelectedEncounter,
     searchIcd10,
     selectEncounter,
   } = useRmeResources();
   const lifecycle = useRmeLifecycle(selectedEncounter?.id ?? null);
-  const conditionActions = useConditionActions();
-  const observationActions = useObservationActions();
   const encounterActions = useEncounterActions();
+  const satusehatActions = useRmeSatusehatActions({
+    reloadRecord: lifecycle.reload,
+    refreshSelectedEncounter,
+  });
   const [startingEncounterId, setStartingEncounterId] = useState<string | null>(null);
   const [queueOpen, setQueueOpen] = useState(false);
-  const canSyncDiagnosis = can(
-    session?.user ?? null,
-    AccessPermission.SYNC_RETRY,
-  );
-  const canSyncObservation = can(
+  const canSyncSatusehat = can(
     session?.user ?? null,
     AccessPermission.SYNC_RETRY,
   );
@@ -105,6 +102,7 @@ export default function RmePage() {
       await refreshEncounters(encountersMeta.page, {
         retainMissingSelection: true,
       });
+      await refreshSelectedEncounter();
       toast.success('RME berhasil difinalisasi', {
         description: 'Catatan menjadi read-only dan Encounter telah diselesaikan.',
       });
@@ -133,48 +131,6 @@ export default function RmePage() {
         duration: 9000,
       });
       return false;
-    }
-  };
-
-  const handleSyncDiagnosis = async (diagnosisId: string) => {
-    if (syncingDiagnosisId) return;
-    setSyncingDiagnosisId(diagnosisId);
-    try {
-      await conditionActions.syncSatusehat(diagnosisId);
-      lifecycle.reload();
-      toast.success('Diagnosis tersinkron ke SATUSEHAT', {
-        description:
-          'Linkage dan status sinkronisasi terbaru sudah dimuat ulang.',
-      });
-    } catch (error) {
-      lifecycle.reload();
-      toast.error('Diagnosis gagal disinkronkan', {
-        description: errorDescription(error),
-        duration: 9000,
-      });
-    } finally {
-      setSyncingDiagnosisId(null);
-    }
-  };
-
-  const handleSyncObservation = async (observationId: string) => {
-    if (syncingObservationId) return;
-    setSyncingObservationId(observationId);
-    try {
-      await observationActions.syncSatusehat(observationId);
-      lifecycle.reload();
-      toast.success('Observation tersinkron ke SATUSEHAT', {
-        description:
-          'Linkage dan status sinkronisasi terbaru sudah dimuat ulang.',
-      });
-    } catch (error) {
-      lifecycle.reload();
-      toast.error('Observation gagal disinkronkan', {
-        description: errorDescription(error),
-        duration: 9000,
-      });
-    } finally {
-      setSyncingObservationId(null);
     }
   };
 
@@ -248,10 +204,31 @@ export default function RmePage() {
 
           <div className="min-w-0 space-y-6">
             {selectedEncounter ? (
-              <RmeWorkspaceContext
-                encounter={selectedEncounter}
-                record={lifecycle.record}
-              />
+              <>
+                <RmeWorkspaceContext
+                  encounter={selectedEncounter}
+                  record={lifecycle.record}
+                />
+                {workspaceState !== 'loading-record' &&
+                workspaceState !== 'record-error' ? (
+                  <RmeSatusehatCompletionPanel
+                    encounter={selectedEncounter}
+                    record={lifecycle.record}
+                    canSync={canSyncSatusehat}
+                    localChangesPending={localSyncState.pending}
+                    localChangesReason={localSyncState.reason}
+                    syncingDiagnosisId={satusehatActions.syncingDiagnosisId}
+                    syncingObservationId={satusehatActions.syncingObservationId}
+                    onSyncDiagnosis={(diagnosisId) =>
+                      void satusehatActions.syncDiagnosis(diagnosisId)
+                    }
+                    onSyncObservation={(observationId) =>
+                      void satusehatActions.syncObservation(observationId)
+                    }
+                    onEncounterSettled={satusehatActions.settleEncounterSync}
+                  />
+                ) : null}
+              </>
             ) : null}
 
             {workspaceState === 'loading-record' ? (
@@ -296,16 +273,7 @@ export default function RmePage() {
                 onPreflight={handlePreflight}
                 onFinalize={handleFinalize}
                 onReload={lifecycle.reload}
-                canSyncDiagnosis={canSyncDiagnosis}
-                syncingDiagnosisId={syncingDiagnosisId}
-                onSyncDiagnosis={(diagnosisId) =>
-                  void handleSyncDiagnosis(diagnosisId)
-                }
-                canSyncObservation={canSyncObservation}
-                syncingObservationId={syncingObservationId}
-                onSyncObservation={(observationId) =>
-                  void handleSyncObservation(observationId)
-                }
+                onLocalSyncStateChange={setLocalSyncState}
                 onIcdSearchChange={(value) => {
                   setIcdSearch(value);
                   void searchIcd10(value);

@@ -72,7 +72,7 @@ export function SatusehatLinkageBadge({
 
   return (
     <span
-      className={`inline-flex whitespace-nowrap items-center gap-1.5 text-xs font-semibold ${statusClassName}`}
+      className={`inline-flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-semibold sm:flex-nowrap ${statusClassName}`}
       title={`Terhubung ke SATUSEHAT. ${resourceName}.${remoteStatusLabel ? ` Status SATUSEHAT: ${remoteStatusLabel}.` : ''}${lastSyncedLabel}${latestSyncFailed ? ` Sinkronisasi terakhir gagal${latestSync.errorMessage ? `: ${latestSync.errorMessage}` : '.'}` : ''}`}
     >
       <span className={`flex h-6 w-6 shrink-0 overflow-hidden rounded border bg-white ${latestSyncFailed ? 'border-warning/25' : 'border-success/25'}`}>
@@ -101,8 +101,8 @@ export function SatusehatLinkageBadge({
         title="Salin ID SATUSEHAT"
         className={
           latestSyncFailed
-            ? 'text-warning hover:bg-warning/10 hover:text-warning'
-            : 'text-success hover:bg-success/10 hover:text-success'
+            ? 'min-h-9 min-w-9 text-warning hover:bg-warning/10 hover:text-warning sm:min-h-8 sm:min-w-8'
+            : 'min-h-9 min-w-9 text-success hover:bg-success/10 hover:text-success sm:min-h-8 sm:min-w-8'
         }
       >
         {copied ? (

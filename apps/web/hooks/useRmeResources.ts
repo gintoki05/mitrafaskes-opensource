@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useReducer } from 'react';
 import type {
+  EncounterHistoryListResponse,
   EncounterListResponse,
   ListMeta,
   MasterDataIcd10Response,
@@ -92,6 +93,26 @@ async function requestIcd10(query: string): Promise<Icd10Entry[]> {
   }));
 }
 
+async function requestEncounterSnapshot(
+  encounter: Encounter,
+): Promise<Encounter | null> {
+  const params = new URLSearchParams({
+    page: '1',
+    pageSize: '25',
+    fromDate: encounter.queueDate,
+    toDate: encounter.queueDate,
+    search: encounter.encounterNumber,
+  });
+  const response = await apiFetch(
+    `/api/encounters/history?${params.toString()}`,
+  );
+  if (!response.ok) {
+    throw new Error('Status Encounter terbaru tidak dapat dimuat.');
+  }
+  const payload = (await response.json()) as EncounterHistoryListResponse;
+  return payload.items.find((item) => item.id === encounter.id) ?? null;
+}
+
 function messageFrom(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
@@ -157,5 +178,22 @@ export function useRmeResources() {
     dispatch({ type: 'select-encounter', encounter });
   }, []);
 
-  return { ...state, refreshEncounters, searchIcd10, selectEncounter };
+  const refreshSelectedEncounter = useCallback(async () => {
+    if (!state.selectedEncounter) return null;
+    try {
+      const encounter = await requestEncounterSnapshot(state.selectedEncounter);
+      if (encounter) dispatch({ type: 'select-encounter', encounter });
+      return encounter;
+    } catch {
+      return null;
+    }
+  }, [state.selectedEncounter]);
+
+  return {
+    ...state,
+    refreshEncounters,
+    refreshSelectedEncounter,
+    searchIcd10,
+    selectEncounter,
+  };
 }

@@ -92,6 +92,30 @@ const completedEncounter = (): EncounterWithRelations => {
   };
 };
 
+const inProgressEncounter = (): EncounterWithRelations => {
+  const encounter = completedEncounter();
+  const startedAt = encounter.startedAt!;
+  return {
+    ...encounter,
+    status: EncounterStatus.IN_PROGRESS,
+    completedAt: null,
+    cancelledAt: null,
+    version: 2,
+    updatedAt: startedAt,
+    statusHistory: [
+      {
+        ...encounter.statusHistory[0],
+        periodEnd: startedAt,
+      },
+      {
+        ...encounter.statusHistory[1],
+        periodEnd: null,
+        createdAt: startedAt,
+      },
+    ],
+  };
+};
+
 const cancelledEncounter = (): EncounterWithRelations => {
   const encounter = completedEncounter();
   const cancelledAt = new Date('2026-08-12T01:10:00.000Z');
@@ -134,6 +158,13 @@ describe('SATUSEHAT Encounter payload contract', () => {
       locationExternalId: dependencies.Location,
       patientExternalId: dependencies.Patient,
       practitionerExternalId: dependencies.Practitioner,
+      diagnoses: [
+        {
+          externalResourceId: 'condition-remote-primary',
+          display: 'Essential hypertension',
+          rank: 1,
+        },
+      ],
     });
 
     expect(payload).toEqual(fixture('valid'));
@@ -183,9 +214,58 @@ describe('SATUSEHAT Encounter payload contract', () => {
       patientExternalId: dependencies.Patient,
       practitionerExternalId: dependencies.Practitioner,
       encounterExternalId: 'encounter-remote-42',
+      diagnoses: [
+        {
+          externalResourceId: 'condition-remote-primary',
+          display: 'Essential hypertension',
+          rank: 1,
+        },
+      ],
     });
 
     expect(payload.id).toBe('encounter-remote-42');
+  });
+
+  it('rejects a finished payload whose history has the lifecycle statuses out of order', () => {
+    const payload = toSatusehatEncounterPayload(completedEncounter(), {
+      organizationExternalId: dependencies.Organization,
+      locationExternalId: dependencies.Location,
+      patientExternalId: dependencies.Patient,
+      practitionerExternalId: dependencies.Practitioner,
+      diagnoses: [
+        {
+          externalResourceId: 'condition-remote-primary',
+          display: 'Essential hypertension',
+          rank: 1,
+        },
+      ],
+    });
+
+    const issues = validateSatusehatEncounterPayload({
+      ...payload,
+      statusHistory: [
+        payload.statusHistory[1],
+        payload.statusHistory[0],
+        payload.statusHistory[2],
+      ],
+    });
+
+    expect(issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ path: 'statusHistory' }),
+      ]),
+    );
+  });
+
+  it('requires a diagnosis reference when the payload is finished', () => {
+    const payload = { ...(fixture('valid') as Record<string, unknown>) };
+    delete payload.diagnosis;
+
+    const issues = validateSatusehatEncounterPayload(payload);
+
+    expect(issues).toEqual(
+      expect.arrayContaining([expect.objectContaining({ path: 'diagnosis' })]),
+    );
   });
 
   it('projects linked Conditions with admission diagnosis use and deterministic ranks', () => {
@@ -250,6 +330,21 @@ describe('SatusehatEncounterService preview', () => {
   const buildService = (
     missing?: keyof typeof dependencies,
     encounterExternalId?: string,
+    encounter: EncounterWithRelations = completedEncounter(),
+    diagnosisRows: Array<{
+      id: string;
+      isPrimary: boolean;
+      icd10Code: string;
+    }> = [{ id: 'diagnosis-primary', isPrimary: true, icd10Code: 'I10' }],
+    conditionLinks: Array<{
+      localResourceId: string;
+      externalResourceId: string;
+    }> = [
+      {
+        localResourceId: 'diagnosis-primary',
+        externalResourceId: 'condition-remote-primary',
+      },
+    ],
   ) => {
     const findUnique = jest.fn(({ where }) => {
       const scope = where.localResourceScope;
@@ -266,19 +361,40 @@ describe('SatusehatEncounterService preview', () => {
           dependencies[scope.resourceType as keyof typeof dependencies],
       });
     });
+    const findConditionLinks = jest.fn(({ where }) => {
+      const requestedIds = where.localResourceId?.in ?? [];
+      return Promise.resolve(
+        conditionLinks.filter((link) =>
+          requestedIds.includes(link.localResourceId),
+        ),
+      );
+    });
     const syncLogCreate = jest.fn();
     const locationFindUnique = jest.fn().mockResolvedValue({
       organizationId: 'organization-local-1',
     });
     const prisma = {
-      externalResourceLink: { findUnique },
+      diagnosis: {
+        findMany: jest.fn().mockResolvedValue(diagnosisRows),
+      },
+      masterIcd10: {
+        findMany: jest
+          .fn()
+          .mockResolvedValue([
+            { code: 'I10', display: 'Essential hypertension' },
+          ]),
+      },
+      externalResourceLink: {
+        findUnique,
+        findMany: findConditionLinks,
+      },
       satusehatSyncLog: { create: syncLogCreate },
       location: {
         findUnique: locationFindUnique,
       },
     };
     const encounters = {
-      findById: jest.fn().mockResolvedValue(completedEncounter()),
+      findById: jest.fn().mockResolvedValue(encounter),
     };
     return {
       service: new SatusehatEncounterPreflightService(
@@ -321,6 +437,76 @@ describe('SatusehatEncounterService preview', () => {
     expect(preview.operation).toBe('UPDATE');
     expect(preview.externalResourceId).toBe('encounter-remote-42');
     expect(preview.payload.id).toBe('encounter-remote-42');
+  });
+
+  it('allows an in-progress Encounter preview before any Condition is linked', async () => {
+    const { service } = buildService(
+      undefined,
+      undefined,
+      inProgressEncounter(),
+      [],
+      [],
+    );
+
+    const preview = await service.previewEncounter('enc-local-42');
+
+    expect(preview.payload.status).toBe('in-progress');
+    expect(preview.payload.diagnosis).toBeUndefined();
+  });
+
+  it('blocks a finished Encounter when the primary Condition is not linked', async () => {
+    const { service } = buildService(
+      undefined,
+      undefined,
+      completedEncounter(),
+      [{ id: 'diagnosis-primary', isPrimary: true, icd10Code: 'I10' }],
+      [],
+    );
+
+    await expect(
+      service.previewEncounter('enc-local-42'),
+    ).rejects.toMatchObject({
+      constructor: ConflictException,
+      response: expect.objectContaining({
+        code: 'SATUSEHAT_ENCOUNTER_PRIMARY_CONDITION_REQUIRED',
+        dependencies: ['Condition'],
+        message: expect.stringContaining('diagnosis utama Condition'),
+      }),
+    });
+  });
+
+  it('keeps primary rank 1 and secondary rank 2 regardless of local row order', async () => {
+    const { service } = buildService(
+      undefined,
+      undefined,
+      completedEncounter(),
+      [
+        { id: 'diagnosis-secondary', isPrimary: false, icd10Code: 'J00' },
+        { id: 'diagnosis-primary', isPrimary: true, icd10Code: 'I10' },
+      ],
+      [
+        {
+          localResourceId: 'diagnosis-secondary',
+          externalResourceId: 'condition-remote-secondary',
+        },
+        {
+          localResourceId: 'diagnosis-primary',
+          externalResourceId: 'condition-remote-primary',
+        },
+      ],
+    );
+
+    const preview = await service.previewEncounter('enc-local-42');
+
+    expect(
+      preview.payload.diagnosis?.map((diagnosis) => ({
+        reference: diagnosis.condition.reference,
+        rank: diagnosis.rank,
+      })),
+    ).toEqual([
+      { reference: 'Condition/condition-remote-primary', rank: 1 },
+      { reference: 'Condition/condition-remote-secondary', rank: 2 },
+    ]);
   });
 
   it.each(Object.keys(dependencies) as Array<keyof typeof dependencies>)(

@@ -59,6 +59,7 @@ export function EncounterSyncDialog({
     error: '',
   });
   const [syncing, setSyncing] = useState(false);
+  const [previewRequestKey, setPreviewRequestKey] = useState(0);
 
   useEffect(() => {
     if (!open || !encounter) return;
@@ -81,7 +82,7 @@ export function EncounterSyncDialog({
     return () => {
       cancelled = true;
     };
-  }, [encounter, open, previewSatusehat]);
+  }, [encounter, open, previewRequestKey, previewSatusehat]);
 
   if (!open || !encounter) return null;
 
@@ -92,11 +93,17 @@ export function EncounterSyncDialog({
   const uiState = resolveEncounterSyncUiState({
     canSync,
     previewLoading: state.loading,
-    previewError: state.error,
+    previewError: state.preview ? '' : state.error,
     syncing,
     previewOperation: state.preview?.operation,
     integration,
   });
+  const displayError = state.error || uiState.error;
+
+  const retryPreview = () => {
+    setState({ preview: null, loading: true, error: '' });
+    setPreviewRequestKey((current) => current + 1);
+  };
 
   const sync = async () => {
     setSyncing(true);
@@ -158,11 +165,11 @@ export function EncounterSyncDialog({
             />
           </div>
 
-          {uiState.error && !state.loading ? (
+          {displayError && !state.loading ? (
             <ScreenState
               kind="error"
               title={
-                state.error
+                state.error && !state.preview
                   ? 'Data kunjungan belum siap dikirim'
                   : uiState.connected
                     ? 'Pembaruan data kunjungan terakhir gagal'
@@ -170,8 +177,16 @@ export function EncounterSyncDialog({
               }
               description={
                 latestSyncFailed && uiState.connected
-                  ? `${uiState.error} Koneksi yang sudah berhasil tetap tersimpan. Periksa data lalu coba kirim kembali.`
-                  : `${uiState.error} Periksa data lalu coba lagi.`
+                  ? `${displayError} Koneksi yang sudah berhasil tetap tersimpan. Periksa data lalu coba kirim kembali.`
+                  : `${displayError} Periksa data lalu coba lagi.`
+              }
+              action={
+                !state.preview ? (
+                  <Button type="button" size="sm" variant="outline" onClick={retryPreview}>
+                    <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                    Coba periksa lagi
+                  </Button>
+                ) : undefined
               }
               compact
             />
@@ -203,6 +218,7 @@ export function EncounterSyncDialog({
                 encounter={encounter}
                 operation={state.preview.operation}
                 externalResourceId={state.preview.externalResourceId}
+                payload={state.preview.payload}
               />
             </>
           ) : null}

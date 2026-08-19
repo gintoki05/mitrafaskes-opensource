@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { SatusehatActionGroup } from '@/components/satusehat/SatusehatActionGroup';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import type { Icd10Entry } from '@/lib/clinical-types';
 import {
@@ -22,11 +21,6 @@ type RmeDiagnosisSectionProps = {
   onAddDiagnosis: (icd: Icd10Entry) => void;
   onRemoveDiagnosis: (code: string) => void;
   disabled: boolean;
-  syncDisabled: boolean;
-  syncDisabledReason?: string;
-  canSyncDiagnosis: boolean;
-  syncingDiagnosisId: string | null;
-  onSyncDiagnosis: (id: string) => void;
 };
 
 export function RmeDiagnosisSection({
@@ -37,11 +31,6 @@ export function RmeDiagnosisSection({
   onAddDiagnosis,
   onRemoveDiagnosis,
   disabled,
-  syncDisabled,
-  syncDisabledReason,
-  canSyncDiagnosis,
-  syncingDiagnosisId,
-  onSyncDiagnosis,
 }: RmeDiagnosisSectionProps) {
   return (
     <Card
@@ -140,31 +129,11 @@ export function RmeDiagnosisSection({
                 </div>
               </div>
               <div className="flex items-center gap-1">
-                {diagnosis.id ? (
-                  <SatusehatActionGroup
-                    resourceName={diagnosis.icd10Code}
-                    onSync={() => onSyncDiagnosis(diagnosis.id!)}
-                    syncDisabled={
-                      syncDisabled ||
-                      !canSyncDiagnosis ||
-                      syncingDiagnosisId === diagnosis.id
-                    }
-                    syncDisabledReason={
-                      syncingDiagnosisId === diagnosis.id
-                        ? 'Sinkronisasi diagnosis sedang berjalan.'
-                        : syncDisabled
-                          ? (syncDisabledReason ??
-                            'Simpan perubahan lokal sebelum sinkronisasi.')
-                          : !canSyncDiagnosis
-                            ? 'Anda tidak memiliki izin sync.retry.'
-                            : undefined
-                    }
-                  />
-                ) : (
+                {!diagnosis.id ? (
                   <span className="text-[11px] text-muted-foreground">
-                    Simpan draft untuk sinkronisasi
+                    Simpan draft agar diagnosis muncul pada panel SATUSEHAT
                   </span>
-                )}
+                ) : null}
                 <Button
                   type="button"
                   variant="ghost"

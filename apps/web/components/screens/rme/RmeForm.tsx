@@ -58,12 +58,10 @@ type RmeFormProps = {
   onFinalize: () => Promise<void>;
   onReload: () => void;
   onIcdSearchChange: (value: string) => void;
-  canSyncDiagnosis: boolean;
-  syncingDiagnosisId: string | null;
-  onSyncDiagnosis: (id: string) => void;
-  canSyncObservation: boolean;
-  syncingObservationId: string | null;
-  onSyncObservation: (id: string) => void;
+  onLocalSyncStateChange: (state: {
+    pending: boolean;
+    reason?: string;
+  }) => void;
 };
 
 export function RmeForm({
@@ -80,12 +78,7 @@ export function RmeForm({
   onFinalize,
   onReload,
   onIcdSearchChange,
-  canSyncDiagnosis,
-  syncingDiagnosisId,
-  onSyncDiagnosis,
-  canSyncObservation,
-  syncingObservationId,
-  onSyncObservation,
+  onLocalSyncStateChange,
 }: RmeFormProps) {
   const {
     control,
@@ -136,6 +129,22 @@ export function RmeForm({
     mutationState === "preflighting" ||
     mutationState === "saving-draft" ||
     mutationState === "finalizing";
+
+  useEffect(() => {
+    onLocalSyncStateChange({
+      pending: isDirty || busy,
+      reason: busy
+        ? "Tunggu proses RME selesai."
+        : isDirty
+          ? "Simpan perubahan lokal sebelum sinkronisasi."
+          : undefined,
+    });
+  }, [busy, isDirty, onLocalSyncStateChange]);
+
+  useEffect(
+    () => () => onLocalSyncStateChange({ pending: false }),
+    [onLocalSyncStateChange],
+  );
 
   useEffect(() => {
     reset(formValuesFrom(record));
@@ -304,15 +313,6 @@ export function RmeForm({
       >
         <RmeObservationSection
           observations={record?.observations ?? []}
-          syncDisabled={isDirty || busy}
-          syncDisabledReason={
-            busy
-              ? "Tunggu proses RME selesai."
-              : "Simpan perubahan lokal sebelum sinkronisasi."
-          }
-          canSyncObservation={canSyncObservation}
-          syncingObservationId={syncingObservationId}
-          onSyncObservation={onSyncObservation}
         />
       </div>
       <div data-rme-section="diagnoses" tabIndex={-1}>
@@ -324,15 +324,6 @@ export function RmeForm({
           onAddDiagnosis={handleAddDiagnosis}
           onRemoveDiagnosis={handleRemoveDiagnosis}
           disabled={readOnly || busy}
-          syncDisabled={isDirty || busy}
-          syncDisabledReason={
-            busy
-              ? "Tunggu proses RME selesai."
-              : "Simpan perubahan lokal sebelum sinkronisasi."
-          }
-          canSyncDiagnosis={canSyncDiagnosis}
-          syncingDiagnosisId={syncingDiagnosisId}
-          onSyncDiagnosis={onSyncDiagnosis}
         />
         <RmeSectionIssues issues={finalizationIssues} section="diagnoses" />
       </div>

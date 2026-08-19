@@ -1,9 +1,17 @@
 import type {
   Encounter,
   SatusehatEncounterOperation,
+  SatusehatEncounterPayload,
 } from '@mitrafaskes/shared';
-import { Building2, CalendarClock, MapPin, UserRound } from 'lucide-react';
+import {
+  Building2,
+  CalendarClock,
+  FileCheck2,
+  MapPin,
+  UserRound,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { formatSatusehatRemoteStatus } from '@/components/satusehat/satusehat-status';
 
 const statusLabels: Record<Encounter['status'], string> = {
   WAITING: 'Menunggu',
@@ -52,12 +60,14 @@ type EncounterSatusehatPreviewProps = {
   encounter: Encounter;
   operation: SatusehatEncounterOperation;
   externalResourceId?: string;
+  payload?: SatusehatEncounterPayload;
 };
 
 export function EncounterSatusehatPreview({
   encounter,
   operation,
   externalResourceId,
+  payload,
 }: EncounterSatusehatPreviewProps) {
   return (
     <div className="space-y-3">
@@ -76,6 +86,56 @@ export function EncounterSatusehatPreview({
       </div>
 
       <div className="overflow-hidden rounded-[var(--radius-card)] border border-border bg-background">
+        {payload ? (
+          <section className="bg-primary/[0.025] p-4">
+            <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+              <FileCheck2 className="h-4 w-4" aria-hidden="true" />
+              <h3>Lifecycle FHIR yang akan dikirim</h3>
+            </div>
+            <dl className="mt-3 grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
+              <PreviewField label="Operasi" value={operation} mono />
+              <PreviewField
+                label="Status FHIR"
+                value={`${payload.status} · ${formatSatusehatRemoteStatus(payload.status)}`}
+                mono
+              />
+              <PreviewField
+                label="Period mulai"
+                value={formatDateTime(payload.period.start)}
+              />
+              <PreviewField
+                label="Period selesai"
+                value={
+                  payload.period.end
+                    ? formatDateTime(payload.period.end)
+                    : 'Belum tersedia untuk lifecycle aktif'
+                }
+              />
+              <PreviewField
+                label="Status history"
+                value={payload.statusHistory
+                  .map((history) => history.status)
+                  .join(' → ')}
+                mono
+              />
+              <PreviewField
+                label="Referensi diagnosis"
+                value={
+                  payload.diagnosis?.length
+                    ? payload.diagnosis
+                        .map(
+                          (diagnosis) =>
+                            `${diagnosis.condition.reference} (rank ${diagnosis.rank})`,
+                        )
+                        .join(', ')
+                    : 'Belum ada pada lifecycle aktif'
+                }
+                mono={Boolean(payload.diagnosis?.length)}
+              />
+            </dl>
+          </section>
+        ) : null}
+
         <section className="p-4">
           <div className="flex items-center gap-2 text-xs font-semibold text-primary">
             <CalendarClock className="h-4 w-4" aria-hidden="true" />

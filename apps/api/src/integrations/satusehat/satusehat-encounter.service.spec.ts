@@ -26,6 +26,8 @@ function buildService(prepared = preview()) {
   const syncLogUpdate = jest.fn().mockResolvedValue({});
   const linkUpsert = jest.fn().mockResolvedValue({});
   const linkDelete = jest.fn().mockResolvedValue({});
+  const localEncounterUpdate = jest.fn();
+  const localMedicalRecordUpdate = jest.fn();
   const transaction = jest.fn(async (actions: Promise<unknown>[]) =>
     Promise.all(actions),
   );
@@ -38,6 +40,8 @@ function buildService(prepared = preview()) {
       upsert: linkUpsert,
       delete: linkDelete,
     },
+    encounter: { update: localEncounterUpdate },
+    medicalRecord: { update: localMedicalRecordUpdate },
     $transaction: transaction,
   };
   const preflight = {
@@ -64,6 +68,8 @@ function buildService(prepared = preview()) {
     fhir,
     linkDelete,
     linkUpsert,
+    localEncounterUpdate,
+    localMedicalRecordUpdate,
     preflight,
     syncLogCreate,
     syncLogUpdate,
@@ -196,6 +202,18 @@ describe('SatusehatEncounterService sync', () => {
         data: expect.objectContaining({ status: 'FAILED' }),
       }),
     );
+  });
+
+  it('does not mutate a locally final RME when the remote update fails', async () => {
+    const context = buildService(preview('UPDATE'));
+    context.fhir.updateEncounter.mockRejectedValue(new Error('remote failure'));
+
+    await expect(
+      context.service.syncEncounter(localResourceId),
+    ).rejects.toBeInstanceOf(BadGatewayException);
+
+    expect(context.localEncounterUpdate).not.toHaveBeenCalled();
+    expect(context.localMedicalRecordUpdate).not.toHaveBeenCalled();
   });
 
   it('rejects a different remote id on update without replacing the linkage', async () => {

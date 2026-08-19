@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { EncounterStatus } from '@prisma/client';
 import type { SatusehatEncounterPreview } from '@mitrafaskes/shared';
 import { PrismaService } from '../../database/prisma.service';
 import { EncountersService } from '../../encounters/encounters.service';
@@ -26,6 +27,14 @@ interface DependencyScope {
   resourceType: string;
   localResourceType: string;
   localResourceId: string;
+}
+
+interface EncounterDiagnosisProjection {
+  localResourceId: string;
+  isPrimary: boolean;
+  externalResourceId?: string;
+  display: string;
+  rank: number;
 }
 
 @Injectable()
@@ -102,7 +111,7 @@ export class SatusehatEncounterPreflightService {
         select: { organizationId: true },
       }),
     ]);
-    const diagnoses = await this.findLinkedConditionDiagnoses(
+    const diagnoses = await this.findConditionDiagnoses(
       encounter.id,
       environment,
     );
@@ -137,10 +146,28 @@ export class SatusehatEncounterPreflightService {
         ],
       });
     }
+    if (encounter.status === EncounterStatus.COMPLETED) {
+      this.assertCompletedDiagnosisLinkage(
+        encounter.id,
+        diagnoses,
+        environment,
+      );
+    }
 
     const [organizationLink, locationLink, patientLink, practitionerLink] =
       dependencyLinks;
     const externalResourceId = encounterLink?.externalResourceId;
+    const linkedDiagnoses = diagnoses.flatMap((diagnosis) =>
+      diagnosis.externalResourceId
+        ? [
+            {
+              externalResourceId: diagnosis.externalResourceId,
+              display: diagnosis.display,
+              rank: diagnosis.rank,
+            },
+          ]
+        : [],
+    );
     try {
       return {
         localResourceId,
@@ -152,7 +179,7 @@ export class SatusehatEncounterPreflightService {
           patientExternalId: patientLink!.externalResourceId,
           practitionerExternalId: practitionerLink!.externalResourceId,
           encounterExternalId: externalResourceId,
-          ...(diagnoses.length > 0 ? { diagnoses } : {}),
+          ...(linkedDiagnoses.length > 0 ? { diagnoses: linkedDiagnoses } : {}),
         }),
       };
     } catch (error) {
@@ -187,12 +214,10 @@ export class SatusehatEncounterPreflightService {
     });
   }
 
-  private async findLinkedConditionDiagnoses(
+  private async findConditionDiagnoses(
     encounterId: string,
     environment: string,
-  ): Promise<
-    Array<{ externalResourceId: string; display: string; rank: number }>
-  > {
+  ): Promise<EncounterDiagnosisProjection[]> {
     const diagnosisClient = this.prisma.diagnosis;
     const linkClient = this.prisma.externalResourceLink;
     if (
@@ -214,26 +239,35 @@ export class SatusehatEncounterPreflightService {
     });
     if (diagnoses.length === 0) return [];
 
-    const catalogEntries = await this.prisma.masterIcd10.findMany({
-      where: {
-        code: { in: diagnoses.map((diagnosis) => diagnosis.icd10Code) },
-      },
-      select: { code: true, display: true },
-    });
+    const catalogClient = this.prisma.masterIcd10;
+    const catalogEntries =
+      catalogClient && typeof catalogClient.findMany === 'function'
+        ? await catalogClient.findMany({
+            where: {
+              code: { in: diagnoses.map((diagnosis) => diagnosis.icd10Code) },
+            },
+            select: { code: true, display: true },
+          })
+        : [];
     const catalogByCode = new Map(
       catalogEntries.map((entry) => [entry.code, entry.display]),
     );
 
-    const links = await linkClient.findMany({
-      where: {
-        provider: SATUSEHAT_PROVIDER,
-        environment,
-        resourceType: CONDITION_RESOURCE_TYPE,
-        localResourceType: LOCAL_CONDITION_RESOURCE_TYPE,
-        localResourceId: { in: diagnoses.map((diagnosis) => diagnosis.id) },
-      },
-      select: { localResourceId: true, externalResourceId: true },
-    });
+    const links =
+      typeof linkClient.findMany === 'function'
+        ? await linkClient.findMany({
+            where: {
+              provider: SATUSEHAT_PROVIDER,
+              environment,
+              resourceType: CONDITION_RESOURCE_TYPE,
+              localResourceType: LOCAL_CONDITION_RESOURCE_TYPE,
+              localResourceId: {
+                in: diagnoses.map((diagnosis) => diagnosis.id),
+              },
+            },
+            select: { localResourceId: true, externalResourceId: true },
+          })
+        : [];
     const linkByDiagnosisId = new Map(
       links.map((link) => [link.localResourceId, link.externalResourceId]),
     );
@@ -245,18 +279,43 @@ export class SatusehatEncounterPreflightService {
         }
         return left.id.localeCompare(right.id);
       })
-      .flatMap((diagnosis, index) => {
-        const externalResourceId = linkByDiagnosisId.get(diagnosis.id);
-        if (!externalResourceId) return [];
-        return [
-          {
-            externalResourceId,
-            display:
-              catalogByCode.get(diagnosis.icd10Code) ?? diagnosis.icd10Code,
-            rank: index + 1,
-          },
-        ];
-      });
+      .map((diagnosis, index) => ({
+        localResourceId: diagnosis.id,
+        isPrimary: diagnosis.isPrimary,
+        externalResourceId: linkByDiagnosisId.get(diagnosis.id),
+        display: catalogByCode.get(diagnosis.icd10Code) ?? diagnosis.icd10Code,
+        rank: index + 1,
+      }));
+  }
+
+  private assertCompletedDiagnosisLinkage(
+    encounterId: string,
+    diagnoses: EncounterDiagnosisProjection[],
+    environment: string,
+  ): void {
+    const primaryDiagnosis = diagnoses.find((diagnosis) => diagnosis.isPrimary);
+    if (primaryDiagnosis?.externalResourceId) return;
+
+    throw new ConflictException({
+      code: 'SATUSEHAT_ENCOUNTER_PRIMARY_CONDITION_REQUIRED',
+      message:
+        'Encounter COMPLETED tidak dapat disinkronkan sebagai finished sebelum diagnosis utama Condition terhubung ke SATUSEHAT.',
+      dependencies: ['Condition'],
+      issues: [
+        {
+          resourceType: CONDITION_RESOURCE_TYPE,
+          ...(primaryDiagnosis?.localResourceId
+            ? { localResourceId: primaryDiagnosis.localResourceId }
+            : {}),
+          provider: SATUSEHAT_PROVIDER,
+          environment,
+          message: primaryDiagnosis
+            ? 'Diagnosis utama harus disinkronkan sebagai Condition terlebih dahulu.'
+            : 'Encounter COMPLETED wajib memiliki diagnosis utama lokal yang dapat disinkronkan sebagai Condition.',
+        },
+      ],
+      encounterId,
+    });
   }
 
   private readEnvironment(): string {

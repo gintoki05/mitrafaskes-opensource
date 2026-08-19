@@ -88,24 +88,35 @@ export function validateSatusehatEncounterPayload(
       'Status terakhir pada riwayat harus sama dengan status Encounter',
     );
   }
-  if (
-    status === 'finished' &&
-    !['arrived', 'in-progress', 'finished'].every((value) =>
-      historyStatuses.includes(value as SatusehatEncounterStatus),
-    )
-  ) {
-    addIssue(
-      issues,
-      'statusHistory',
-      'Encounter selesai harus memuat arrived, in-progress, dan finished',
-    );
+  if (status === 'finished') {
+    const expectedHistory: readonly SatusehatEncounterStatus[] = [
+      'arrived',
+      'in-progress',
+      'finished',
+    ];
+    const hasExpectedHistory =
+      historyStatuses.length === expectedHistory.length &&
+      expectedHistory.every(
+        (expectedStatus, index) => historyStatuses[index] === expectedStatus,
+      );
+    if (!hasExpectedHistory) {
+      addIssue(
+        issues,
+        'statusHistory',
+        'Encounter selesai harus memiliki urutan arrived, in-progress, finished',
+      );
+    }
   }
 
   const encounterPeriod = readPeriod(payload.period, 'period', issues);
-  if (
-    (status === 'finished' || status === 'cancelled') &&
-    !encounterPeriod?.end
-  ) {
+  if (status === 'finished' && !encounterPeriod?.end) {
+    addIssue(
+      issues,
+      'period.end',
+      'Encounter finished wajib memiliki waktu selesai klinis',
+    );
+  }
+  if (status === 'cancelled' && !encounterPeriod?.end) {
     addIssue(
       issues,
       'period.end',
@@ -171,8 +182,26 @@ export function validateSatusehatEncounterPayload(
     issues,
   );
 
+  const diagnoses =
+    payload.diagnosis === undefined
+      ? []
+      : readArray(payload.diagnosis, 'diagnosis', issues);
+  if (status === 'finished') {
+    if (diagnoses.length === 0) {
+      addIssue(
+        issues,
+        'diagnosis',
+        'Encounter finished wajib mereferensikan minimal satu diagnosis utama Condition',
+      );
+    } else if (!diagnoses.some((entry) => asRecord(entry).rank === 1)) {
+      addIssue(
+        issues,
+        'diagnosis',
+        'Encounter finished wajib memiliki diagnosis utama dengan rank 1',
+      );
+    }
+  }
   if (payload.diagnosis !== undefined) {
-    const diagnoses = readArray(payload.diagnosis, 'diagnosis', issues);
     for (const [index, entry] of diagnoses.entries()) {
       const diagnosis = asRecord(entry);
       requireReference(

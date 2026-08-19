@@ -34,6 +34,15 @@ The registration screen focuses on creating patients and managing the active que
 
 RME, Master Faskes, and SATUSEHAT use the same shell, tokens, border language, status vocabulary, focus ring, and responsive content width. Existing clinical workflows, permission gates, API calls, and Indonesian terminology remain intact.
 
+Within RME, SATUSEHAT completion is presented as one four-step operational
+sequence: Encounter awal, Condition diagnosis, Observation tanda vital, then
+Encounter selesai. Each step names its dependency, uses linkage from
+`ExternalResourceLink`, preserves a successful linkage when the latest retry
+fails, and keeps resource actions inside the completion panel instead of
+scattering them through clinical form sections. Observation progress covers
+every saved item, but it does not block Encounter `finished` unless an official
+profile later requires that dependency.
+
 ## Interaction rules
 
 1. Keep status text explicit; never rely on color alone.
