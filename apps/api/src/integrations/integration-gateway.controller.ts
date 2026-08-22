@@ -62,6 +62,11 @@ export class IntegrationGatewayController {
     return this.integrations.getConnectionStatus(provider);
   }
 
+  @Get(':provider/connection-status')
+  getConnectionStatus(@Param('provider') provider: string) {
+    return this.integrations.getConnectionSummary(provider);
+  }
+
   @Get(':provider/logs')
   @RequirePermission(AccessPermission.SYNC_STATUS_READ)
   getLogs(

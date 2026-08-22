@@ -31,6 +31,29 @@ function contextForRetry(role?: UserRole) {
   return contextFor(IntegrationGatewayController.prototype.retryLog, role);
 }
 
+function contextForConnectionStatus(role?: UserRole) {
+  return contextFor(
+    IntegrationGatewayController.prototype.getConnectionStatus,
+    role,
+  );
+}
+
+describe('IntegrationGatewayController connection status permission', () => {
+  const guard = new PermissionGuard(new Reflector());
+
+  it('requires an authenticated session but not the integration permission', () => {
+    expect(() => guard.canActivate(contextForConnectionStatus())).toThrow(
+      UnauthorizedException,
+    );
+    expect(
+      guard.canActivate(contextForConnectionStatus(UserRole.DOKTER)),
+    ).toBe(true);
+    expect(
+      guard.canActivate(contextForConnectionStatus(UserRole.PERAWAT)),
+    ).toBe(true);
+  });
+});
+
 describe('IntegrationGatewayController sync permission', () => {
   const guard = new PermissionGuard(new Reflector());
 

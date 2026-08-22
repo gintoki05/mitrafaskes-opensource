@@ -59,12 +59,15 @@ export interface ResourceIntegrationSummary {
   latestSync?: ResourceIntegrationSync;
 }
 
-export interface IntegrationCapability {
+export interface IntegrationConnectionSummary {
   provider: string;
   displayName: string;
   enabled: boolean;
   status: IntegrationProviderStatus;
   environment: string;
+}
+
+export interface IntegrationCapability extends IntegrationConnectionSummary {
   resources: string[];
   operations: string[];
 }

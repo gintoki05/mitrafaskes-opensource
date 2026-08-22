@@ -14,9 +14,10 @@ import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
 import { SatusehatLinkageBadge } from '@/components/satusehat/SatusehatLinkageBadge';
 import {
-  getSatusehatEncounterStatus,
-  getSatusehatEncounterStatusTooltip,
-} from '@/components/satusehat/satusehat-status';
+  getLocalEncounterStatusClass,
+  getLocalEncounterStatusLabel,
+  getLocalEncounterStatusTooltip,
+} from '@/lib/encounter-status-display';
 import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 import { formatEncounterQueueDate } from '@/lib/encounter-display';
 import { EncounterQueueActions } from './EncounterQueueActions';
@@ -48,22 +49,6 @@ type QueuePanelProps = {
   canCorrect: boolean;
   canSync: boolean;
 };
-
-function statusClass(status: EncounterStatus): string {
-  if (status === EncounterStatus.ARRIVED || status === EncounterStatus.ONLEAVE) {
-    return 'clinical-status-warning border text-xs font-semibold';
-  }
-  if (status === EncounterStatus.IN_PROGRESS) {
-    return 'border-primary/20 bg-primary/10 text-xs font-semibold text-primary';
-  }
-  if (
-    status === EncounterStatus.CANCELLED ||
-    status === EncounterStatus.ENTERED_IN_ERROR
-  ) {
-    return 'clinical-status-error border text-xs font-semibold';
-  }
-  return 'clinical-status-success border text-xs font-semibold';
-}
 
 export function QueuePanel({
   encounters,
@@ -197,10 +182,10 @@ export function QueuePanel({
               </div>
               <div className="flex basis-full w-full min-w-0 flex-1 flex-wrap items-center justify-start gap-2 sm:basis-auto sm:w-auto sm:min-w-[12rem] sm:flex-none sm:justify-end">
                 <Badge
-                  className={statusClass(encounter.status)}
-                  title={getSatusehatEncounterStatusTooltip(encounter.status)}
+                  className={getLocalEncounterStatusClass(encounter.status)}
+                  title={getLocalEncounterStatusTooltip(encounter.status)}
                 >
-                  {getSatusehatEncounterStatus(encounter.status)}
+                  {getLocalEncounterStatusLabel(encounter.status)}
                 </Badge>
                 <SatusehatLinkageBadge
                   linkage={satusehatLinkage}

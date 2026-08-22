@@ -12,8 +12,13 @@ import {
   type SatusehatConnectionDisplayStatus,
 } from '@/hooks/useSatusehatConnection';
 
-const statusPresentation: Record<
+type RenderableSatusehatConnectionStatus = Exclude<
   SatusehatConnectionDisplayStatus,
+  'UNAVAILABLE'
+>;
+
+const statusPresentation: Record<
+  RenderableSatusehatConnectionStatus,
   { label: string; icon: LucideIcon; iconClassName: string }
 > = {
   LOADING: {
@@ -45,6 +50,14 @@ const statusPresentation: Record<
 
 export function SatusehatConnectionBadge() {
   const status = useSatusehatConnection();
+  if (
+    status === 'LOADING' ||
+    status === 'UNAVAILABLE' ||
+    status === 'DISABLED'
+  ) {
+    return null;
+  }
+
   const presentation = statusPresentation[status];
   const Icon = presentation.icon;
 

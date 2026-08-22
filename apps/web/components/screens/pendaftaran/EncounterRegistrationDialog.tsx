@@ -13,9 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FieldDescription, FieldError } from '@/components/ui/field';
 import {
-  getSatusehatEncounterStatus,
-  getSatusehatEncounterStatusTooltip,
-} from '@/components/satusehat/satusehat-status';
+  getLocalEncounterStatusClass,
+  getLocalEncounterStatusLabel,
+  getLocalEncounterStatusTooltip,
+} from '@/lib/encounter-status-display';
 import { FieldLabel, SelectField } from '../master-faskes/FormField';
 import { MasterFaskesDialog } from '../master-faskes/MasterFaskesDialog';
 import { useMasterFaskesData } from '@/hooks/useMasterFaskesData';
@@ -151,10 +152,10 @@ export function EncounterRegistrationDialog({
                 <span className="font-semibold text-foreground">{patient.fullName}</span>
                 <span className="font-mono text-muted-foreground">RM {patient.medicalRecNo}</span>
                 <Badge
-                  className="clinical-status-warning border text-[10px] font-bold"
-                  title={getSatusehatEncounterStatusTooltip(EncounterStatus.ARRIVED)}
+                  className={getLocalEncounterStatusClass(EncounterStatus.ARRIVED)}
+                  title={getLocalEncounterStatusTooltip(EncounterStatus.ARRIVED)}
                 >
-                  {getSatusehatEncounterStatus(EncounterStatus.ARRIVED)}
+                  {getLocalEncounterStatusLabel(EncounterStatus.ARRIVED)}
                 </Badge>
               </div>
             </div>

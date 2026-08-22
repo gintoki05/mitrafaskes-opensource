@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { ACTIVE_ENCOUNTER_STATUSES } from '@/lib/encounter-statuses';
 import {
-  getSatusehatEncounterStatus,
-  getSatusehatEncounterStatusTooltip,
-} from '@/components/satusehat/satusehat-status';
+  getLocalEncounterStatusLabel,
+  getLocalEncounterStatusTooltip,
+} from '@/lib/encounter-status-display';
 
 export type QueueStatusFilterValue = 'ACTIVE' | EncounterStatus;
 
@@ -28,28 +28,28 @@ export const queueStatusFilterValues: readonly QueueStatusFilterValue[] = [
 
 const queueStatusLabels: Record<QueueStatusFilterValue, string> = {
   ACTIVE: 'Aktif',
-  [EncounterStatus.PLANNED]: getSatusehatEncounterStatus(EncounterStatus.PLANNED),
-  [EncounterStatus.ARRIVED]: getSatusehatEncounterStatus(EncounterStatus.ARRIVED),
-  [EncounterStatus.TRIAGED]: getSatusehatEncounterStatus(EncounterStatus.TRIAGED),
-  [EncounterStatus.IN_PROGRESS]: getSatusehatEncounterStatus(EncounterStatus.IN_PROGRESS),
-  [EncounterStatus.ONLEAVE]: getSatusehatEncounterStatus(EncounterStatus.ONLEAVE),
-  [EncounterStatus.FINISHED]: getSatusehatEncounterStatus(EncounterStatus.FINISHED),
-  [EncounterStatus.CANCELLED]: getSatusehatEncounterStatus(EncounterStatus.CANCELLED),
-  [EncounterStatus.ENTERED_IN_ERROR]: getSatusehatEncounterStatus(EncounterStatus.ENTERED_IN_ERROR),
-  [EncounterStatus.UNKNOWN]: getSatusehatEncounterStatus(EncounterStatus.UNKNOWN),
+  [EncounterStatus.PLANNED]: getLocalEncounterStatusLabel(EncounterStatus.PLANNED),
+  [EncounterStatus.ARRIVED]: getLocalEncounterStatusLabel(EncounterStatus.ARRIVED),
+  [EncounterStatus.TRIAGED]: getLocalEncounterStatusLabel(EncounterStatus.TRIAGED),
+  [EncounterStatus.IN_PROGRESS]: getLocalEncounterStatusLabel(EncounterStatus.IN_PROGRESS),
+  [EncounterStatus.ONLEAVE]: getLocalEncounterStatusLabel(EncounterStatus.ONLEAVE),
+  [EncounterStatus.FINISHED]: getLocalEncounterStatusLabel(EncounterStatus.FINISHED),
+  [EncounterStatus.CANCELLED]: getLocalEncounterStatusLabel(EncounterStatus.CANCELLED),
+  [EncounterStatus.ENTERED_IN_ERROR]: getLocalEncounterStatusLabel(EncounterStatus.ENTERED_IN_ERROR),
+  [EncounterStatus.UNKNOWN]: getLocalEncounterStatusLabel(EncounterStatus.UNKNOWN),
 };
 
 const queueStatusTooltips: Record<QueueStatusFilterValue, string> = {
-  ACTIVE: 'Filter lokal untuk gabungan status arrived, triaged, in-progress, dan onleave.',
-  [EncounterStatus.PLANNED]: getSatusehatEncounterStatusTooltip(EncounterStatus.PLANNED),
-  [EncounterStatus.ARRIVED]: getSatusehatEncounterStatusTooltip(EncounterStatus.ARRIVED),
-  [EncounterStatus.TRIAGED]: getSatusehatEncounterStatusTooltip(EncounterStatus.TRIAGED),
-  [EncounterStatus.IN_PROGRESS]: getSatusehatEncounterStatusTooltip(EncounterStatus.IN_PROGRESS),
-  [EncounterStatus.ONLEAVE]: getSatusehatEncounterStatusTooltip(EncounterStatus.ONLEAVE),
-  [EncounterStatus.FINISHED]: getSatusehatEncounterStatusTooltip(EncounterStatus.FINISHED),
-  [EncounterStatus.CANCELLED]: getSatusehatEncounterStatusTooltip(EncounterStatus.CANCELLED),
-  [EncounterStatus.ENTERED_IN_ERROR]: getSatusehatEncounterStatusTooltip(EncounterStatus.ENTERED_IN_ERROR),
-  [EncounterStatus.UNKNOWN]: getSatusehatEncounterStatusTooltip(EncounterStatus.UNKNOWN),
+  ACTIVE: 'Filter lokal untuk kunjungan yang belum selesai.',
+  [EncounterStatus.PLANNED]: getLocalEncounterStatusTooltip(EncounterStatus.PLANNED),
+  [EncounterStatus.ARRIVED]: getLocalEncounterStatusTooltip(EncounterStatus.ARRIVED),
+  [EncounterStatus.TRIAGED]: getLocalEncounterStatusTooltip(EncounterStatus.TRIAGED),
+  [EncounterStatus.IN_PROGRESS]: getLocalEncounterStatusTooltip(EncounterStatus.IN_PROGRESS),
+  [EncounterStatus.ONLEAVE]: getLocalEncounterStatusTooltip(EncounterStatus.ONLEAVE),
+  [EncounterStatus.FINISHED]: getLocalEncounterStatusTooltip(EncounterStatus.FINISHED),
+  [EncounterStatus.CANCELLED]: getLocalEncounterStatusTooltip(EncounterStatus.CANCELLED),
+  [EncounterStatus.ENTERED_IN_ERROR]: getLocalEncounterStatusTooltip(EncounterStatus.ENTERED_IN_ERROR),
+  [EncounterStatus.UNKNOWN]: getLocalEncounterStatusTooltip(EncounterStatus.UNKNOWN),
 };
 
 export function getQueueStatuses(

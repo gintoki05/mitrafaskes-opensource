@@ -420,6 +420,19 @@ describe('Access control (e2e)', () => {
       }),
     ]);
 
+    const connectionSummary = await request(app.getHttpServer())
+      .get('/api/integrations/SATUSEHAT/connection-status')
+      .set(bearer('mock-jwt-token-dr_budi'))
+      .expect(200);
+
+    expect(connectionSummary.body).toEqual({
+      provider: 'SATUSEHAT',
+      displayName: 'SATUSEHAT',
+      enabled: false,
+      status: 'DISABLED',
+      environment: 'sandbox',
+    });
+
     const logs = await request(app.getHttpServer())
       .get('/api/integrations/SATUSEHAT/logs?page=1&pageSize=1')
       .set(bearer('mock-jwt-token-admin'))

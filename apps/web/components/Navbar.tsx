@@ -352,7 +352,7 @@ export function Navbar() {
         </div>
 
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
-          {can(user, AccessPermission.SYNC_STATUS_READ) && satusehat.available ? (
+          {user ? (
             <SatusehatConnectionBadge />
           ) : null}
           {user ? (

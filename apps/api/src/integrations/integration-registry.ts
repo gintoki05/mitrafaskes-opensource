@@ -7,6 +7,7 @@ import {
 import type {
   IntegrationCapabilitiesResponse,
   IntegrationCapability,
+  IntegrationConnectionSummary,
   IntegrationConnectionResponse,
   IntegrationLogListResponse,
   IntegrationReconciliationResponse,
@@ -78,6 +79,33 @@ export class IntegrationRegistry {
       );
     }
     return { integrations };
+  }
+
+  async getConnectionSummary(
+    providerInput: string,
+  ): Promise<IntegrationConnectionSummary> {
+    const definition = this.getDefinition(providerInput);
+    const provider = this.normalizeProvider(definition.provider);
+    const plugin = this.plugins.get(provider);
+
+    if (!plugin) {
+      return {
+        provider: definition.provider,
+        displayName: definition.displayName,
+        enabled: false,
+        status: 'DISABLED',
+        environment: definition.environment,
+      };
+    }
+
+    const connection = await plugin.getConnectionStatus();
+    return {
+      provider: connection.provider,
+      displayName: connection.displayName,
+      enabled: connection.enabled,
+      status: connection.status,
+      environment: connection.environment,
+    };
   }
 
   getDefinition(providerInput: string): IntegrationProviderDefinition {

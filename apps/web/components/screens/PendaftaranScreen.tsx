@@ -66,6 +66,9 @@ export default function PendaftaranPage() {
     encounters,
     encountersMeta,
     encountersStatusCounts,
+    todayEncounters,
+    todayEncountersLoading,
+    todayEncountersError,
     patientsLoading,
     encountersLoading,
     patientsError,
@@ -226,6 +229,9 @@ export default function PendaftaranPage() {
           <div id="registration-panel-patients" role="tabpanel" aria-labelledby="registration-tab-patients" tabIndex={0}>
             <PatientDirectory
               patients={patients}
+              todayEncounters={todayEncounters}
+              todayEncountersLoading={todayEncountersLoading}
+              todayEncountersError={todayEncountersError}
               patientsLoading={patientsLoading}
               patientsError={patientsError}
               meta={patientsMeta}

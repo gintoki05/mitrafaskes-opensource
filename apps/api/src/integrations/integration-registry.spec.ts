@@ -39,6 +39,38 @@ describe('IntegrationRegistry', () => {
     await expect(
       registry.getConnectionStatus('satusehat'),
     ).rejects.toBeInstanceOf(IntegrationDisabledError);
+    await expect(registry.getConnectionSummary('satusehat')).resolves.toEqual({
+      provider: 'SATUSEHAT',
+      displayName: 'SATUSEHAT',
+      enabled: false,
+      status: 'DISABLED',
+      environment: 'sandbox',
+    });
+  });
+
+  it('returns only the connection summary for authenticated status indicators', async () => {
+    const registry = new IntegrationRegistry(options);
+    registry.register({
+      provider: 'SATUSEHAT',
+      getConnectionStatus: jest.fn().mockResolvedValue({
+        provider: 'SATUSEHAT',
+        displayName: 'SATUSEHAT',
+        enabled: true,
+        status: 'CONNECTED',
+        environment: 'sandbox',
+        resources: [],
+        operations: [],
+        connection: { token: 'must-not-leak' },
+      }),
+    } as never);
+
+    await expect(registry.getConnectionSummary('SATUSEHAT')).resolves.toEqual({
+      provider: 'SATUSEHAT',
+      displayName: 'SATUSEHAT',
+      enabled: true,
+      status: 'CONNECTED',
+      environment: 'sandbox',
+    });
   });
 
   it('returns a typed 503 for a known provider without a plugin', () => {

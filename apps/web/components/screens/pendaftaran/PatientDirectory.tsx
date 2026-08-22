@@ -2,6 +2,7 @@
 
 import type { SubmitEventHandler } from 'react';
 import type {
+  Encounter,
   ListMeta,
   Patient,
   PatientStatusCounts,
@@ -18,11 +19,16 @@ import { cn } from '@/lib/utils';
 import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
 import { PatientSyncReadinessNotice } from './PatientSyncReadinessNotice';
 import { getPatientSyncReadiness } from './patient-sync-readiness';
+import { PatientEncounterStatusBadge } from './PatientEncounterStatusBadge';
+import { getLatestPatientEncounter } from './patient-encounter-status';
 import { PatientStatusBadge } from './PatientStatusBadge';
 import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
 
 type PatientDirectoryProps = {
   patients: Patient[];
+  todayEncounters: Encounter[];
+  todayEncountersLoading: boolean;
+  todayEncountersError: string;
   patientsLoading: boolean;
   patientsError: string;
   meta: ListMeta;
@@ -43,6 +49,9 @@ type PatientDirectoryProps = {
 
 export function PatientDirectory({
   patients,
+  todayEncounters,
+  todayEncountersLoading,
+  todayEncountersError,
   patientsLoading,
   patientsError,
   meta,
@@ -78,8 +87,13 @@ export function PatientDirectory({
         <div className="min-w-0">
           <h2 id="patient-directory-title" className="text-lg font-semibold text-foreground">Pasien terdaftar</h2>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Lihat detail, edit data, atau masukkan pasien ke antrean.
+            Lihat detail, edit data, masukkan pasien ke antrean, dan pantau status kunjungan lokal hari ini.
           </p>
+          {todayEncountersError ? (
+            <p className="mt-2 text-xs text-destructive" role="status">
+              Status kunjungan hari ini belum tersedia. Muat ulang antrean untuk mencoba lagi.
+            </p>
+          ) : null}
         </div>
         <span className="shrink-0 text-sm font-medium text-muted-foreground">
           <strong className="font-mono text-foreground">{meta.total}</strong>{' '}
@@ -103,7 +117,7 @@ export function PatientDirectory({
           <Button type="submit" className="sm:h-11 sm:px-4">Cari data</Button>
         </form>
         <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter status pasien">
-          <span className="mr-1 text-sm font-medium text-foreground">Status</span>
+          <span className="mr-1 text-sm font-medium text-foreground">Status pasien</span>
           {statusFilterOptions.map((option) => {
             const selected = statusFilter === option.value;
 
@@ -132,7 +146,7 @@ export function PatientDirectory({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[960px] border-collapse text-left">
+        <table className="w-full min-w-[1080px] border-collapse text-left">
           <caption className="sr-only">Daftar pasien terdaftar</caption>
           <thead className="bg-muted/35 text-xs font-semibold uppercase tracking-[0.04em] text-muted-foreground">
             <tr>
@@ -140,7 +154,8 @@ export function PatientDirectory({
               <th scope="col" className="border-b border-border px-4 py-3">Nama Pasien</th>
               <th scope="col" className="border-b border-border px-4 py-3">No. Rekam Medis</th>
               <th scope="col" className="border-b border-border px-4 py-3">Identitas</th>
-              <th scope="col" className="border-b border-border px-4 py-3">Status</th>
+              <th scope="col" className="border-b border-border px-4 py-3">Status pasien</th>
+              <th scope="col" className="border-b border-border px-4 py-3">Kunjungan lokal</th>
               {satusehat.available ? (
                 <th scope="col" className="border-b border-border px-4 py-3">SATUSEHAT</th>
               ) : null}
@@ -150,13 +165,13 @@ export function PatientDirectory({
           <tbody className="divide-y divide-border/70">
             {patientsLoading ? (
               <tr>
-                <td colSpan={satusehat.available ? 7 : 6} className="p-4">
+                <td colSpan={satusehat.available ? 8 : 7} className="p-4">
                   <ScreenState kind="loading" title="Memuat daftar pasien" description="Mohon tunggu sebentar." compact />
                 </td>
               </tr>
             ) : patients.length === 0 && !patientsError ? (
               <tr>
-                <td colSpan={satusehat.available ? 7 : 6} className="p-4">
+                <td colSpan={satusehat.available ? 8 : 7} className="p-4">
                   <ScreenState
                     kind="empty"
                     title={search ? 'Pasien tidak ditemukan' : statusFilterLabel ? `Belum ada pasien ${statusFilterLabel}` : 'Belum ada pasien'}
@@ -171,6 +186,7 @@ export function PatientDirectory({
               </tr>
             ) : patients.map((patient, index) => {
               const syncReadiness = getPatientSyncReadiness(patient);
+              const todayEncounter = getLatestPatientEncounter(todayEncounters, patient.id);
 
               return (
               <tr key={patient.id} className="group transition-colors hover:bg-muted/45">
@@ -185,6 +201,14 @@ export function PatientDirectory({
                 </td>
                 <td className="px-4 py-3">
                   <PatientStatusBadge active={patient.active} />
+                </td>
+                <td className="px-4 py-3">
+                  <PatientEncounterStatusBadge
+                    encounter={todayEncounter}
+                    loading={todayEncountersLoading}
+                    unavailable={Boolean(todayEncountersError)}
+                    unavailableMessage={todayEncountersError}
+                  />
                 </td>
                 {satusehat.available ? (
                   <td className="px-4 py-3">
