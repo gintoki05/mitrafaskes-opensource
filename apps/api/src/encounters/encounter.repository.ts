@@ -4,8 +4,14 @@ import {
   TriageStatus as PrismaTriageStatus,
 } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
-import type { EncounterStatusCounts } from '@mitrafaskes/shared';
-import { fromPrismaEncounterStatus } from './encounter.status-map';
+import {
+  ACTIVE_ENCOUNTER_STATUSES,
+  type EncounterStatusCounts,
+} from '@mitrafaskes/shared';
+import {
+  fromPrismaEncounterStatus,
+  toPrismaEncounterStatus,
+} from './encounter.status-map';
 import { PrismaService } from '../database/prisma.service';
 
 export const encounterInclude = {
@@ -62,6 +68,7 @@ export type EncounterWithRelations = Prisma.EncounterGetPayload<{
 
 export interface EncounterListWhere {
   queueDate: Date;
+  includeActiveAcrossDates?: boolean;
   locationId?: string;
   locationIds?: string[];
   doctorId?: string;
@@ -90,8 +97,18 @@ export class EncounterRepository {
     total: number;
     statusCounts: EncounterStatusCounts;
   }> {
+    const activePrismaStatuses = ACTIVE_ENCOUNTER_STATUSES.map(
+      toPrismaEncounterStatus,
+    );
     const scopeWhere: Prisma.EncounterWhereInput = {
-      queueDate: where.queueDate,
+      ...(where.includeActiveAcrossDates
+        ? {
+            OR: [
+              { queueDate: where.queueDate },
+              { status: { in: activePrismaStatuses } },
+            ],
+          }
+        : { queueDate: where.queueDate }),
       ...(where.locationIds
         ? { locationId: { in: where.locationIds } }
         : { locationId: where.locationId }),

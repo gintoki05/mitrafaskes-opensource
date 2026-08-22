@@ -63,6 +63,7 @@ export function EncounterQueueActions({
   };
 
   const isArrived = encounter.status === EncounterStatus.ARRIVED;
+  const isReadyToStart = isArrived || encounter.status === EncounterStatus.TRIAGED;
   const isInProgress = encounter.status === EncounterStatus.IN_PROGRESS;
   const isOnLeave = encounter.status === EncounterStatus.ONLEAVE;
   const canCorrectThis = canCorrect &&
@@ -76,7 +77,7 @@ export function EncounterQueueActions({
   return (
     <>
       <div className="flex items-center gap-1" role="group" aria-label={`Aksi kunjungan ${encounter.encounterNumber}`}>
-        {canStart && isArrived ? (
+        {canStart && isReadyToStart ? (
           <Button
             type="button"
             variant="outline"

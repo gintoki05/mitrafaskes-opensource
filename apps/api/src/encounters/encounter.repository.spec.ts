@@ -132,6 +132,51 @@ describe('EncounterRepository allocators', () => {
     );
   });
 
+  it('includes active encounters from earlier queue dates when requested', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const count = jest.fn().mockResolvedValue(0);
+    const prisma = {
+      encounter: { findMany, count },
+      $transaction: jest.fn((operations: Promise<unknown>[]) =>
+        Promise.all(operations),
+      ),
+    } as unknown as PrismaService;
+    const repository = new EncounterRepository(prisma);
+    const queueDate = new Date('2026-08-22T00:00:00.000Z');
+    const activeStatuses = [
+      PrismaEncounterStatus.ARRIVED,
+      PrismaEncounterStatus.TRIAGED,
+      PrismaEncounterStatus.IN_PROGRESS,
+      PrismaEncounterStatus.ONLEAVE,
+    ];
+
+    await repository.findMany(
+      {
+        queueDate,
+        includeActiveAcrossDates: true,
+        locationIds: ['location-1'],
+        statuses: activeStatuses,
+      },
+      1,
+      25,
+    );
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [{ queueDate }, { status: { in: activeStatuses } }],
+          status: { in: activeStatuses },
+        }),
+      }),
+    );
+    expect(count).toHaveBeenNthCalledWith(2, {
+      where: expect.objectContaining({
+        OR: [{ queueDate }, { status: { in: activeStatuses } }],
+        status: PrismaEncounterStatus.PLANNED,
+      }),
+    });
+  });
+
   it('formats a stable Encounter number with the facility year', async () => {
     const transaction = {
       $queryRaw: jest

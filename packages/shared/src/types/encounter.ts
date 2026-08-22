@@ -24,6 +24,14 @@ export enum EncounterStatus {
   UNKNOWN = "unknown",
 }
 
+/** Encounter statuses that remain in the active local queue until completion. */
+export const ACTIVE_ENCOUNTER_STATUSES: readonly EncounterStatus[] = [
+  EncounterStatus.ARRIVED,
+  EncounterStatus.TRIAGED,
+  EncounterStatus.IN_PROGRESS,
+  EncounterStatus.ONLEAVE,
+];
+
 export interface EncounterStatusHistory {
   id: string;
   status: EncounterStatus;
@@ -97,6 +105,8 @@ export interface EncounterListQuery {
   page?: number;
   pageSize?: number;
   queueDate?: string;
+  /** Include non-terminal encounters from earlier queue dates in the active queue. */
+  includeActiveAcrossDates?: boolean;
   locationId?: string;
   status?: EncounterStatus;
   statuses?: EncounterStatus[];

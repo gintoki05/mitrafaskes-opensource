@@ -19,6 +19,7 @@ import {
 import { useTriageResources } from "./triase/useTriageResources";
 import { useSession } from "@/hooks/useSession";
 import { can } from "@/lib/auth";
+import { formatEncounterQueueDate } from "@/lib/encounter-display";
 import { toast } from "sonner";
 import {
   getSatusehatEncounterStatus,
@@ -79,7 +80,7 @@ export default function TriaseScreen() {
         <PageHeader
           icon={<HeartPulse className="h-6 w-6" />}
           title="Triase Perawat"
-          description="Antrean triase dan hasil triase yang sudah tersimpan untuk kunjungan hari ini tersedia di sini."
+          description="Antrean triase dan hasil triase yang sudah tersimpan untuk kunjungan aktif tersedia di sini."
         />
         <div className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-4 lg:gap-8">
           <Card className="min-w-0">
@@ -131,7 +132,7 @@ export default function TriaseScreen() {
                       </span>
                       <span className="font-mono text-[11px] text-muted-foreground">
                         #{encounter.queueNumber} ·{" "}
-                        {encounter.patient?.medicalRecNo}
+                        {encounter.patient?.medicalRecNo} · {formatEncounterQueueDate(encounter.queueDate)}
                       </span>
                     </span>
                     <span className="flex shrink-0 flex-col items-end gap-1">

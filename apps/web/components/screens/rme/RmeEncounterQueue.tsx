@@ -19,6 +19,7 @@ import { ListChecks, PanelLeftClose, PanelLeftOpen, RefreshCw, RotateCcw } from 
 import { EncounterStatus } from '@mitrafaskes/shared';
 import type { ListMeta } from '@mitrafaskes/shared';
 import type { Encounter } from '@/lib/clinical-types';
+import { formatEncounterQueueDate } from '@/lib/encounter-display';
 
 type RmeEncounterQueueProps = {
   encounters: Encounter[];
@@ -60,7 +61,7 @@ export function RmeEncounterQueue({
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
   const selectedPatientName = selectedEncounter?.patient?.fullName ?? 'Belum ada pasien dipilih';
   const selectedPatientMeta = selectedEncounter
-    ? `${selectedEncounter.patient?.medicalRecNo ?? 'No. RM belum tersedia'} · #${selectedEncounter.queueNumber}`
+    ? `${selectedEncounter.patient?.medicalRecNo ?? 'No. RM belum tersedia'} · #${selectedEncounter.queueNumber} · ${formatEncounterQueueDate(selectedEncounter.queueDate)}`
     : 'Buka antrean untuk memilih pasien';
   const queueCountLabel = meta.total === 0 ? 'Tidak ada antrean aktif' : `${meta.total} antrean aktif`;
 
@@ -159,7 +160,9 @@ export function RmeEncounterQueue({
                 className="min-w-0 flex-1 text-left"
               >
                 <div className="truncate text-xs font-bold text-foreground">{encounter.patient?.fullName}</div>
-                <div className="font-mono text-[11px] text-muted-foreground">{encounter.patient?.medicalRecNo}</div>
+                <div className="font-mono text-[11px] text-muted-foreground">
+                  {encounter.patient?.medicalRecNo} · {formatEncounterQueueDate(encounter.queueDate)}
+                </div>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   <Badge className="bg-muted font-mono text-[10px] font-bold text-primary">#{encounter.queueNumber}</Badge>
                   <Badge
@@ -172,7 +175,7 @@ export function RmeEncounterQueue({
                   <Badge variant="outline" className="text-[10px]">{encounter.triage?.status === 'COMPLETED' ? 'Triase selesai' : encounter.triage?.status === 'DRAFT' ? 'Triase draft' : 'Triase belum selesai'}</Badge>
                 </div>
               </button>
-              {encounter.status === EncounterStatus.ARRIVED && canStart ? (
+              {(encounter.status === EncounterStatus.ARRIVED || encounter.status === EncounterStatus.TRIAGED) && canStart ? (
                 <Button type="button" size="sm" disabled={Boolean(startingEncounterId)} onClick={() => onStartEncounter(encounter)}>
                   {startingEncounterId === encounter.id ? 'Memulai...' : 'Mulai'}
                 </Button>

@@ -30,6 +30,7 @@ import {
   parseEncounterStatuses,
   parseTriageStatuses,
   parsePositiveInteger,
+  parseOptionalBoolean,
 } from './encounter.validation';
 
 type EncounterHttpQuery = Record<string, string | undefined>;
@@ -74,6 +75,9 @@ export class EncountersController {
           page: parsePositiveInteger(query.page, 1),
           pageSize: parsePositiveInteger(query.pageSize, 25),
           queueDate: query.queueDate,
+          includeActiveAcrossDates: parseOptionalBoolean(
+            query.includeActiveAcrossDates,
+          ),
           locationId: query.locationId,
           status: parseEncounterStatus(query.status),
           statuses: parseEncounterStatuses(query.statuses),

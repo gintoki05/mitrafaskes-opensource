@@ -29,8 +29,8 @@ const viewTabs: readonly {
   },
   {
     id: 'queue',
-    label: 'Antrean hari ini',
-    description: 'Kunjungan hari ini',
+    label: 'Antrean aktif',
+    description: 'Kunjungan belum selesai',
     countNoun: 'antrean',
     icon: Clock3,
   },

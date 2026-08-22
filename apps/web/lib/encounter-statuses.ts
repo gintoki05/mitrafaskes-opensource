@@ -1,0 +1,5 @@
+import { ACTIVE_ENCOUNTER_STATUSES } from '@mitrafaskes/shared';
+
+export { ACTIVE_ENCOUNTER_STATUSES };
+
+export const ACTIVE_ENCOUNTER_STATUS_QUERY = ACTIVE_ENCOUNTER_STATUSES.join(',');

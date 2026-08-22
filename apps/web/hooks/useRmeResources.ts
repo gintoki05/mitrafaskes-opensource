@@ -9,6 +9,7 @@ import type {
 } from '@mitrafaskes/shared';
 import { apiFetch } from '@/lib/auth';
 import { Encounter, Icd10Entry } from '@/lib/clinical-types';
+import { ACTIVE_ENCOUNTER_STATUS_QUERY } from '@/lib/encounter-statuses';
 import { reconcileRmeSelection } from '@/components/screens/rme/rme-selection-model';
 
 type RmeResourcesState = {
@@ -72,7 +73,8 @@ async function requestEncounters(page = 1): Promise<EncounterListResponse> {
   const params = new URLSearchParams({
     page: String(page),
     pageSize: '25',
-    statuses: 'arrived,in-progress,onleave',
+    statuses: ACTIVE_ENCOUNTER_STATUS_QUERY,
+    includeActiveAcrossDates: 'true',
   });
   const response = await apiFetch(`/api/encounters?${params.toString()}`);
   if (!response.ok) throw new Error('Antrean pasien tidak dapat dimuat.');

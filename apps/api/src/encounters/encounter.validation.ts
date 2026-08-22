@@ -137,6 +137,20 @@ export const parseEncounterStatuses = (
   return [...new Set(statuses)] as EncounterStatus[];
 };
 
+export const parseOptionalBoolean = (
+  value: string | undefined,
+): boolean | undefined => {
+  if (value === undefined) return undefined;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  throw new EncounterValidationError('Filter boolean tidak valid', [
+    {
+      field: 'includeActiveAcrossDates',
+      message: 'Filter includeActiveAcrossDates harus bernilai true atau false',
+    },
+  ]);
+};
+
 export const parseTriageStatuses = (
   value: string | undefined,
 ): TriageStatus[] | undefined => {

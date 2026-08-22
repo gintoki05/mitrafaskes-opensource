@@ -104,6 +104,7 @@ export class EncountersService {
     const { records, total, statusCounts } = await this.repository.findMany(
       {
         queueDate,
+        includeActiveAcrossDates: query.includeActiveAcrossDates,
         locationId:
           actor?.role === UserRole.PERAWAT ? undefined : query.locationId,
         locationIds,

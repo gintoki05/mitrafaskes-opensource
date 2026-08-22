@@ -13,12 +13,10 @@ import type {
 } from "@mitrafaskes/shared";
 import { apiFetch } from "@/lib/auth";
 import type { Encounter } from "@/lib/clinical-types";
+import { ACTIVE_ENCOUNTER_STATUSES } from "@/lib/encounter-statuses";
 
 const DEFAULT_PAGE_SIZE = 25;
-const DEFAULT_ENCOUNTER_STATUSES: readonly EncounterStatus[] = [
-  EncounterStatus.ARRIVED,
-  EncounterStatus.IN_PROGRESS,
-];
+const DEFAULT_ENCOUNTER_STATUSES: readonly EncounterStatus[] = ACTIVE_ENCOUNTER_STATUSES;
 
 type RegistrationDataState = {
   patients: Patient[];
@@ -263,6 +261,7 @@ async function requestEncounters(
 ): Promise<EncounterListResponse> {
   const params = listParams(page);
   params.set("statuses", statuses.join(","));
+  params.set("includeActiveAcrossDates", "true");
   const response = await apiFetch(`/api/encounters?${params.toString()}`);
   if (!response.ok) throw new Error("Antrean rawat jalan tidak dapat dimuat.");
   const payload = (await response.json()) as EncounterListResponse | Encounter[];

@@ -18,6 +18,7 @@ import {
   getSatusehatEncounterStatusTooltip,
 } from '@/components/satusehat/satusehat-status';
 import { getIntegrationLinkage, getLatestIntegrationSync } from '@/lib/integrations';
+import { formatEncounterQueueDate } from '@/lib/encounter-display';
 import { EncounterQueueActions } from './EncounterQueueActions';
 import {
   getQueueCountLabel,
@@ -105,10 +106,10 @@ export function QueuePanel({
         <div className="min-w-0 flex-1">
           <h2 id="queue-title" className="flex items-center gap-2 text-lg font-semibold text-foreground">
             <Clock3 className="h-4 w-4 text-primary" aria-hidden="true" />
-            Antrean rawat jalan hari ini
+            Antrean rawat jalan aktif
           </h2>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Status antrean mengikuti tahapan kunjungan.
+            Termasuk kunjungan lintas hari yang belum selesai.
           </p>
         </div>
         <span className="shrink-0 text-sm font-medium text-muted-foreground">
@@ -155,7 +156,7 @@ export function QueuePanel({
               }
               description={
                 statusFilter === 'ACTIVE'
-                  ? 'Pasien yang didaftarkan ke poli akan muncul di sini.'
+                  ? 'Pasien dengan kunjungan aktif akan muncul di sini.'
                   : 'Pilih status lain untuk melihat kunjungan yang tersedia.'
               }
             />
@@ -185,6 +186,8 @@ export function QueuePanel({
                     <span className="font-mono">{encounter.encounterNumber}</span>
                     <span aria-hidden="true">·</span>
                     <span>{encounter.patient?.medicalRecNo ?? 'Nomor RM belum tersedia'}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>Tanggal {formatEncounterQueueDate(encounter.queueDate)}</span>
                   </div>
                   <div className="mt-2 grid gap-x-4 gap-y-1 text-[11px] text-muted-foreground sm:grid-cols-2">
                     <span>Dokter: <strong className="text-foreground">{encounter.doctor?.fullName ?? 'Belum tersedia'}</strong></span>

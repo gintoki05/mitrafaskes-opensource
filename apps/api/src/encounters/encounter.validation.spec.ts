@@ -3,6 +3,7 @@ import { EncounterValidationError } from './encounter.errors';
 import {
   parseEncounterStatus,
   parseTriageStatuses,
+  parseOptionalBoolean,
   parsePositiveInteger,
   validateCreateEncounter,
   validateEncounterHistoryDateRange,
@@ -70,6 +71,13 @@ describe('Encounter validation', () => {
     expect(() => parseTriageStatuses('COMPLETED,UNKNOWN')).toThrow(
       EncounterValidationError,
     );
+  });
+
+  it('validates the cross-date active queue filter', () => {
+    expect(parseOptionalBoolean('true')).toBe(true);
+    expect(parseOptionalBoolean('false')).toBe(false);
+    expect(parseOptionalBoolean(undefined)).toBeUndefined();
+    expect(() => parseOptionalBoolean('yes')).toThrow(EncounterValidationError);
   });
 
   it('requires and trims a reason when correcting an Encounter', () => {

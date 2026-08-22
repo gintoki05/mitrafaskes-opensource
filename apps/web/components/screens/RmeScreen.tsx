@@ -275,7 +275,7 @@ export default function RmePage() {
                   </Button>
                 }
               />
-            ) : workspaceState === 'ready' && selectedEncounter && selectedEncounter.status === EncounterStatus.ARRIVED ? (
+            ) : workspaceState === 'ready' && selectedEncounter && (selectedEncounter.status === EncounterStatus.ARRIVED || selectedEncounter.status === EncounterStatus.TRIAGED) ? (
               <ScreenState
                 kind="empty"
                 title="Pasien menunggu pemeriksaan"

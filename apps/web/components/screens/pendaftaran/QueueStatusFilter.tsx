@@ -5,6 +5,7 @@ import type { EncounterStatusCounts } from '@mitrafaskes/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { ACTIVE_ENCOUNTER_STATUSES } from '@/lib/encounter-statuses';
 import {
   getSatusehatEncounterStatus,
   getSatusehatEncounterStatusTooltip,
@@ -39,7 +40,7 @@ const queueStatusLabels: Record<QueueStatusFilterValue, string> = {
 };
 
 const queueStatusTooltips: Record<QueueStatusFilterValue, string> = {
-  ACTIVE: 'Filter lokal untuk gabungan status arrived, in-progress, dan onleave.',
+  ACTIVE: 'Filter lokal untuk gabungan status arrived, triaged, in-progress, dan onleave.',
   [EncounterStatus.PLANNED]: getSatusehatEncounterStatusTooltip(EncounterStatus.PLANNED),
   [EncounterStatus.ARRIVED]: getSatusehatEncounterStatusTooltip(EncounterStatus.ARRIVED),
   [EncounterStatus.TRIAGED]: getSatusehatEncounterStatusTooltip(EncounterStatus.TRIAGED),
@@ -51,16 +52,10 @@ const queueStatusTooltips: Record<QueueStatusFilterValue, string> = {
   [EncounterStatus.UNKNOWN]: getSatusehatEncounterStatusTooltip(EncounterStatus.UNKNOWN),
 };
 
-const activeQueueStatuses: readonly EncounterStatus[] = [
-  EncounterStatus.ARRIVED,
-  EncounterStatus.IN_PROGRESS,
-  EncounterStatus.ONLEAVE,
-];
-
 export function getQueueStatuses(
   filter: QueueStatusFilterValue,
 ): readonly EncounterStatus[] {
-  return filter === 'ACTIVE' ? activeQueueStatuses : [filter];
+  return filter === 'ACTIVE' ? ACTIVE_ENCOUNTER_STATUSES : [filter];
 }
 
 export function getQueueStatusLabel(filter: QueueStatusFilterValue): string {
@@ -92,9 +87,10 @@ export function QueueStatusFilter({
         const selected = value === filter;
         const count =
           filter === 'ACTIVE'
-            ? statusCounts[EncounterStatus.ARRIVED] +
-              statusCounts[EncounterStatus.IN_PROGRESS] +
-              statusCounts[EncounterStatus.ONLEAVE]
+            ? ACTIVE_ENCOUNTER_STATUSES.reduce(
+                (total, status) => total + statusCounts[status],
+                0,
+              )
             : statusCounts[filter];
 
         return (

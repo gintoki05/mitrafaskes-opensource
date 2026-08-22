@@ -4,6 +4,7 @@ import { useCallback, useEffect, useReducer } from 'react';
 import type { EncounterListResponse, ListMeta } from '@mitrafaskes/shared';
 import type { Encounter } from '@/lib/clinical-types';
 import { apiFetch } from '@/lib/auth';
+import { ACTIVE_ENCOUNTER_STATUS_QUERY } from '@/lib/encounter-statuses';
 
 type State = { encounters: Encounter[]; meta: ListMeta; selected: Encounter | null; loading: boolean; error: string };
 type Action =
@@ -38,8 +39,9 @@ export function useTriageResources() {
       const params = new URLSearchParams({
         page: String(page),
         pageSize: '25',
-        statuses: 'arrived,in-progress,onleave',
+        statuses: ACTIVE_ENCOUNTER_STATUS_QUERY,
         triageStatuses: TRIAGE_QUEUE_STATUSES,
+        includeActiveAcrossDates: 'true',
       });
       const response = await apiFetch(`/api/encounters?${params.toString()}`);
       if (!response.ok) throw new Error('Daftar triase tidak dapat dimuat.');
