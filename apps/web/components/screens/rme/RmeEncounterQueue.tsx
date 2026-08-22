@@ -11,7 +11,12 @@ import {
 import { PaginationControl } from '@/components/ui/pagination';
 import { ScreenState } from '@/components/ScreenState';
 import { Button } from '@/components/ui/button';
-import { ListChecks, PanelLeftClose, PanelLeftOpen, RefreshCw } from 'lucide-react';
+import {
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+} from '@/components/satusehat/satusehat-status';
+import { ListChecks, PanelLeftClose, PanelLeftOpen, RefreshCw, RotateCcw } from 'lucide-react';
+import { EncounterStatus } from '@mitrafaskes/shared';
 import type { ListMeta } from '@mitrafaskes/shared';
 import type { Encounter } from '@/lib/clinical-types';
 
@@ -29,6 +34,9 @@ type RmeEncounterQueueProps = {
   canStart: boolean;
   startingEncounterId: string | null;
   onStartEncounter: (encounter: Encounter) => void;
+  canPause: boolean;
+  transitioningEncounterId: string | null;
+  onResumeEncounter: (encounter: Encounter) => void;
 };
 
 export function RmeEncounterQueue({
@@ -45,6 +53,9 @@ export function RmeEncounterQueue({
   canStart,
   startingEncounterId,
   onStartEncounter,
+  canPause,
+  transitioningEncounterId,
+  onResumeEncounter,
 }: RmeEncounterQueueProps) {
   const totalPages = Math.max(1, Math.ceil(meta.total / meta.pageSize));
   const selectedPatientName = selectedEncounter?.patient?.fullName ?? 'Belum ada pasien dipilih';
@@ -151,13 +162,32 @@ export function RmeEncounterQueue({
                 <div className="font-mono text-[11px] text-muted-foreground">{encounter.patient?.medicalRecNo}</div>
                 <div className="mt-1 flex flex-wrap gap-1.5">
                   <Badge className="bg-muted font-mono text-[10px] font-bold text-primary">#{encounter.queueNumber}</Badge>
-                  <Badge variant="outline" className="text-[10px]">{encounter.status === 'WAITING' ? 'Menunggu' : 'Sedang diperiksa'}</Badge>
+                  <Badge
+                    variant="outline"
+                    className="text-[10px]"
+                    title={getSatusehatEncounterStatusTooltip(encounter.status)}
+                  >
+                    {getSatusehatEncounterStatus(encounter.status)}
+                  </Badge>
                   <Badge variant="outline" className="text-[10px]">{encounter.triage?.status === 'COMPLETED' ? 'Triase selesai' : encounter.triage?.status === 'DRAFT' ? 'Triase draft' : 'Triase belum selesai'}</Badge>
                 </div>
               </button>
-              {encounter.status === 'WAITING' && canStart ? (
+              {encounter.status === EncounterStatus.ARRIVED && canStart ? (
                 <Button type="button" size="sm" disabled={Boolean(startingEncounterId)} onClick={() => onStartEncounter(encounter)}>
                   {startingEncounterId === encounter.id ? 'Memulai...' : 'Mulai'}
+                </Button>
+              ) : null}
+              {encounter.status === EncounterStatus.ONLEAVE && canPause ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={Boolean(transitioningEncounterId)}
+                  onClick={() => onResumeEncounter(encounter)}
+                  title="Lanjutkan pemeriksaan ke in-progress"
+                >
+                  <RotateCcw className="mr-1.5 h-3.5 w-3.5" aria-hidden="true" />
+                  {transitioningEncounterId === encounter.id ? 'Melanjutkan...' : 'Lanjutkan'}
                 </Button>
               ) : null}
             </div>

@@ -10,7 +10,10 @@ import type {
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { useIntegrationCapability } from '@/hooks/useIntegrationCapabilities';
-import { formatSatusehatRemoteStatus } from './satusehat-status';
+import {
+  formatSatusehatRemoteStatus,
+  getSatusehatStatusTooltip,
+} from './satusehat-status';
 
 type SatusehatLinkageBadgeProps = {
   linkage?: ResourceIntegrationLinkage;
@@ -55,7 +58,8 @@ export function SatusehatLinkageBadge({
         timeStyle: 'short',
       }).format(new Date(linkage.lastSyncedAt))}.`
     : '';
-  const remoteStatusLabel = formatSatusehatRemoteStatus(linkage.remoteStatus);
+  const remoteStatusCode = formatSatusehatRemoteStatus(linkage.remoteStatus);
+  const remoteStatusTooltip = getSatusehatStatusTooltip(linkage.remoteStatus);
   const latestSyncFailed = latestSync?.status === 'FAILED';
   const statusClassName = latestSyncFailed ? 'text-warning' : 'text-success';
 
@@ -73,7 +77,7 @@ export function SatusehatLinkageBadge({
   return (
     <span
       className={`inline-flex min-w-0 flex-wrap items-center gap-1.5 text-xs font-semibold sm:flex-nowrap ${statusClassName}`}
-      title={`Terhubung ke SATUSEHAT. ${resourceName}.${remoteStatusLabel ? ` Status SATUSEHAT: ${remoteStatusLabel}.` : ''}${lastSyncedLabel}${latestSyncFailed ? ` Sinkronisasi terakhir gagal${latestSync.errorMessage ? `: ${latestSync.errorMessage}` : '.'}` : ''}`}
+      title={`Terhubung ke SATUSEHAT. ${resourceName}.${remoteStatusTooltip ? ` ${remoteStatusTooltip}` : ''}${lastSyncedLabel}${latestSyncFailed ? ` Sinkronisasi terakhir gagal${latestSync.errorMessage ? `: ${latestSync.errorMessage}` : '.'}` : ''}`}
     >
       <span className={`flex h-6 w-6 shrink-0 overflow-hidden rounded border bg-white ${latestSyncFailed ? 'border-warning/25' : 'border-success/25'}`}>
         <Image
@@ -87,9 +91,12 @@ export function SatusehatLinkageBadge({
       <span className="text-foreground">SATUSEHAT</span>
       <span aria-hidden="true">·</span>
       <span>Terhubung</span>
-      {remoteStatusLabel ? (
-        <span className="font-medium text-foreground">
-          · Status: {remoteStatusLabel}
+      {remoteStatusCode ? (
+        <span
+          className="font-medium text-foreground"
+          title={remoteStatusTooltip}
+        >
+          · Status: {remoteStatusCode}
         </span>
       ) : null}
       <Button
@@ -113,7 +120,7 @@ export function SatusehatLinkageBadge({
       </Button>
       <span className="sr-only">
         {resourceName} terhubung ke SATUSEHAT
-        {remoteStatusLabel ? ` dengan status ${remoteStatusLabel}` : ''}; gunakan tombol salin untuk menyalin ID.
+        {remoteStatusCode ? ` dengan status ${remoteStatusCode}` : ''}; gunakan tombol salin untuk menyalin ID.
         {copied ? ' ID berhasil disalin.' : ''}
       </span>
     </span>

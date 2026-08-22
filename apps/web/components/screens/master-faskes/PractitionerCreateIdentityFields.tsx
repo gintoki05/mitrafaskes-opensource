@@ -1,5 +1,6 @@
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
+import type { PractitionerRoleOption } from '@mitrafaskes/shared';
 import type {
   PractitionerFormFieldUpdater,
   PractitionerFormState,
@@ -10,10 +11,16 @@ export function PractitionerCreateIdentityFields({
   form,
   disabled,
   updateField,
+  roles,
+  rolesLoading,
+  rolesError,
 }: {
   form: PractitionerFormState;
   disabled: boolean;
   updateField: PractitionerFormFieldUpdater;
+  roles: PractitionerRoleOption[];
+  rolesLoading: boolean;
+  rolesError: string;
 }) {
   return (
     <section className="space-y-4">
@@ -47,12 +54,25 @@ export function PractitionerCreateIdentityFields({
             onChange={(value) =>
               updateField('role', value as PractitionerFormState['role'])
             }
-            disabled={disabled}
+            disabled={disabled || rolesLoading || roles.length === 0}
           >
-            <option value="DOKTER">Dokter</option>
-            <option value="PERAWAT">Perawat</option>
-            <option value="PETUGAS_PENDAFTARAN">Petugas pendaftaran</option>
+            {rolesLoading ? (
+              <option value={form.role}>Memuat role...</option>
+            ) : roles.length > 0 ? (
+              roles.map((role) => (
+                <option key={role.id} value={role.code}>
+                  {role.name}
+                </option>
+              ))
+            ) : (
+              <option value="">Role tidak tersedia</option>
+            )}
           </SelectField>
+          {rolesError ? (
+            <p className="mt-1 text-xs text-destructive" role="alert">
+              {rolesError}
+            </p>
+          ) : null}
         </div>
         <div>
           <FieldLabel htmlFor="practitioner-create-username" required>

@@ -19,6 +19,7 @@ import type {
   IntegrationProviderDefinition,
   IntegrationRetryOptions,
   IntegrationResourceHandler,
+  RegisteredIntegrationResourceHandler,
 } from './integration.types';
 
 export class IntegrationProviderNotFoundError extends NotFoundException {
@@ -138,6 +139,17 @@ export class IntegrationRegistry {
       });
     }
     return handler;
+  }
+
+  getRegisteredResourceHandlers(
+    resourceType: string,
+  ): RegisteredIntegrationResourceHandler[] {
+    const handlers: RegisteredIntegrationResourceHandler[] = [];
+    for (const plugin of this.plugins.values()) {
+      const handler = plugin.getResourceHandler(resourceType);
+      if (handler) handlers.push({ provider: plugin.provider, handler });
+    }
+    return handlers;
   }
 
   async findResourceSummaries(

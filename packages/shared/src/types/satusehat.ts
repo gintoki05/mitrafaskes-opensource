@@ -405,7 +405,15 @@ export interface SatusehatLocationContext {
 }
 
 export type SatusehatEncounterStatus =
-  'arrived' | 'in-progress' | 'finished' | 'cancelled';
+  | 'planned'
+  | 'arrived'
+  | 'triaged'
+  | 'in-progress'
+  | 'onleave'
+  | 'finished'
+  | 'cancelled'
+  | 'entered-in-error'
+  | 'unknown';
 
 export interface SatusehatEncounterPeriod {
   start: string;

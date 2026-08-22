@@ -26,10 +26,15 @@ export interface SatusehatEncounterDependencies {
 }
 
 const statusMap: Readonly<Record<EncounterStatus, SatusehatEncounterStatus>> = {
-  [EncounterStatus.WAITING]: 'arrived',
+  [EncounterStatus.PLANNED]: 'planned',
+  [EncounterStatus.ARRIVED]: 'arrived',
+  [EncounterStatus.TRIAGED]: 'triaged',
   [EncounterStatus.IN_PROGRESS]: 'in-progress',
-  [EncounterStatus.COMPLETED]: 'finished',
+  [EncounterStatus.ONLEAVE]: 'onleave',
+  [EncounterStatus.FINISHED]: 'finished',
   [EncounterStatus.CANCELLED]: 'cancelled',
+  [EncounterStatus.ENTERED_IN_ERROR]: 'entered-in-error',
+  [EncounterStatus.UNKNOWN]: 'unknown',
 };
 
 export function toSatusehatEncounterPayload(
@@ -37,8 +42,15 @@ export function toSatusehatEncounterPayload(
   dependencies: SatusehatEncounterDependencies,
 ): SatusehatEncounterPayload {
   const status = statusMap[encounter.status];
+  const enteredInErrorAt =
+    encounter.status === EncounterStatus.ENTERED_IN_ERROR
+      ? [...encounter.statusHistory]
+          .reverse()
+          .find((entry) => entry.status === EncounterStatus.ENTERED_IN_ERROR)
+          ?.periodStart
+      : undefined;
   const terminalTime =
-    encounter.completedAt ?? encounter.cancelledAt ?? undefined;
+    encounter.completedAt ?? encounter.cancelledAt ?? enteredInErrorAt;
   const period = {
     start: encounter.arrivedAt.toISOString(),
     ...(terminalTime ? { end: terminalTime.toISOString() } : {}),

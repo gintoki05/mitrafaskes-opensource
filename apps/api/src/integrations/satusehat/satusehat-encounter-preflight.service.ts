@@ -185,7 +185,7 @@ export class SatusehatEncounterPreflightService {
         encounterLink,
         medicalRecord?.status,
       );
-    } else if (encounter.status === EncounterStatus.COMPLETED) {
+    } else if (encounter.status === EncounterStatus.FINISHED) {
       this.assertCompletedDiagnosisLinkage(
         encounter.id,
         diagnoses,

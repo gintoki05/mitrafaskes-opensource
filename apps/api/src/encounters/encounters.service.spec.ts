@@ -1,4 +1,8 @@
-import { Role, LocationStatus } from '@prisma/client';
+import {
+  EncounterStatus as PrismaEncounterStatus,
+  Role,
+  LocationStatus,
+} from '@prisma/client';
 import { EncounterStatus } from '@mitrafaskes/shared';
 import type { PrismaService } from '../database/prisma.service';
 import { EncountersService } from './encounters.service';
@@ -6,7 +10,7 @@ import { EncounterRepository } from './encounter.repository';
 
 const now = new Date('2026-08-10T02:00:00.000Z');
 
-function encounterRecord(status = EncounterStatus.WAITING) {
+function encounterRecord(status = EncounterStatus.ARRIVED) {
   return {
     id: 'enc-local-1',
     encounterNumber: 'ENC-2026-000001',
@@ -19,7 +23,7 @@ function encounterRecord(status = EncounterStatus.WAITING) {
     status,
     arrivedAt: now,
     startedAt: status === EncounterStatus.IN_PROGRESS ? now : null,
-    completedAt: status === EncounterStatus.COMPLETED ? now : null,
+    completedAt: status === EncounterStatus.FINISHED ? now : null,
     cancelledAt: status === EncounterStatus.CANCELLED ? now : null,
     version: 1,
     createdAt: now,
@@ -128,7 +132,7 @@ describe('EncountersService', () => {
 
     expect(result.encounterNumber).toBe('ENC-2026-000001');
     expect(result.queueNumber).toBe(1);
-    expect(result.status).toBe(EncounterStatus.WAITING);
+    expect(result.status).toBe(EncounterStatus.ARRIVED);
     expect(result.patient).toEqual(
       expect.objectContaining({
         birthDate: '1990-04-23',
@@ -141,14 +145,14 @@ describe('EncountersService', () => {
         data: expect.objectContaining({
           encounterNumber: 'ENC-2026-000001',
           queueNumber: 1,
-          status: EncounterStatus.WAITING,
+          status: PrismaEncounterStatus.ARRIVED,
         }),
       }),
     );
   });
 
   it('closes history, snapshots the actor, and increments lifecycle version atomically', async () => {
-    const current = encounterRecord(EncounterStatus.WAITING);
+    const current = encounterRecord(EncounterStatus.ARRIVED);
     const updated = {
       ...encounterRecord(EncounterStatus.IN_PROGRESS),
       version: 2,
@@ -157,7 +161,7 @@ describe('EncountersService', () => {
       $queryRaw: jest.fn().mockResolvedValue([
         {
           id: current.id,
-          status: EncounterStatus.WAITING,
+          status: EncounterStatus.ARRIVED,
           version: 1,
           doctorId: current.doctorId,
         },
@@ -203,7 +207,7 @@ describe('EncountersService', () => {
     expect(transaction.encounter.update).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          status: EncounterStatus.IN_PROGRESS,
+          status: PrismaEncounterStatus.IN_PROGRESS,
           version: { increment: 1 },
           startedAt: expect.any(Date),
         }),
@@ -212,7 +216,7 @@ describe('EncountersService', () => {
     expect(transaction.encounterStatusHistory.create).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({
-          status: EncounterStatus.IN_PROGRESS,
+          status: PrismaEncounterStatus.IN_PROGRESS,
           actorUserId: 'user-db-1',
           actorUsername: 'perawat_ani',
           actorRole: Role.PERAWAT,
@@ -227,7 +231,7 @@ describe('EncountersService', () => {
       $queryRaw: jest.fn().mockResolvedValue([
         {
           id: 'enc-local-1',
-          status: EncounterStatus.WAITING,
+          status: EncounterStatus.ARRIVED,
           version: 2,
           doctorId: 'doctor-1',
         },
@@ -267,7 +271,7 @@ describe('EncountersService', () => {
     await expect(
       service.updateStatus(
         'enc-local-1',
-        { status: EncounterStatus.COMPLETED, expectedVersion: 1 },
+        { status: EncounterStatus.FINISHED, expectedVersion: 1 },
         { id: 'doctor-1', username: 'dr_budi', role: 'DOKTER' },
       ),
     ).rejects.toMatchObject({
@@ -281,7 +285,7 @@ describe('EncountersService', () => {
       $queryRaw: jest.fn().mockResolvedValue([
         {
           id: 'enc-local-1',
-          status: EncounterStatus.WAITING,
+          status: EncounterStatus.ARRIVED,
           version: 1,
           doctorId: 'doctor-other',
         },
@@ -324,10 +328,15 @@ describe('EncountersService', () => {
         records: [],
         total: 0,
         statusCounts: {
-          WAITING: 0,
-          IN_PROGRESS: 0,
-          COMPLETED: 0,
-          CANCELLED: 0,
+          planned: 0,
+          arrived: 0,
+          triaged: 0,
+          'in-progress': 0,
+          onleave: 0,
+          finished: 0,
+          cancelled: 0,
+          'entered-in-error': 0,
+          unknown: 0,
         },
       });
     const prisma = {
@@ -337,7 +346,7 @@ describe('EncountersService', () => {
 
     try {
       await service.findMany(
-        { queueDate: '2026-08-13', status: EncounterStatus.WAITING },
+        { queueDate: '2026-08-13', status: EncounterStatus.ARRIVED },
         { id: 'session-user-1', username: 'dr_budi', role: 'DOKTER' },
       );
       expect(findMany).toHaveBeenCalledWith(
@@ -365,7 +374,7 @@ describe('EncountersService', () => {
           fromDate: '2026-08-01',
           toDate: '2026-08-13',
           search: 'RM-2026',
-          status: EncounterStatus.COMPLETED,
+          status: EncounterStatus.FINISHED,
         },
         { id: 'session-user-1', username: 'dr_budi', role: 'DOKTER' },
       );
@@ -374,7 +383,7 @@ describe('EncountersService', () => {
           fromDate: new Date('2026-08-01T00:00:00.000Z'),
           toDate: new Date('2026-08-13T00:00:00.000Z'),
           search: 'RM-2026',
-          status: EncounterStatus.COMPLETED,
+          status: PrismaEncounterStatus.FINISHED,
           doctorId: 'doctor-1',
         }),
         1,

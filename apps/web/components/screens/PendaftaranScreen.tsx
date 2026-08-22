@@ -56,6 +56,8 @@ export default function PendaftaranPage() {
   const canCreateQueue = can(currentUser, AccessPermission.QUEUE_CREATE);
   const canStartEncounter = can(currentUser, AccessPermission.QUEUE_START);
   const canCancelEncounter = can(currentUser, AccessPermission.QUEUE_CANCEL);
+  const canPauseEncounter = can(currentUser, AccessPermission.QUEUE_PAUSE);
+  const canCorrectEncounter = can(currentUser, AccessPermission.ENCOUNTER_CORRECT);
   const canSyncEncounter = can(currentUser, AccessPermission.SYNC_RETRY);
   const {
     patients,
@@ -134,17 +136,18 @@ export default function PendaftaranPage() {
     await refreshEncounters(encountersMeta.page, queueStatuses);
   };
 
-  const handleStatusChange = async (encounter: Encounter, status: EncounterStatus) => {
+  const handleStatusChange = async (
+    encounter: Encounter,
+    status: EncounterStatus,
+    reason?: string,
+  ) => {
     try {
       await changeEncounterStatus(encounter, status, {
         updateStatus: encounterActions.updateStatus,
-        syncSatusehat: encounterActions.syncSatusehat,
         refreshEncounters,
         page: encountersMeta.page,
         queueStatuses,
-        satusehatConfigured: satusehat.configured,
-        canSync: canSyncEncounter,
-      });
+      }, reason);
     } catch (error) {
       const code = (error as { code?: string }).code;
       if (code === 'ENCOUNTER_VERSION_CONFLICT') {
@@ -256,6 +259,8 @@ export default function PendaftaranPage() {
               onSyncEncounter={setSyncingEncounter}
               canStart={canStartEncounter}
               canCancel={canCancelEncounter}
+              canPause={canPauseEncounter}
+              canCorrect={canCorrectEncounter}
               canSync={canSyncEncounter}
             />
           </div>

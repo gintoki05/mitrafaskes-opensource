@@ -47,6 +47,7 @@ export function SelectField({
   "aria-label": ariaLabel,
   "aria-describedby": ariaDescribedBy,
   "aria-invalid": ariaInvalid,
+  title,
 }: {
   id: string;
   value: string;
@@ -58,6 +59,7 @@ export function SelectField({
   "aria-label"?: string;
   "aria-describedby"?: string;
   "aria-invalid"?: AriaAttributes["aria-invalid"];
+  title?: string;
 }) {
   const options = Children.toArray(children).flatMap((child) => {
     if (
@@ -95,6 +97,7 @@ export function SelectField({
         aria-label={ariaLabel}
         aria-describedby={ariaDescribedBy}
         aria-invalid={ariaInvalid}
+        title={title}
         className={cn(
           "min-w-0 w-full max-w-full px-2.5 py-1 text-sm",
           className,

@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePractitioners } from '@/hooks/usePractitioners';
+import { usePractitionerRoles } from '@/hooks/usePractitionerRoles';
 import { PractitionerCreateClinicalFields } from './PractitionerCreateClinicalFields';
 import { PractitionerCreateIdentityFields } from './PractitionerCreateIdentityFields';
 import { PractitionerCreatePlacementFields } from './PractitionerCreatePlacementFields';
@@ -32,6 +33,7 @@ export function PractitionerCreateForm({
   onSaved,
 }: Omit<PractitionerCreateDialogProps, 'open'>) {
   const { create } = usePractitioners();
+  const roleCatalog = usePractitionerRoles();
   const [form, setForm] = useState<PractitionerFormState>(
     initialPractitionerForm,
   );
@@ -79,6 +81,16 @@ export function PractitionerCreateForm({
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!canWrite) return;
+    const selectedRole = roleCatalog.roles.find(
+      (role) => role.code === form.role,
+    );
+    if (!selectedRole) {
+      toast.error('Role Practitioner belum tersedia.', {
+        description:
+          roleCatalog.error || 'Muat ulang form sebelum menyimpan data.',
+      });
+      return;
+    }
 
     setSaving(true);
     const payload: PractitionerCreateRequest = {
@@ -86,6 +98,7 @@ export function PractitionerCreateForm({
       password: form.password,
       fullName: form.fullName.trim(),
       role: form.role,
+      accessRoleId: selectedRole.id,
       nik: form.nik?.trim() || null,
       birthDate: form.birthDate || null,
       gender: form.gender || null,
@@ -132,6 +145,9 @@ export function PractitionerCreateForm({
             form={form}
             disabled={saving}
             updateField={updateField}
+            roles={roleCatalog.roles}
+            rolesLoading={roleCatalog.loading}
+            rolesError={roleCatalog.error}
           />
           <PractitionerCreateClinicalFields
             form={form}
@@ -155,7 +171,11 @@ export function PractitionerCreateForm({
             >
               Batal
             </Button>
-            <Button type="submit" disabled={saving} aria-busy={saving}>
+            <Button
+              type="submit"
+              disabled={saving || roleCatalog.loading || !roleCatalog.roles.length}
+              aria-busy={saving}
+            >
               {saving ? (
                 <RefreshCw className="h-4 w-4 motion-safe:animate-spin" />
               ) : null}

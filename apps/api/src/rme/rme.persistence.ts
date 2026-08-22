@@ -8,7 +8,7 @@ import {
   Prisma,
 } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
-import { UserRole } from '@mitrafaskes/shared';
+import { EncounterStatus, UserRole } from '@mitrafaskes/shared';
 import type { AuthenticatedUser } from '../auth/session-permission.guard';
 import { PrismaService } from '../database/prisma.service';
 import {
@@ -44,7 +44,7 @@ export const finalizationInclude = {
 
 export type LockedEncounter = {
   id: string;
-  status: 'WAITING' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  status: EncounterStatus;
   version: number;
   doctorId: string;
   organizationId: string;
@@ -327,10 +327,10 @@ export async function lockMedicalRecord(
 }
 
 export function assertEncounterInProgress(encounter: LockedEncounter): void {
-  if (encounter.status !== 'IN_PROGRESS') {
+  if (encounter.status !== EncounterStatus.IN_PROGRESS) {
     throw new ConflictException({
       code: 'RME_ENCOUNTER_NOT_IN_PROGRESS',
-      message: 'Encounter harus berstatus IN_PROGRESS untuk menulis RME.',
+      message: 'Encounter harus berstatus in-progress untuk menulis RME.',
     });
   }
 }

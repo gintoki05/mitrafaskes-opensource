@@ -53,7 +53,7 @@ export function getPractitionerColumns({
         <div className="min-w-48">
           <div className="font-semibold text-foreground">{row.original.fullName}</div>
           <div className="mt-1 text-[11px] text-muted-foreground">
-            @{row.original.username} · {row.original.role === 'DOKTER' ? 'Dokter' : row.original.role === 'PETUGAS_PENDAFTARAN' ? 'Petugas pendaftaran' : 'Perawat'}
+            @{row.original.username} · {row.original.accessRole?.name ?? (row.original.role === 'DOKTER' ? 'Dokter' : row.original.role === 'PETUGAS_PENDAFTARAN' ? 'Petugas pendaftaran' : 'Perawat')}
           </div>
         </div>
       ),

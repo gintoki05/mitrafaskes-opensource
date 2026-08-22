@@ -8,6 +8,7 @@ import {
 import { randomUUID } from 'node:crypto';
 import { MedicalRecordStatus as PrismaMedicalRecordStatus } from '@prisma/client';
 import {
+  EncounterStatus,
   UserRole,
   type MedicalRecord,
   type RmeAuditItem,
@@ -308,7 +309,7 @@ export class RmeService {
           isSameRequest &&
           current.status === PrismaMedicalRecordStatus.FINAL &&
           current.version === priorAudit.entityVersion &&
-          encounter.status === 'COMPLETED'
+          encounter.status === EncounterStatus.FINISHED
         ) {
           return readMedicalRecord(transaction, current.id);
         }

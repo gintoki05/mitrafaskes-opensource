@@ -25,7 +25,7 @@ const completedEncounter = (): EncounterWithRelations => {
     locationId: 'location-local-1',
     queueDate: new Date('2026-08-12T00:00:00.000Z'),
     queueNumber: 42,
-    status: EncounterStatus.COMPLETED,
+    status: EncounterStatus.FINISHED,
     arrivedAt,
     startedAt,
     completedAt,
@@ -58,7 +58,7 @@ const completedEncounter = (): EncounterWithRelations => {
       {
         id: 'history-arrived',
         encounterId: 'enc-local-42',
-        status: EncounterStatus.WAITING,
+        status: EncounterStatus.ARRIVED,
         periodStart: arrivedAt,
         periodEnd: startedAt,
         actorUserId: 'user-1',
@@ -80,7 +80,7 @@ const completedEncounter = (): EncounterWithRelations => {
       {
         id: 'history-finished',
         encounterId: 'enc-local-42',
-        status: EncounterStatus.COMPLETED,
+        status: EncounterStatus.FINISHED,
         periodStart: completedAt,
         periodEnd: null,
         actorUserId: 'user-2',

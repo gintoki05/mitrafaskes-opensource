@@ -16,7 +16,7 @@ import type { Encounter } from "@/lib/clinical-types";
 
 const DEFAULT_PAGE_SIZE = 25;
 const DEFAULT_ENCOUNTER_STATUSES: readonly EncounterStatus[] = [
-  EncounterStatus.WAITING,
+  EncounterStatus.ARRIVED,
   EncounterStatus.IN_PROGRESS,
 ];
 
@@ -64,10 +64,15 @@ const emptyPatientResponse = (page = 1): PatientListResponse => ({
 });
 
 const emptyEncounterStatusCounts = (): EncounterStatusCounts => ({
-  WAITING: 0,
-  IN_PROGRESS: 0,
-  COMPLETED: 0,
-  CANCELLED: 0,
+  planned: 0,
+  arrived: 0,
+  triaged: 0,
+  'in-progress': 0,
+  onleave: 0,
+  finished: 0,
+  cancelled: 0,
+  'entered-in-error': 0,
+  unknown: 0,
 });
 
 const emptyEncounterResponse = (page = 1): EncounterListResponse => ({

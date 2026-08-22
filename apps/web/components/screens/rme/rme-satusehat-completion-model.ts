@@ -76,11 +76,11 @@ export function resolveRmeSatusehatCompletion(input: {
   const recordFinal = record?.status === MedicalRecordStatus.FINAL;
   const encounterRecoveryAvailable =
     recordFinal &&
-    encounter.status === EncounterStatus.COMPLETED &&
+    encounter.status === EncounterStatus.FINISHED &&
     !encounterConnected &&
     Boolean(primaryDiagnosis);
   const encounterActive =
-    encounter.status === EncounterStatus.WAITING ||
+    encounter.status === EncounterStatus.ARRIVED ||
     encounter.status === EncounterStatus.IN_PROGRESS;
   const pendingReason = localChangesPending
     ? 'Simpan perubahan lokal sebelum sinkronisasi.'

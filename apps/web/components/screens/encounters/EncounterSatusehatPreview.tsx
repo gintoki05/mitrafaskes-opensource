@@ -11,14 +11,11 @@ import {
   UserRound,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { formatSatusehatRemoteStatus } from '@/components/satusehat/satusehat-status';
-
-const statusLabels: Record<Encounter['status'], string> = {
-  WAITING: 'Menunggu',
-  IN_PROGRESS: 'Diperiksa',
-  COMPLETED: 'Selesai',
-  CANCELLED: 'Dibatalkan',
-};
+import {
+  formatSatusehatRemoteStatus,
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+} from '@/components/satusehat/satusehat-status';
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('id-ID', { dateStyle: 'medium' }).format(
@@ -37,9 +34,10 @@ type PreviewFieldProps = {
   label: string;
   value: string | number;
   mono?: boolean;
+  tooltip?: string;
 };
 
-function PreviewField({ label, value, mono = false }: PreviewFieldProps) {
+function PreviewField({ label, value, mono = false, tooltip }: PreviewFieldProps) {
   return (
     <div>
       <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
@@ -50,7 +48,7 @@ function PreviewField({ label, value, mono = false }: PreviewFieldProps) {
             : 'mt-1 break-words text-sm text-foreground'
         }
       >
-        {value}
+        <span title={tooltip}>{value}</span>
       </dd>
     </div>
   );
@@ -146,7 +144,11 @@ export function EncounterSatusehatPreview({
             <PreviewField label="Nomor antrean" value={encounter.queueNumber} />
             <PreviewField label="Tanggal antrean" value={formatDate(encounter.queueDate)} />
             <PreviewField label="Waktu datang" value={formatDateTime(encounter.arrivedAt)} />
-            <PreviewField label="Status kunjungan" value={statusLabels[encounter.status]} />
+            <PreviewField
+              label="Status kunjungan SATUSEHAT"
+              value={getSatusehatEncounterStatus(encounter.status)}
+              tooltip={getSatusehatEncounterStatusTooltip(encounter.status)}
+            />
             <PreviewField
               label="ID kunjungan SATUSEHAT"
               value={

@@ -1,3 +1,4 @@
+import { EncounterStatus as PrismaEncounterStatus } from '@prisma/client';
 import { EncounterRepository } from './encounter.repository';
 import type { PrismaService } from '../database/prisma.service';
 
@@ -7,10 +8,15 @@ describe('EncounterRepository allocators', () => {
     const count = jest
       .fn()
       .mockResolvedValueOnce(1)
+      .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(1)
       .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0)
       .mockResolvedValueOnce(2)
-      .mockResolvedValueOnce(3);
+      .mockResolvedValueOnce(3)
+      .mockResolvedValueOnce(0)
+      .mockResolvedValueOnce(0);
     const prisma = {
       encounter: { findMany, count },
       $transaction: jest.fn((operations: Promise<unknown>[]) =>
@@ -25,7 +31,10 @@ describe('EncounterRepository allocators', () => {
         {
           queueDate,
           locationIds: ['location-1'],
-          statuses: ['WAITING', 'IN_PROGRESS'],
+          statuses: [
+            PrismaEncounterStatus.ARRIVED,
+            PrismaEncounterStatus.IN_PROGRESS,
+          ],
         },
         1,
         25,
@@ -34,10 +43,15 @@ describe('EncounterRepository allocators', () => {
       records: [],
       total: 1,
       statusCounts: {
-        WAITING: 1,
-        IN_PROGRESS: 0,
-        COMPLETED: 2,
-        CANCELLED: 3,
+        planned: 0,
+        arrived: 1,
+        triaged: 0,
+        'in-progress': 0,
+        onleave: 0,
+        finished: 2,
+        cancelled: 3,
+        'entered-in-error': 0,
+        unknown: 0,
       },
     });
 
@@ -46,7 +60,12 @@ describe('EncounterRepository allocators', () => {
         where: expect.objectContaining({
           queueDate,
           locationId: { in: ['location-1'] },
-          status: { in: ['WAITING', 'IN_PROGRESS'] },
+          status: {
+            in: [
+              PrismaEncounterStatus.ARRIVED,
+              PrismaEncounterStatus.IN_PROGRESS,
+            ],
+          },
         }),
       }),
     );
@@ -54,14 +73,14 @@ describe('EncounterRepository allocators', () => {
       where: expect.objectContaining({
         queueDate,
         locationId: { in: ['location-1'] },
-        status: 'WAITING',
+        status: PrismaEncounterStatus.PLANNED,
       }),
     });
-    expect(count).toHaveBeenNthCalledWith(5, {
+    expect(count).toHaveBeenNthCalledWith(10, {
       where: expect.objectContaining({
         queueDate,
         locationId: { in: ['location-1'] },
-        status: 'CANCELLED',
+        status: PrismaEncounterStatus.UNKNOWN,
       }),
     });
   });
@@ -81,7 +100,10 @@ describe('EncounterRepository allocators', () => {
       {
         queueDate: new Date('2026-08-16T00:00:00.000Z'),
         locationIds: ['location-1'],
-        statuses: ['WAITING', 'IN_PROGRESS'],
+        statuses: [
+          PrismaEncounterStatus.ARRIVED,
+          PrismaEncounterStatus.IN_PROGRESS,
+        ],
         triageStatuses: ['NOT_STARTED', 'DRAFT'],
       },
       1,
@@ -91,7 +113,12 @@ describe('EncounterRepository allocators', () => {
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: expect.objectContaining({
-          status: { in: ['WAITING', 'IN_PROGRESS'] },
+          status: {
+            in: [
+              PrismaEncounterStatus.ARRIVED,
+              PrismaEncounterStatus.IN_PROGRESS,
+            ],
+          },
           OR: [
             { medicalRecord: null },
             {
@@ -160,7 +187,7 @@ describe('EncounterRepository allocators', () => {
           fromDate,
           toDate,
           search: 'Siti Aminah',
-          status: 'COMPLETED',
+          status: PrismaEncounterStatus.FINISHED,
         },
         2,
         25,
@@ -171,7 +198,7 @@ describe('EncounterRepository allocators', () => {
       expect.objectContaining({
         where: expect.objectContaining({
           queueDate: { gte: fromDate, lte: toDate },
-          status: 'COMPLETED',
+          status: PrismaEncounterStatus.FINISHED,
           OR: expect.any(Array),
         }),
         orderBy: [

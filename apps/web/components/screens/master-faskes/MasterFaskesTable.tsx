@@ -105,10 +105,10 @@ export function MasterFaskesTable<TData>({
 
   return (
     <section className="data-surface" aria-label={caption}>
-      <div className="data-toolbar flex-wrap">
+      <div className="data-toolbar flex-col items-stretch">
         <form
           onSubmit={onSearchSubmit}
-          className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center"
+          className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-center"
         >
           <div className="relative min-w-0 flex-1 sm:max-w-xl">
             <label htmlFor={`master-search-${caption}`} className="sr-only">
@@ -127,11 +127,11 @@ export function MasterFaskesTable<TData>({
               className="h-10 pl-9 text-sm"
             />
           </div>
-          <Button type="submit" className="sm:h-10 sm:px-4">
+          <Button type="submit" className="shrink-0 sm:h-10 sm:px-4">
             Cari data
           </Button>
         </form>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full min-w-0 flex-wrap items-center justify-start gap-2">
           {filters}
           {hasActiveFilters && onClearFilters ? (
             <Button

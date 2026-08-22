@@ -6,10 +6,15 @@ export interface SatusehatEncounterContractIssue {
 }
 
 const statuses = new Set<SatusehatEncounterStatus>([
+  'planned',
   'arrived',
+  'triaged',
   'in-progress',
+  'onleave',
   'finished',
   'cancelled',
+  'entered-in-error',
+  'unknown',
 ]);
 const utcDateTimePattern =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|\+00:00)$/;

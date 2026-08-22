@@ -1,4 +1,8 @@
-import type { EncounterStatus } from '@mitrafaskes/shared';
+import { EncounterStatus } from '@mitrafaskes/shared';
+import {
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+} from '../../satusehat/satusehat-status.ts';
 import type {
   VisitHistoryFilters,
   VisitHistoryStatusFilter,
@@ -9,17 +13,52 @@ export const VISIT_HISTORY_RANGE_DAYS = 30;
 
 export const visitHistoryStatusLabels: Record<VisitHistoryStatusFilter, string> = {
   ALL: 'Semua status',
-  WAITING: 'Menunggu',
-  IN_PROGRESS: 'Diperiksa',
-  COMPLETED: 'Selesai',
-  CANCELLED: 'Dibatalkan',
+  [EncounterStatus.PLANNED]: getSatusehatEncounterStatus(EncounterStatus.PLANNED),
+  [EncounterStatus.ARRIVED]: getSatusehatEncounterStatus(EncounterStatus.ARRIVED),
+  [EncounterStatus.TRIAGED]: getSatusehatEncounterStatus(EncounterStatus.TRIAGED),
+  [EncounterStatus.IN_PROGRESS]: getSatusehatEncounterStatus(EncounterStatus.IN_PROGRESS),
+  [EncounterStatus.ONLEAVE]: getSatusehatEncounterStatus(EncounterStatus.ONLEAVE),
+  [EncounterStatus.FINISHED]: getSatusehatEncounterStatus(EncounterStatus.FINISHED),
+  [EncounterStatus.CANCELLED]: getSatusehatEncounterStatus(EncounterStatus.CANCELLED),
+  [EncounterStatus.ENTERED_IN_ERROR]: getSatusehatEncounterStatus(EncounterStatus.ENTERED_IN_ERROR),
+  [EncounterStatus.UNKNOWN]: getSatusehatEncounterStatus(EncounterStatus.UNKNOWN),
 };
 
 export const encounterStatusLabels: Record<EncounterStatus, string> = {
-  WAITING: 'Menunggu',
-  IN_PROGRESS: 'Diperiksa',
-  COMPLETED: 'Selesai',
-  CANCELLED: 'Dibatalkan',
+  [EncounterStatus.PLANNED]: getSatusehatEncounterStatus(EncounterStatus.PLANNED),
+  [EncounterStatus.ARRIVED]: getSatusehatEncounterStatus(EncounterStatus.ARRIVED),
+  [EncounterStatus.TRIAGED]: getSatusehatEncounterStatus(EncounterStatus.TRIAGED),
+  [EncounterStatus.IN_PROGRESS]: getSatusehatEncounterStatus(EncounterStatus.IN_PROGRESS),
+  [EncounterStatus.ONLEAVE]: getSatusehatEncounterStatus(EncounterStatus.ONLEAVE),
+  [EncounterStatus.FINISHED]: getSatusehatEncounterStatus(EncounterStatus.FINISHED),
+  [EncounterStatus.CANCELLED]: getSatusehatEncounterStatus(EncounterStatus.CANCELLED),
+  [EncounterStatus.ENTERED_IN_ERROR]: getSatusehatEncounterStatus(EncounterStatus.ENTERED_IN_ERROR),
+  [EncounterStatus.UNKNOWN]: getSatusehatEncounterStatus(EncounterStatus.UNKNOWN),
+};
+
+export const encounterStatusTooltips: Record<EncounterStatus, string> = {
+  [EncounterStatus.PLANNED]: getSatusehatEncounterStatusTooltip(EncounterStatus.PLANNED),
+  [EncounterStatus.ARRIVED]: getSatusehatEncounterStatusTooltip(EncounterStatus.ARRIVED),
+  [EncounterStatus.TRIAGED]: getSatusehatEncounterStatusTooltip(EncounterStatus.TRIAGED),
+  [EncounterStatus.IN_PROGRESS]: getSatusehatEncounterStatusTooltip(EncounterStatus.IN_PROGRESS),
+  [EncounterStatus.ONLEAVE]: getSatusehatEncounterStatusTooltip(EncounterStatus.ONLEAVE),
+  [EncounterStatus.FINISHED]: getSatusehatEncounterStatusTooltip(EncounterStatus.FINISHED),
+  [EncounterStatus.CANCELLED]: getSatusehatEncounterStatusTooltip(EncounterStatus.CANCELLED),
+  [EncounterStatus.ENTERED_IN_ERROR]: getSatusehatEncounterStatusTooltip(EncounterStatus.ENTERED_IN_ERROR),
+  [EncounterStatus.UNKNOWN]: getSatusehatEncounterStatusTooltip(EncounterStatus.UNKNOWN),
+};
+
+export const visitHistoryStatusTooltips: Record<VisitHistoryStatusFilter, string> = {
+  ALL: 'Menampilkan semua status Encounter.',
+  [EncounterStatus.PLANNED]: encounterStatusTooltips[EncounterStatus.PLANNED],
+  [EncounterStatus.ARRIVED]: encounterStatusTooltips[EncounterStatus.ARRIVED],
+  [EncounterStatus.TRIAGED]: encounterStatusTooltips[EncounterStatus.TRIAGED],
+  [EncounterStatus.IN_PROGRESS]: encounterStatusTooltips[EncounterStatus.IN_PROGRESS],
+  [EncounterStatus.ONLEAVE]: encounterStatusTooltips[EncounterStatus.ONLEAVE],
+  [EncounterStatus.FINISHED]: encounterStatusTooltips[EncounterStatus.FINISHED],
+  [EncounterStatus.CANCELLED]: encounterStatusTooltips[EncounterStatus.CANCELLED],
+  [EncounterStatus.ENTERED_IN_ERROR]: encounterStatusTooltips[EncounterStatus.ENTERED_IN_ERROR],
+  [EncounterStatus.UNKNOWN]: encounterStatusTooltips[EncounterStatus.UNKNOWN],
 };
 
 export function dateInputValue(date: Date): string {
@@ -63,13 +102,22 @@ export function formatVisitDateTime(value: string | undefined): string {
 }
 
 export function statusClass(status: EncounterStatus): string {
-  if (status === 'WAITING') {
+  if (
+    status === EncounterStatus.PLANNED ||
+    status === EncounterStatus.ARRIVED ||
+    status === EncounterStatus.TRIAGED ||
+    status === EncounterStatus.ONLEAVE
+  ) {
     return 'clinical-status-warning border text-xs font-semibold';
   }
-  if (status === 'IN_PROGRESS') {
+  if (status === EncounterStatus.IN_PROGRESS) {
     return 'border-primary/20 bg-primary/10 text-xs font-semibold text-primary';
   }
-  if (status === 'CANCELLED') {
+  if (
+    status === EncounterStatus.CANCELLED ||
+    status === EncounterStatus.ENTERED_IN_ERROR ||
+    status === EncounterStatus.UNKNOWN
+  ) {
     return 'clinical-status-error border text-xs font-semibold';
   }
   return 'clinical-status-success border text-xs font-semibold';

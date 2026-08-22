@@ -51,6 +51,21 @@ describe('Practitioner validation', () => {
     });
   });
 
+  it('keeps the selected access role reference for a new Practitioner', () => {
+    expect(
+      validatePractitionerCreate({
+        username: 'dr_role',
+        password: 'Temporary123!',
+        fullName: 'Dokter Role',
+        role: 'DOKTER',
+        accessRoleId: 'access-role-dokter',
+      }),
+    ).toMatchObject({
+      role: 'DOKTER',
+      accessRoleId: 'access-role-dokter',
+    });
+  });
+
   it('normalizes a valid local profile update', () => {
     expect(
       validatePractitionerUpdate({

@@ -14,11 +14,11 @@ export function assertHistoricalEncounterProjectionAllowed(
         'Encounter sudah memiliki linkage; recovery historis tidak boleh menurunkan status remote.',
     });
   }
-  if (encounter.status !== EncounterStatus.COMPLETED) {
+  if (encounter.status !== EncounterStatus.FINISHED) {
     throw new ConflictException({
       code: 'SATUSEHAT_ENCOUNTER_RECOVERY_NOT_APPLICABLE',
       message:
-        'Recovery historis hanya berlaku untuk Encounter lokal COMPLETED yang belum pernah terhubung.',
+        'Recovery historis hanya berlaku untuk Encounter lokal FINISHED yang belum pernah terhubung.',
     });
   }
   if (medicalRecordStatus !== 'FINAL') {
@@ -36,7 +36,7 @@ export function toHistoricalInProgressEncounter(
   const statusHistory = encounter.statusHistory
     .filter(
       (entry) =>
-        entry.status === EncounterStatus.WAITING ||
+        entry.status === EncounterStatus.ARRIVED ||
         entry.status === EncounterStatus.IN_PROGRESS,
     )
     .sort(

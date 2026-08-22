@@ -78,7 +78,7 @@ test('completion flow starts with Encounter and names downstream dependencies', 
 test('final Encounter is blocked until the primary Condition is linked', () => {
   const model = resolveRmeSatusehatCompletion({
     encounter: encounter({
-      status: EncounterStatus.COMPLETED,
+      status: EncounterStatus.FINISHED,
       integrations: connected('in-progress'),
     }),
     record: record({
@@ -105,7 +105,7 @@ test('final Encounter is blocked until the primary Condition is linked', () => {
 test('a final local RME can recover a missed initial Encounter through primary Condition sync', () => {
   const model = resolveRmeSatusehatCompletion({
     encounter: encounter({
-      status: EncounterStatus.COMPLETED,
+      status: EncounterStatus.FINISHED,
       completedAt: '2026-08-19T02:00:00.000Z',
       integrations: [],
     }),
@@ -134,7 +134,7 @@ test('a final local RME can recover a missed initial Encounter through primary C
 test('linked primary diagnosis makes the finished update ready', () => {
   const model = resolveRmeSatusehatCompletion({
     encounter: encounter({
-      status: EncounterStatus.COMPLETED,
+      status: EncounterStatus.FINISHED,
       integrations: connected('in-progress'),
     }),
     record: record({
@@ -164,7 +164,7 @@ test('finished linkage remains complete while a latest retry failure stays disco
   };
   const model = resolveRmeSatusehatCompletion({
     encounter: encounter({
-      status: EncounterStatus.COMPLETED,
+      status: EncounterStatus.FINISHED,
       integrations: encounterIntegrations,
     }),
     record: record({ status: MedicalRecordStatus.FINAL }),

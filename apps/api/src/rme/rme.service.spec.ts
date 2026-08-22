@@ -1,4 +1,5 @@
 import { MedicalRecordStatus } from '@prisma/client';
+import { EncounterStatus } from '@mitrafaskes/shared';
 import type { PrismaService } from '../database/prisma.service';
 import type { EncountersService } from '../encounters/encounters.service';
 import { RmeService } from './rme.service';
@@ -75,7 +76,7 @@ function finalizationDraft() {
     ...medicalRecord(),
     encounter: {
       id: 'encounter-1',
-      status: 'IN_PROGRESS',
+      status: EncounterStatus.IN_PROGRESS,
       patientId: 'patient-1',
       doctorId: 'doctor-1',
       organizationId: 'organization-1',
@@ -131,7 +132,7 @@ function successfulTransaction() {
       .mockResolvedValueOnce([
         {
           id: 'encounter-1',
-          status: 'IN_PROGRESS',
+          status: EncounterStatus.IN_PROGRESS,
           version: 3,
           doctorId: 'doctor-1',
           organizationId: 'organization-1',
@@ -166,7 +167,7 @@ describe('RmeService lifecycle', () => {
         .mockResolvedValueOnce([
           {
             id: 'encounter-1',
-            status: 'IN_PROGRESS',
+            status: EncounterStatus.IN_PROGRESS,
             version: 2,
             doctorId: 'doctor-1',
             organizationId: 'organization-1',
@@ -214,7 +215,7 @@ describe('RmeService lifecycle', () => {
         .mockResolvedValueOnce([
           {
             id: 'encounter-1',
-            status: 'IN_PROGRESS',
+            status: EncounterStatus.IN_PROGRESS,
             version: 2,
             doctorId: 'doctor-1',
             organizationId: 'organization-1',
@@ -319,7 +320,7 @@ describe('RmeService lifecycle', () => {
         .mockResolvedValueOnce([
           {
             id: 'encounter-1',
-            status: 'IN_PROGRESS',
+            status: EncounterStatus.IN_PROGRESS,
             version: 2,
             doctorId: 'doctor-1',
             organizationId: 'organization-1',
@@ -386,7 +387,7 @@ describe('RmeService lifecycle', () => {
         .mockResolvedValueOnce([
           {
             id: 'encounter-1',
-            status: 'IN_PROGRESS',
+            status: EncounterStatus.IN_PROGRESS,
             version: 2,
             doctorId: 'doctor-1',
             organizationId: 'organization-1',
@@ -441,7 +442,7 @@ describe('RmeService lifecycle', () => {
     };
     const encounterLock = {
       id: 'encounter-1',
-      status: 'IN_PROGRESS',
+      status: EncounterStatus.IN_PROGRESS,
       version: 3,
       doctorId: 'doctor-1',
       organizationId: 'organization-1',
@@ -503,7 +504,7 @@ describe('RmeService lifecycle', () => {
         .mockResolvedValueOnce([
           {
             id: 'encounter-1',
-            status: 'IN_PROGRESS',
+            status: EncounterStatus.IN_PROGRESS,
             version: 3,
             doctorId: 'doctor-1',
             organizationId: 'organization-1',
@@ -578,7 +579,7 @@ describe('RmeService lifecycle', () => {
         .mockResolvedValueOnce([
           {
             id: 'encounter-1',
-            status: 'COMPLETED',
+            status: EncounterStatus.FINISHED,
             version: 4,
             doctorId: 'doctor-1',
             organizationId: 'organization-1',
@@ -626,7 +627,7 @@ describe('RmeService lifecycle', () => {
         .mockResolvedValueOnce([
           {
             id: 'encounter-1',
-            status: 'COMPLETED',
+            status: EncounterStatus.FINISHED,
             version: 4,
             doctorId: 'doctor-1',
             organizationId: 'organization-1',
@@ -672,7 +673,7 @@ describe('RmeService lifecycle', () => {
       .mockResolvedValueOnce([
         {
           id: 'encounter-1',
-          status: 'IN_PROGRESS',
+          status: EncounterStatus.IN_PROGRESS,
           version: 3,
           doctorId: 'doctor-1',
           organizationId: 'organization-1',
@@ -701,7 +702,7 @@ describe('RmeService lifecycle', () => {
     transaction.$queryRaw.mockReset().mockResolvedValueOnce([
       {
         id: 'encounter-1',
-        status: 'IN_PROGRESS',
+        status: EncounterStatus.IN_PROGRESS,
         version: 3,
         doctorId: 'doctor-other',
         organizationId: 'organization-1',
@@ -771,7 +772,7 @@ describe('RmeService lifecycle', () => {
         .mockResolvedValueOnce([
           {
             id: 'encounter-1',
-            status: 'IN_PROGRESS',
+            status: EncounterStatus.IN_PROGRESS,
             version: 1,
             doctorId: 'doctor-1',
             organizationId: 'organization-1',
@@ -861,7 +862,7 @@ describe('RmeService lifecycle', () => {
         .mockResolvedValueOnce([
           {
             id: 'encounter-1',
-            status: 'IN_PROGRESS',
+            status: EncounterStatus.IN_PROGRESS,
             version: 1,
             doctorId: 'doctor-1',
             organizationId: 'organization-1',

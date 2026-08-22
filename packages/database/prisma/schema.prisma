@@ -105,10 +105,15 @@ enum PatientRelationshipCode {
 }
 
 enum EncounterStatus {
-  WAITING
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
+  PLANNED         @map("planned")
+  ARRIVED         @map("arrived")
+  TRIAGED         @map("triaged")
+  IN_PROGRESS     @map("in-progress")
+  ONLEAVE         @map("onleave")
+  FINISHED        @map("finished")
+  CANCELLED       @map("cancelled")
+  ENTERED_IN_ERROR @map("entered-in-error")
+  UNKNOWN         @map("unknown")
 }
 
 enum MedicalRecordStatus {
@@ -139,6 +144,20 @@ enum SyncStatus {
   PENDING
   SUCCESS
   FAILED
+}
+
+enum IntegrationOutboxStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+  BLOCKED
+  SKIPPED
+}
+
+enum IntegrationOutboxDispatchScope {
+  ALL_ENABLED
+  LINKED_ONLY
 }
 
 enum MasterDataImportStatus {
@@ -591,7 +610,7 @@ model Encounter {
   locationId      String
   queueDate       DateTime                 @db.Date
   queueNumber     Int
-  status          EncounterStatus          @default(WAITING)
+  status          EncounterStatus          @default(ARRIVED)
   arrivedAt       DateTime                 @default(now())
   startedAt       DateTime?
   completedAt     DateTime?
@@ -621,6 +640,7 @@ model EncounterStatusHistory {
   actorUserId   String?
   actorUsername String          @db.VarChar(128)
   actorRole     Role
+  reason        String?         @db.VarChar(500)
   createdAt     DateTime        @default(now())
   encounter     Encounter       @relation(fields: [encounterId], references: [id], onDelete: Cascade)
   actorUser     User?           @relation("EncounterStatusActor", fields: [actorUserId], references: [id], onDelete: SetNull)
@@ -809,4 +829,25 @@ model SatusehatSyncLog {
   updatedAt    DateTime   @updatedAt
 
   @@index([resourceType, resourceId, updatedAt])
+}
+
+model IntegrationOutboxEvent {
+  id               String                          @id @default(uuid())
+  resourceType     String                          @db.VarChar(64)
+  resourceId       String
+  aggregateVersion Int
+  operation        String                          @db.VarChar(32)
+  dispatchScope    IntegrationOutboxDispatchScope  @default(ALL_ENABLED)
+  status           IntegrationOutboxStatus         @default(PENDING)
+  attempt          Int                             @default(0)
+  nextAttemptAt   DateTime                        @default(now())
+  lockedAt        DateTime?
+  processedAt     DateTime?
+  errorMessage    String?                         @db.VarChar(1000)
+  createdAt       DateTime                        @default(now())
+  updatedAt       DateTime                        @updatedAt
+
+  @@unique([resourceType, resourceId, aggregateVersion, operation])
+  @@index([status, nextAttemptAt])
+  @@index([resourceType, resourceId, createdAt])
 }

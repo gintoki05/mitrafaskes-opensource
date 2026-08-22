@@ -30,6 +30,11 @@ export interface IntegrationResourceHandler {
   link?(localResourceId: string, input: unknown): Promise<unknown>;
 }
 
+export interface RegisteredIntegrationResourceHandler {
+  provider: string;
+  handler: IntegrationResourceHandler;
+}
+
 export interface IntegrationPlugin {
   readonly provider: string;
   readonly descriptor: IntegrationCapability;

@@ -1,31 +1,62 @@
-# Design QA — Arctic Cyan + Ink RME
+# Design QA — RME Vital Signs
+
+source visual truth: `C:\Users\user\AppData\Local\Temp\codex-clipboard-fefeab48-1671-4cb7-b362-244765e0ca08.png`
+
+implementation screenshot: `C:\Users\user\Documents\Developments\Ajie\mitrafaskes-opensource\design-qa-rme-vital-signs.png`
+
+viewport: 1142 × 234 CSS px
+
+source pixels: 1142 × 234
+
+implementation pixels: 1134 × 232 (the in-app browser capture excludes its scrollbar gutter)
+
+density normalization: no resampling; the comparison focused on the shared card content region. The source and implementation were captured in the empty/default form state.
+
+## Full-view comparison evidence
+
+The card keeps the same single-row desktop composition, pale background, white surface, cool border, green activity icon, dark title, eight metric labels, and outlined inputs. The implementation now reserves a consistent two-line label area, so every input starts on the same baseline instead of dropping below labels that wrap.
+
+## Focused region comparison evidence
+
+The label/input grid was inspected at the desktop viewport and at 390 × 844 CSS px. Desktop measurements showed all eight inputs at the same y-position (`149px`, `48px` high). The mobile check showed two-column wrapping with no horizontal overflow.
+
+## Required fidelity surfaces
+
+- Fonts and typography: title increased to the reference hierarchy (`text-lg`); labels use readable `text-sm` sizing with consistent `leading-5`; input values retain the medical monospace treatment.
+- Spacing and layout rhythm: card padding, title-to-field gap, column gap, label reserve, and input height were tuned to the reference; all desktop inputs share one baseline.
+- Colors and visual tokens: existing application tokens remain in use for foreground, success icon, card, border, and input states; no global token changes were made.
+- Image quality and asset fidelity: the reference uses a UI icon, not a raster asset; the existing `Activity` icon library component is retained.
+- Copy and content: all Indonesian labels and field IDs remain unchanged, including `SpO₂ (%)` and `/menit`.
+
+## Comparison history
+
+### Iteration 1
+
+- [P1] Input baseline drift: labels that wrapped onto two lines pushed only some inputs downward. Fixed with a shared `min-h-10` label area and consistent label spacing.
+- [P2] Form density was smaller than the source: title, field labels, card spacing, and controls were visually compact. Fixed with the existing card tokens plus `text-lg` title, `text-sm` labels, `h-12` inputs, and five-unit column spacing.
+
+### Iteration 2
+
+- [P2] The first pass placed labels about 8px too high relative to the source. Fixed by increasing the card header/content gap from `gap-5` to `gap-7`.
+- Post-fix evidence: card height measured about 201px and all eight inputs measured `y=149px`, `height=48px`; no horizontal overflow was present at the mobile check.
+
+## Findings
+
+No actionable P0, P1, or P2 differences remain.
+
+## Open Questions
+
+None.
+
+## Implementation Checklist
+
+- [x] Align desktop vital-sign inputs despite wrapped labels.
+- [x] Preserve all existing field IDs, types, ranges, and change handlers.
+- [x] Verify desktop source comparison and mobile overflow behavior.
+- [x] Check browser console for errors; none were reported.
+
+## Follow-up Polish
+
+No P3 follow-up is required for this focused UI fix.
 
 final result: passed
-
-Date: 2026-08-02
-
-## Review coverage
-
-- `/login` reviewed at the default desktop viewport and at 390×844. The split ink-navy/white layout with a blue-white canvas fits the viewport without horizontal overflow.
-- `/rme` reviewed with a signed-in doctor demo session. The new shell, navigation, page heading, patient context, queue, clinical forms, and status treatments render together.
-- `/pendaftaran` reviewed with a signed-in admin demo session. The table-first layout, search toolbar, queue rows, responsive table scroll container, and patient-registration dialog were checked.
-- Desktop sidebar reviewed in expanded and collapsed icon-rail states. The topbar trigger, persisted state, accessible navigation labels, and content/topbar offset were checked.
-- The patient list API returned an empty list in this local run; the empty table state was reviewed, while the queue rendered two existing local encounters.
-- Mobile metrics at 390×844: document scroll width stayed within the viewport; the dense table used an intentional 850px inner scroll width inside a 348px container.
-- Arctic Cyan + Ink palette spot-check: body text on blue-white measured 13.01:1, primary button text on cyan-teal 5.59:1, sidebar text on ink navy 11.48:1, and sidebar secondary text 7.58:1.
-
-## Interaction checks
-
-- Login submit navigated to the role default route.
-- Role-aware navigation exposed the expected links for doctor and admin sessions.
-- Sidebar trigger collapsed the rail from 256px to 72px; `Ctrl+B` / `Cmd+B` toggled it back, and the main content followed the rail without horizontal overflow.
-- Registration navigation opened `/pendaftaran` through the product menu.
-- “Pasien Baru” opened a labelled dialog with the NIK field focused.
-- Escape/cancel path remains wired to close the dialog.
-- Console errors and warnings were empty during the final browser check.
-
-## Automated checks
-
-- Impeccable detector: `[]`
-- `npm --workspace=apps/web run lint`: passed with one pre-existing warning in `apps/web/types/env.d.ts` (`NodeJS` unused).
-- `npm run build`: passed for API, shared, database, and web workspaces.

@@ -9,6 +9,13 @@ describe('PRI-14 Encounter migration', () => {
     ),
     'utf8',
   );
+  const fhirLifecycleMigration = readFileSync(
+    resolve(
+      __dirname,
+      '../../../../packages/database/prisma/migrations/20260817120000_encounter_fhir_lifecycle/migration.sql',
+    ),
+    'utf8',
+  );
 
   it('fails explicitly instead of guessing legacy Encounter context', () => {
     expect(migration).toContain('requires an explicit Encounter backfill');
@@ -40,5 +47,30 @@ describe('PRI-14 Encounter migration', () => {
   it('contains no remote SATUSEHAT request', () => {
     expect(migration).not.toMatch(/https?:\/\//i);
     expect(migration).not.toMatch(/fetch\s*\(/i);
+  });
+
+  it('migrates Encounter status values to the canonical FHIR vocabulary', () => {
+    expect(fhirLifecycleMigration).toContain(
+      'ALTER TYPE "EncounterStatus" RENAME TO "EncounterStatus_old"',
+    );
+    expect(fhirLifecycleMigration).toContain("WHEN 'WAITING' THEN 'arrived'");
+    expect(fhirLifecycleMigration).toContain(
+      "WHEN 'COMPLETED' THEN 'finished'",
+    );
+    expect(fhirLifecycleMigration).toContain("'entered-in-error'");
+    expect(fhirLifecycleMigration).toContain(
+      "WHERE \"status\" IN ('arrived', 'triaged', 'in-progress', 'onleave')",
+    );
+  });
+
+  it('creates the provider-neutral integration outbox with correction scope', () => {
+    expect(fhirLifecycleMigration).toContain(
+      'CREATE TABLE "IntegrationOutboxEvent"',
+    );
+    expect(fhirLifecycleMigration).toContain('IntegrationOutboxDispatchScope');
+    expect(fhirLifecycleMigration).toContain("'LINKED_ONLY'");
+    expect(fhirLifecycleMigration).toContain(
+      'IntegrationOutboxEvent_resourceType_resourceId_aggregateVersion_operation_key',
+    );
   });
 });

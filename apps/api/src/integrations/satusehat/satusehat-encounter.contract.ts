@@ -109,14 +109,12 @@ export function validateSatusehatEncounterPayload(
   }
 
   const encounterPeriod = readPeriod(payload.period, 'period', issues);
-  if (status === 'finished' && !encounterPeriod?.end) {
-    addIssue(
-      issues,
-      'period.end',
-      'Encounter finished wajib memiliki waktu selesai klinis',
-    );
-  }
-  if (status === 'cancelled' && !encounterPeriod?.end) {
+  if (
+    (status === 'finished' ||
+      status === 'cancelled' ||
+      status === 'entered-in-error') &&
+    !encounterPeriod?.end
+  ) {
     addIssue(
       issues,
       'period.end',

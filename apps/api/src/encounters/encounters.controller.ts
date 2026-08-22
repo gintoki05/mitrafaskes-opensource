@@ -106,15 +106,20 @@ export class EncountersController {
         ? (body as { status?: string }).status
         : undefined;
     const requiredPermission =
-      status === 'IN_PROGRESS'
+      status === 'in-progress'
         ? AccessPermission.QUEUE_START
-        : status === 'CANCELLED'
-          ? AccessPermission.QUEUE_CANCEL
-          : undefined;
+        : status === 'onleave'
+          ? AccessPermission.QUEUE_PAUSE
+          : status === 'cancelled'
+            ? AccessPermission.QUEUE_CANCEL
+            : status === 'entered-in-error'
+              ? AccessPermission.ENCOUNTER_CORRECT
+              : undefined;
     if (!requiredPermission) {
       throw new BadRequestException({
         code: 'INVALID_ENCOUNTER_STATUS',
-        message: 'Status antrean tidak dapat diubah melalui endpoint ini',
+        message:
+          'Status Encounter ini tidak dapat diubah melalui endpoint lifecycle tersebut',
       });
     }
     if (!hasAuthenticatedPermission(request.user, requiredPermission)) {

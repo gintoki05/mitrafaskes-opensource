@@ -1,4 +1,5 @@
 import { MedicalRecordStatus } from '@prisma/client';
+import { EncounterStatus } from '@mitrafaskes/shared';
 import type { PrismaService } from '../database/prisma.service';
 import type { EncountersService } from '../encounters/encounters.service';
 import { RmeService } from './rme.service';
@@ -56,7 +57,7 @@ function createHarness(transaction: Record<string, any>) {
 function lockedEncounter() {
   return {
     id: 'encounter-1',
-    status: 'IN_PROGRESS',
+    status: EncounterStatus.IN_PROGRESS,
     version: 2,
     doctorId: 'doctor-1',
     organizationId: 'organization-1',

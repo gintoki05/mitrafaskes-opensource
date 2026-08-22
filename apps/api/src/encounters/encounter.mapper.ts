@@ -2,10 +2,10 @@ import type {
   Encounter as SharedEncounter,
   Gender,
   ResourceIntegrationSummary,
-  EncounterStatus,
   UserRole,
 } from '@mitrafaskes/shared';
 import type { EncounterWithRelations } from './encounter.repository';
+import { fromPrismaEncounterStatus } from './encounter.status-map';
 
 export function toEncounter(
   record: EncounterWithRelations,
@@ -20,7 +20,7 @@ export function toEncounter(
     locationId: record.locationId,
     queueDate: record.queueDate.toISOString().slice(0, 10),
     queueNumber: record.queueNumber,
-    status: record.status as unknown as EncounterStatus,
+    status: fromPrismaEncounterStatus(record.status),
     arrivedAt: record.arrivedAt.toISOString(),
     startedAt: record.startedAt?.toISOString(),
     completedAt: record.completedAt?.toISOString(),
@@ -28,12 +28,13 @@ export function toEncounter(
     version: record.version,
     statusHistory: record.statusHistory.map((entry) => ({
       id: entry.id,
-      status: entry.status as unknown as EncounterStatus,
+      status: fromPrismaEncounterStatus(entry.status),
       periodStart: entry.periodStart.toISOString(),
       periodEnd: entry.periodEnd?.toISOString(),
       actorUserId: entry.actorUserId ?? undefined,
       actorUsername: entry.actorUsername,
       actorRole: entry.actorRole as unknown as UserRole,
+      ...(entry.reason ? { reason: entry.reason } : {}),
     })),
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),

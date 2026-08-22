@@ -49,6 +49,7 @@ export function validateCreateEncounter(
 export interface ValidatedStatusInput {
   status: EncounterStatus;
   expectedVersion: number;
+  reason?: string;
 }
 
 export function validateStatusUpdate(input: unknown): ValidatedStatusInput {
@@ -56,6 +57,7 @@ export function validateStatusUpdate(input: unknown): ValidatedStatusInput {
   const issues: Array<{ field: string; message: string }> = [];
   const status = body.status;
   const expectedVersion = body.expectedVersion;
+  const rawReason = body.reason;
   if (!Object.values(EncounterStatus).includes(status as EncounterStatus)) {
     issues.push({ field: 'status', message: 'Status Encounter tidak valid' });
   }
@@ -69,12 +71,35 @@ export function validateStatusUpdate(input: unknown): ValidatedStatusInput {
       message: 'Versi Encounter tidak valid',
     });
   }
+  let reason: string | undefined;
+  if (rawReason !== undefined) {
+    if (typeof rawReason !== 'string' || rawReason.trim().length === 0) {
+      issues.push({
+        field: 'reason',
+        message: 'Alasan status harus berupa teks yang tidak kosong',
+      });
+    } else if (rawReason.trim().length > 500) {
+      issues.push({
+        field: 'reason',
+        message: 'Alasan status maksimal 500 karakter',
+      });
+    } else {
+      reason = rawReason.trim();
+    }
+  }
+  if (status === EncounterStatus.ENTERED_IN_ERROR && !reason) {
+    issues.push({
+      field: 'reason',
+      message: 'Alasan wajib diisi saat Encounter ditandai entered-in-error',
+    });
+  }
   if (issues.length > 0) {
     throw new EncounterValidationError('Perubahan status tidak valid', issues);
   }
   return {
     status: status as EncounterStatus,
     expectedVersion: expectedVersion as number,
+    ...(reason ? { reason } : {}),
   };
 }
 

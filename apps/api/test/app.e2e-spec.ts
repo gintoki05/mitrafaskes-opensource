@@ -475,19 +475,19 @@ describe('Access control (e2e)', () => {
     await request(app.getHttpServer())
       .patch('/api/encounters/enc-test-1/status')
       .set(bearer('mock-jwt-token-pendaftaran_siti'))
-      .send({ status: 'CANCELLED', expectedVersion: 1 })
+      .send({ status: 'cancelled', expectedVersion: 1 })
       .expect(200);
 
     await request(app.getHttpServer())
       .patch('/api/encounters/enc-test-1/status')
       .set(bearer('mock-jwt-token-dr_budi'))
-      .send({ status: 'IN_PROGRESS', expectedVersion: 1 })
+      .send({ status: 'in-progress', expectedVersion: 1 })
       .expect(200);
 
     await request(app.getHttpServer())
       .patch('/api/encounters/enc-test-1/status')
       .set(bearer('mock-jwt-token-dr_budi'))
-      .send({ status: 'COMPLETED', expectedVersion: 1 })
+      .send({ status: 'finished', expectedVersion: 1 })
       .expect(400);
 
     await request(app.getHttpServer())
@@ -498,7 +498,7 @@ describe('Access control (e2e)', () => {
     await request(app.getHttpServer())
       .patch('/api/encounters/enc-test-1/status')
       .set(bearer('mock-jwt-token-admin'))
-      .send({ status: 'CANCELLED', expectedVersion: 1 })
+      .send({ status: 'cancelled', expectedVersion: 1 })
       .expect(200);
 
     await request(app.getHttpServer())
@@ -514,7 +514,7 @@ describe('Access control (e2e)', () => {
     await request(app.getHttpServer())
       .patch('/api/encounters/enc-test-1/status')
       .set(bearer('mock-jwt-token-perawat_ani'))
-      .send({ status: 'COMPLETED', expectedVersion: 1 })
+      .send({ status: 'finished', expectedVersion: 1 })
       .expect(400);
   });
 

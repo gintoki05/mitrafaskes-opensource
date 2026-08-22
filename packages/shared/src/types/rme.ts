@@ -214,6 +214,7 @@ export interface MedicalRecord {
   triageUpdatedBy?: string;
   triageUpdatedAt?: string;
   triageCompletedBy?: string;
+  triageCompletedByName?: string;
   triageCompletedAt?: string;
   chiefComplaint?: string;
   presentIllness?: string;

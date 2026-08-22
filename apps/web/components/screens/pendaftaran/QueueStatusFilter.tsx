@@ -5,28 +5,56 @@ import type { EncounterStatusCounts } from '@mitrafaskes/shared';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  getSatusehatEncounterStatus,
+  getSatusehatEncounterStatusTooltip,
+} from '@/components/satusehat/satusehat-status';
 
 export type QueueStatusFilterValue = 'ACTIVE' | EncounterStatus;
 
 export const queueStatusFilterValues: readonly QueueStatusFilterValue[] = [
   'ACTIVE',
-  EncounterStatus.WAITING,
+  EncounterStatus.PLANNED,
+  EncounterStatus.ARRIVED,
+  EncounterStatus.TRIAGED,
   EncounterStatus.IN_PROGRESS,
-  EncounterStatus.COMPLETED,
+  EncounterStatus.ONLEAVE,
+  EncounterStatus.FINISHED,
   EncounterStatus.CANCELLED,
+  EncounterStatus.ENTERED_IN_ERROR,
+  EncounterStatus.UNKNOWN,
 ];
 
 const queueStatusLabels: Record<QueueStatusFilterValue, string> = {
   ACTIVE: 'Aktif',
-  [EncounterStatus.WAITING]: 'Menunggu',
-  [EncounterStatus.IN_PROGRESS]: 'Diperiksa',
-  [EncounterStatus.COMPLETED]: 'Selesai',
-  [EncounterStatus.CANCELLED]: 'Dibatalkan',
+  [EncounterStatus.PLANNED]: getSatusehatEncounterStatus(EncounterStatus.PLANNED),
+  [EncounterStatus.ARRIVED]: getSatusehatEncounterStatus(EncounterStatus.ARRIVED),
+  [EncounterStatus.TRIAGED]: getSatusehatEncounterStatus(EncounterStatus.TRIAGED),
+  [EncounterStatus.IN_PROGRESS]: getSatusehatEncounterStatus(EncounterStatus.IN_PROGRESS),
+  [EncounterStatus.ONLEAVE]: getSatusehatEncounterStatus(EncounterStatus.ONLEAVE),
+  [EncounterStatus.FINISHED]: getSatusehatEncounterStatus(EncounterStatus.FINISHED),
+  [EncounterStatus.CANCELLED]: getSatusehatEncounterStatus(EncounterStatus.CANCELLED),
+  [EncounterStatus.ENTERED_IN_ERROR]: getSatusehatEncounterStatus(EncounterStatus.ENTERED_IN_ERROR),
+  [EncounterStatus.UNKNOWN]: getSatusehatEncounterStatus(EncounterStatus.UNKNOWN),
+};
+
+const queueStatusTooltips: Record<QueueStatusFilterValue, string> = {
+  ACTIVE: 'Filter lokal untuk gabungan status arrived, in-progress, dan onleave.',
+  [EncounterStatus.PLANNED]: getSatusehatEncounterStatusTooltip(EncounterStatus.PLANNED),
+  [EncounterStatus.ARRIVED]: getSatusehatEncounterStatusTooltip(EncounterStatus.ARRIVED),
+  [EncounterStatus.TRIAGED]: getSatusehatEncounterStatusTooltip(EncounterStatus.TRIAGED),
+  [EncounterStatus.IN_PROGRESS]: getSatusehatEncounterStatusTooltip(EncounterStatus.IN_PROGRESS),
+  [EncounterStatus.ONLEAVE]: getSatusehatEncounterStatusTooltip(EncounterStatus.ONLEAVE),
+  [EncounterStatus.FINISHED]: getSatusehatEncounterStatusTooltip(EncounterStatus.FINISHED),
+  [EncounterStatus.CANCELLED]: getSatusehatEncounterStatusTooltip(EncounterStatus.CANCELLED),
+  [EncounterStatus.ENTERED_IN_ERROR]: getSatusehatEncounterStatusTooltip(EncounterStatus.ENTERED_IN_ERROR),
+  [EncounterStatus.UNKNOWN]: getSatusehatEncounterStatusTooltip(EncounterStatus.UNKNOWN),
 };
 
 const activeQueueStatuses: readonly EncounterStatus[] = [
-  EncounterStatus.WAITING,
+  EncounterStatus.ARRIVED,
   EncounterStatus.IN_PROGRESS,
+  EncounterStatus.ONLEAVE,
 ];
 
 export function getQueueStatuses(
@@ -64,7 +92,9 @@ export function QueueStatusFilter({
         const selected = value === filter;
         const count =
           filter === 'ACTIVE'
-            ? statusCounts.WAITING + statusCounts.IN_PROGRESS
+            ? statusCounts[EncounterStatus.ARRIVED] +
+              statusCounts[EncounterStatus.IN_PROGRESS] +
+              statusCounts[EncounterStatus.ONLEAVE]
             : statusCounts[filter];
 
         return (
@@ -76,6 +106,7 @@ export function QueueStatusFilter({
             aria-pressed={selected}
             disabled={disabled}
             onClick={() => onChange(filter)}
+            title={queueStatusTooltips[filter]}
             className={cn(
               'h-9 gap-2 rounded-full border px-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 disabled:pointer-events-none disabled:opacity-50',
               selected

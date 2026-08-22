@@ -13,10 +13,15 @@ export interface TriageSummary {
 }
 
 export enum EncounterStatus {
-  WAITING = "WAITING",
-  IN_PROGRESS = "IN_PROGRESS",
-  COMPLETED = "COMPLETED",
-  CANCELLED = "CANCELLED",
+  PLANNED = "planned",
+  ARRIVED = "arrived",
+  TRIAGED = "triaged",
+  IN_PROGRESS = "in-progress",
+  ONLEAVE = "onleave",
+  FINISHED = "finished",
+  CANCELLED = "cancelled",
+  ENTERED_IN_ERROR = "entered-in-error",
+  UNKNOWN = "unknown",
 }
 
 export interface EncounterStatusHistory {
@@ -27,6 +32,7 @@ export interface EncounterStatusHistory {
   actorUserId?: string;
   actorUsername: string;
   actorRole: UserRole;
+  reason?: string;
 }
 
 export interface Encounter {
@@ -84,6 +90,7 @@ export interface CreateEncounterDto {
 export interface UpdateEncounterStatusDto {
   status: EncounterStatus;
   expectedVersion: number;
+  reason?: string;
 }
 
 export interface EncounterListQuery {

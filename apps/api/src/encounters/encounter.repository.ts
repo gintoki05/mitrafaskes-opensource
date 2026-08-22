@@ -5,6 +5,7 @@ import {
 } from '@prisma/client';
 import { randomUUID } from 'node:crypto';
 import type { EncounterStatusCounts } from '@mitrafaskes/shared';
+import { fromPrismaEncounterStatus } from './encounter.status-map';
 import { PrismaService } from '../database/prisma.service';
 
 export const encounterInclude = {
@@ -104,38 +105,32 @@ export class EncounterRepository {
         : { status: where.status }),
       ...triageWhere,
     };
-    const [records, total, waiting, inProgress, completed, cancelled] =
-      await this.prisma.$transaction([
-        this.prisma.encounter.findMany({
-          where: prismaWhere,
-          include: encounterInclude,
-          orderBy: [{ queueNumber: 'asc' }, { createdAt: 'asc' }],
-          skip: (page - 1) * pageSize,
-          take: pageSize,
-        }),
-        this.prisma.encounter.count({ where: prismaWhere }),
+    const statusCountStatuses = Object.values(PrismaEncounterStatus);
+    const [records, total, ...statusCounts] = await this.prisma.$transaction([
+      this.prisma.encounter.findMany({
+        where: prismaWhere,
+        include: encounterInclude,
+        orderBy: [{ queueNumber: 'asc' }, { createdAt: 'asc' }],
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      this.prisma.encounter.count({ where: prismaWhere }),
+      ...statusCountStatuses.map((status) =>
         this.prisma.encounter.count({
-          where: { ...scopeWhere, status: PrismaEncounterStatus.WAITING },
+          where: { ...scopeWhere, status },
         }),
-        this.prisma.encounter.count({
-          where: { ...scopeWhere, status: PrismaEncounterStatus.IN_PROGRESS },
-        }),
-        this.prisma.encounter.count({
-          where: { ...scopeWhere, status: PrismaEncounterStatus.COMPLETED },
-        }),
-        this.prisma.encounter.count({
-          where: { ...scopeWhere, status: PrismaEncounterStatus.CANCELLED },
-        }),
-      ]);
+      ),
+    ]);
+    const counts = Object.fromEntries(
+      statusCountStatuses.map((status, index) => [
+        fromPrismaEncounterStatus(status),
+        statusCounts[index],
+      ]),
+    ) as EncounterStatusCounts;
     return {
       records,
       total,
-      statusCounts: {
-        WAITING: waiting,
-        IN_PROGRESS: inProgress,
-        COMPLETED: completed,
-        CANCELLED: cancelled,
-      },
+      statusCounts: counts,
     };
   }
 
